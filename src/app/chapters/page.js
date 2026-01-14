@@ -118,14 +118,16 @@ export default function ChaptersPage() {
         {chapter.level}
       </span>
       <span className="font-medium text-gray-900 flex-1">{chapter.name}</span>
-      <span className="text-gray-500 text-sm">
-        {chapter.memberCount} member{chapter.memberCount !== 1 ? 's' : ''}
-        {chapter.primaryCount > 0 && chapter.primaryCount !== chapter.memberCount && (
-          <span className="text-gray-400 ml-1">
-            ({chapter.primaryCount} direct)
-          </span>
-        )}
-      </span>
+      {isAdmin && (
+        <span className="text-gray-500 text-sm">
+          {chapter.memberCount} member{chapter.memberCount !== 1 ? 's' : ''}
+          {chapter.primaryCount > 0 && chapter.primaryCount !== chapter.memberCount && (
+            <span className="text-gray-400 ml-1">
+              ({chapter.primaryCount} direct)
+            </span>
+          )}
+        </span>
+      )}
     </Link>
   )
 
@@ -133,12 +135,19 @@ export default function ChaptersPage() {
     const isExpanded = expandedStates.has(state.id)
     const hasChildren = state.children.length > 0
 
+    const handleToggle = (e) => {
+      e.preventDefault()
+      e.stopPropagation()
+      toggleState(state.id)
+    }
+
     return (
       <div className="mb-2">
         <div className="flex items-center gap-2">
           {hasChildren && (
             <button
-              onClick={() => toggleState(state.id)}
+              type="button"
+              onClick={handleToggle}
               className="p-1 hover:bg-gray-100 rounded"
             >
               <svg
@@ -167,8 +176,8 @@ export default function ChaptersPage() {
   }
 
   const ChapterWithChildren = ({ chapter, depth }) => (
-    <div className="space-y-2">
-      <ChapterRow chapter={chapter} indent={depth} />
+    <div className={depth > 0 ? 'ml-6 pl-4 border-l-2 border-gray-200 space-y-2' : 'space-y-2'}>
+      <ChapterRow chapter={chapter} indent={0} />
       {chapter.children.map(child => (
         <ChapterWithChildren key={child.id} chapter={child} depth={depth + 1} />
       ))}
