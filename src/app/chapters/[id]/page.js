@@ -1,0 +1,149 @@
+import Link from 'next/link'
+import { notFound } from 'next/navigation'
+import { createAdminClient } from '@/lib/supabase/server'
+
+export const dynamic = 'force-dynamic'
+
+const LEVEL_COLORS = {
+  national: 'bg-labor-red',
+  state: 'bg-blue-600',
+  county: 'bg-green-600',
+  city: 'bg-purple-600',
+}
+
+export default async function ChapterDetailPage({ params }) {
+  const { id } = await params
+  const supabase = createAdminClient()
+
+  const { data: chapter } = await supabase
+    .from('chapters')
+    .select('*')
+    .eq('id', id)
+    .single()
+
+  if (!chapter) notFound()
+
+  // Get parent chapter
+  let parent = null
+  if (chapter.parent_id) {
+    const { data } = await supabase
+      .from('chapters')
+      .select('id, name, level')
+      .eq('id', chapter.parent_id)
+      .single()
+    parent = data
+  }
+
+  // Get child chapters
+  const { data: children } = await supabase
+    .from('chapters')
+    .select('id, name, level')
+    .eq('parent_id', id)
+    .order('name')
+
+  // Get direct members
+  const { data: directMembers } = await supabase
+    .from('members')
+    .select('*')
+    .eq('chapter_id', id)
+    .eq('status', 'active')
+    .order('last_name')
+
+  // Get all members (including sub-chapters) using RPC
+  const { data: allMemberIds } = await supabase
+    .rpc('get_chapter_descendants', { chapter_uuid: id })
+
+  let totalMemberCount = 0
+  if (allMemberIds) {
+    const descendantIds = allMemberIds.map(c => c.id)
+    const { count } = await supabase
+      .from('members')
+      .select('*', { count: 'exact', head: true })
+      .in('chapter_id', descendantIds)
+      .eq('status', 'active')
+    totalMemberCount = count || 0
+  }
+
+  return (
+    <div className="max-w-4xl mx-auto px-4 py-8">
+      <Link href="/chapters" className="text-gray-500 hover:text-gray-700 text-sm mb-4 inline-block">
+        ← Back to Chapters
+      </Link>
+
+      <div className="flex items-start justify-between mb-8">
+        <div>
+          <div className="flex items-center gap-3 mb-2">
+            <span className={`px-3 py-1 rounded text-white text-sm ${LEVEL_COLORS[chapter.level]}`}>
+              {chapter.level}
+            </span>
+            <h1 className="text-3xl font-bold text-gray-900">{chapter.name}</h1>
+          </div>
+          {parent && (
+            <p className="text-gray-600">
+              Part of <Link href={`/chapters/${parent.id}`} className="text-labor-red hover:underline">{parent.name}</Link>
+            </p>
+          )}
+        </div>
+        <Link href={`/join?chapter=${id}`} className="btn-primary">
+          Join This Chapter
+        </Link>
+      </div>
+
+      <div className="grid md:grid-cols-3 gap-6 mb-8">
+        <div className="card text-center">
+          <div className="text-3xl font-bold text-labor-red">{directMembers?.length || 0}</div>
+          <div className="text-gray-600">Direct Members</div>
+        </div>
+        <div className="card text-center">
+          <div className="text-3xl font-bold text-gray-900">{totalMemberCount}</div>
+          <div className="text-gray-600">Total Members</div>
+        </div>
+        <div className="card text-center">
+          <div className="text-3xl font-bold text-gray-900">{children?.length || 0}</div>
+          <div className="text-gray-600">Sub-Chapters</div>
+        </div>
+      </div>
+
+      {children && children.length > 0 && (
+        <div className="card mb-8">
+          <h2 className="text-xl font-bold mb-4">Sub-Chapters</h2>
+          <div className="space-y-2">
+            {children.map(child => (
+              <Link
+                key={child.id}
+                href={`/chapters/${child.id}`}
+                className="flex items-center gap-3 p-3 bg-gray-50 rounded-lg hover:bg-gray-100"
+              >
+                <span className={`px-2 py-1 rounded text-white text-xs ${LEVEL_COLORS[child.level]}`}>
+                  {child.level}
+                </span>
+                <span className="font-medium">{child.name}</span>
+              </Link>
+            ))}
+          </div>
+        </div>
+      )}
+
+      <div className="card">
+        <h2 className="text-xl font-bold mb-4">Direct Members ({directMembers?.length || 0})</h2>
+        {directMembers && directMembers.length > 0 ? (
+          <div className="divide-y">
+            {directMembers.map(member => (
+              <div key={member.id} className="py-3 flex justify-between">
+                <div>
+                  <div className="font-medium">{member.first_name} {member.last_name}</div>
+                  <div className="text-sm text-gray-500">{member.email}</div>
+                </div>
+                <div className="text-sm text-gray-500">
+                  Joined {new Date(member.joined_date).toLocaleDateString()}
+                </div>
+              </div>
+            ))}
+          </div>
+        ) : (
+          <p className="text-gray-500">No direct members yet.</p>
+        )}
+      </div>
+    </div>
+  )
+}

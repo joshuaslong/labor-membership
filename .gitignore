@@ -1,0 +1,27 @@
+# Dependencies
+node_modules/
+
+# Environment
+.env.local
+.env*.local
+
+# Next.js
+.next/
+out/
+
+# Misc
+.DS_Store
+*.pem
+
+# Debug
+npm-debug.log*
+
+# Vercel
+.vercel
+
+# IDE
+.idea/
+.vscode/
+
+# Supabase temp
+supabase/.temp/
