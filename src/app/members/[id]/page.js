@@ -26,11 +26,15 @@ export default function MemberDetailPage() {
   const [chapters, setChapters] = useState([])
   const [memberChapters, setMemberChapters] = useState([])
   const [isAdmin, setIsAdmin] = useState(false)
+  const [currentUserRole, setCurrentUserRole] = useState(null)
+  const [memberAdminRecord, setMemberAdminRecord] = useState(null)
   const [loading, setLoading] = useState(true)
   const [saving, setSaving] = useState(false)
   const [error, setError] = useState(null)
   const [success, setSuccess] = useState(null)
   const [selectedChapter, setSelectedChapter] = useState('')
+  const [selectedAdminRole, setSelectedAdminRole] = useState('chapter_admin')
+  const [selectedAdminChapter, setSelectedAdminChapter] = useState('')
 
   useEffect(() => {
     const loadData = async () => {
@@ -45,7 +49,7 @@ export default function MemberDetailPage() {
       // Check if current user is admin
       const { data: adminUser } = await supabase
         .from('admin_users')
-        .select('role')
+        .select('role, chapter_id')
         .eq('user_id', user.id)
         .single()
 
@@ -55,6 +59,7 @@ export default function MemberDetailPage() {
       }
 
       setIsAdmin(true)
+      setCurrentUserRole(adminUser.role)
 
       // Load member details
       const { data: memberData, error: memberError } = await supabase
@@ -88,6 +93,20 @@ export default function MemberDetailPage() {
         .eq('member_id', params.id)
 
       setMemberChapters(mcData || [])
+
+      // Check if this member is an admin
+      if (memberData.user_id) {
+        const { data: memberAdmin } = await supabase
+          .from('admin_users')
+          .select('id, role, chapter_id, chapters(id, name, level)')
+          .eq('user_id', memberData.user_id)
+          .single()
+
+        if (memberAdmin) {
+          setMemberAdminRecord(memberAdmin)
+        }
+      }
+
       setLoading(false)
     }
 
@@ -145,6 +164,77 @@ export default function MemberDetailPage() {
       setMember({ ...member, status: newStatus })
       setSuccess('Status updated successfully')
     }
+    setSaving(false)
+  }
+
+  const handleMakeAdmin = async () => {
+    if (!selectedAdminChapter) {
+      setError('Please select a chapter for admin access')
+      return
+    }
+
+    setSaving(true)
+    setError(null)
+    setSuccess(null)
+
+    try {
+      const res = await fetch('/api/admin/admins', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          email: member.email,
+          role: selectedAdminRole,
+          chapter_id: selectedAdminChapter,
+        }),
+      })
+
+      const data = await res.json()
+
+      if (!res.ok) {
+        throw new Error(data.error || 'Failed to make admin')
+      }
+
+      // Reload admin record
+      const supabase = createClient()
+      const { data: memberAdmin } = await supabase
+        .from('admin_users')
+        .select('id, role, chapter_id, chapters(id, name, level)')
+        .eq('user_id', member.user_id)
+        .single()
+
+      setMemberAdminRecord(memberAdmin)
+      setSuccess('Admin access granted successfully')
+    } catch (err) {
+      setError(err.message)
+    }
+
+    setSaving(false)
+  }
+
+  const handleRemoveAdmin = async () => {
+    if (!memberAdminRecord) return
+
+    setSaving(true)
+    setError(null)
+    setSuccess(null)
+
+    try {
+      const res = await fetch(`/api/admin/admins?id=${memberAdminRecord.id}`, {
+        method: 'DELETE',
+      })
+
+      const data = await res.json()
+
+      if (!res.ok) {
+        throw new Error(data.error || 'Failed to remove admin')
+      }
+
+      setMemberAdminRecord(null)
+      setSuccess('Admin access removed successfully')
+    } catch (err) {
+      setError(err.message)
+    }
+
     setSaving(false)
   }
 
@@ -309,7 +399,7 @@ export default function MemberDetailPage() {
       </div>
 
       {/* Status Management */}
-      <div className="card">
+      <div className="card mb-6">
         <h2 className="text-lg font-bold text-gray-900 mb-4">Status Management</h2>
         <div className="flex flex-wrap gap-2">
           {['pending', 'active', 'lapsed', 'cancelled'].map(status => (
@@ -327,6 +417,93 @@ export default function MemberDetailPage() {
             </button>
           ))}
         </div>
+      </div>
+
+      {/* Admin Access Management */}
+      <div className="card">
+        <h2 className="text-lg font-bold text-gray-900 mb-4">Admin Access</h2>
+
+        {memberAdminRecord ? (
+          <div>
+            <div className="flex items-center gap-3 p-4 bg-purple-50 rounded-lg mb-4">
+              <div className="flex-1">
+                <div className="font-medium text-purple-900">
+                  {memberAdminRecord.role === 'super_admin' ? 'Super Admin' :
+                   memberAdminRecord.role === 'state_admin' ? 'State Admin' :
+                   memberAdminRecord.role === 'county_admin' ? 'County Admin' :
+                   memberAdminRecord.role === 'city_admin' ? 'City Admin' :
+                   'Chapter Admin'}
+                </div>
+                {memberAdminRecord.chapters && (
+                  <div className="text-sm text-purple-700">
+                    {memberAdminRecord.chapters.name}
+                  </div>
+                )}
+              </div>
+              <button
+                onClick={handleRemoveAdmin}
+                disabled={saving || memberAdminRecord.role === 'super_admin'}
+                className="px-4 py-2 bg-red-100 text-red-700 rounded-lg text-sm font-medium hover:bg-red-200 disabled:opacity-50"
+              >
+                {saving ? 'Removing...' : 'Remove Admin'}
+              </button>
+            </div>
+            {memberAdminRecord.role === 'super_admin' && (
+              <p className="text-sm text-gray-500">Super admins cannot be removed from this interface.</p>
+            )}
+          </div>
+        ) : (
+          <div>
+            <p className="text-gray-600 mb-4">This member does not have admin access.</p>
+            <div className="space-y-4">
+              <div>
+                <label className="block text-sm font-medium text-gray-700 mb-2">Admin Role</label>
+                <select
+                  value={selectedAdminRole}
+                  onChange={(e) => setSelectedAdminRole(e.target.value)}
+                  className="input-field"
+                >
+                  <option value="chapter_admin">Chapter Admin</option>
+                  <option value="city_admin">City Admin</option>
+                  <option value="county_admin">County Admin</option>
+                  <option value="state_admin">State Admin</option>
+                  {currentUserRole === 'super_admin' && (
+                    <option value="super_admin">Super Admin</option>
+                  )}
+                </select>
+              </div>
+              <div>
+                <label className="block text-sm font-medium text-gray-700 mb-2">Chapter Access</label>
+                <select
+                  value={selectedAdminChapter}
+                  onChange={(e) => setSelectedAdminChapter(e.target.value)}
+                  className="input-field"
+                >
+                  <option value="">Select a chapter...</option>
+                  {['national', 'state', 'county', 'city'].map(level => (
+                    groupedChapters[level]?.length > 0 && (
+                      <optgroup key={level} label={level.charAt(0).toUpperCase() + level.slice(1)}>
+                        {groupedChapters[level].map(c => (
+                          <option key={c.id} value={c.id}>{c.name}</option>
+                        ))}
+                      </optgroup>
+                    )
+                  ))}
+                </select>
+                <p className="text-xs text-gray-500 mt-1">
+                  The admin will have access to this chapter and all its sub-chapters.
+                </p>
+              </div>
+              <button
+                onClick={handleMakeAdmin}
+                disabled={saving || !selectedAdminChapter}
+                className="btn-primary"
+              >
+                {saving ? 'Granting Access...' : 'Grant Admin Access'}
+              </button>
+            </div>
+          </div>
+        )}
       </div>
     </div>
   )
