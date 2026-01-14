@@ -16,9 +16,12 @@ export default async function ChapterDetailPage({ params }) {
   const supabase = createAdminClient()
   const supabaseAuth = await createClient()
 
-  // Check if current user is an admin
+  // Check if current user is an admin and if they're a member of this chapter
   const { data: { user } } = await supabaseAuth.auth.getUser()
   let isAdmin = false
+  let isMember = false
+  let isPrimaryChapter = false
+
   if (user) {
     const { data: adminUser } = await supabase
       .from('admin_users')
@@ -26,6 +29,27 @@ export default async function ChapterDetailPage({ params }) {
       .eq('user_id', user.id)
       .single()
     isAdmin = !!adminUser
+
+    // Check if user is a member of this chapter
+    const { data: memberRecord } = await supabase
+      .from('members')
+      .select('id')
+      .eq('user_id', user.id)
+      .single()
+
+    if (memberRecord) {
+      const { data: memberChapter } = await supabase
+        .from('member_chapters')
+        .select('is_primary')
+        .eq('member_id', memberRecord.id)
+        .eq('chapter_id', id)
+        .single()
+
+      if (memberChapter) {
+        isMember = true
+        isPrimaryChapter = memberChapter.is_primary
+      }
+    }
   }
 
   const { data: chapter } = await supabase
@@ -103,9 +127,20 @@ export default async function ChapterDetailPage({ params }) {
             </p>
           )}
         </div>
-        <Link href={`/join?chapter=${id}`} className="btn-primary">
-          Join This Chapter
-        </Link>
+        {isMember ? (
+          <div className="flex items-center gap-2 px-4 py-2 bg-green-100 text-green-800 rounded-lg">
+            <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+              <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M5 13l4 4L19 7" />
+            </svg>
+            <span className="font-medium">
+              {isPrimaryChapter ? 'Your Chapter' : 'Member'}
+            </span>
+          </div>
+        ) : (
+          <Link href={`/join?chapter=${id}`} className="btn-primary">
+            Join This Chapter
+          </Link>
+        )}
       </div>
 
       {isAdmin ? (
