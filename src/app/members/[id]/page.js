@@ -101,21 +101,22 @@ export default function MemberDetailPage() {
     setError(null)
     setSuccess(null)
 
-    const supabase = createClient()
+    // Use API to update chapter (handles member_chapters junction table)
+    const res = await fetch(`/api/members/${member.id}/chapter`, {
+      method: 'PUT',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ chapter_id: selectedChapter }),
+    })
 
-    // Update the member's chapter - the trigger will handle the junction table
-    const { error: updateError } = await supabase
-      .from('members')
-      .update({ chapter_id: selectedChapter })
-      .eq('id', member.id)
-
-    if (updateError) {
-      setError(updateError.message)
+    if (!res.ok) {
+      const data = await res.json()
+      setError(data.error || 'Failed to update chapter')
       setSaving(false)
       return
     }
 
     // Reload member chapters
+    const supabase = createClient()
     const { data: mcData } = await supabase
       .from('member_chapters')
       .select('chapter_id, is_primary, chapters(id, name, level)')
