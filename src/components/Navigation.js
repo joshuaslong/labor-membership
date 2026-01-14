@@ -1,6 +1,7 @@
 import Link from 'next/link'
 import Image from 'next/image'
 import { createClient } from '@/lib/supabase/server'
+import MobileNav from './MobileNav'
 
 export default async function Navigation() {
   const supabase = await createClient()
@@ -25,23 +26,29 @@ export default async function Navigation() {
     memberName = member?.first_name
   }
 
+  const navData = {
+    isLoggedIn: !!user,
+    isAdmin,
+    memberName: memberName || user?.email?.split('@')[0] || null,
+  }
+
   return (
     <nav className="sticky top-0 z-50 bg-labor-red border-b border-labor-red-600">
-      <div className="max-w-6xl mx-auto px-6 h-16 flex items-center justify-between">
+      <div className="max-w-6xl mx-auto px-4 sm:px-6 h-16 flex items-center justify-between">
         {/* Logo */}
-        <Link href="/" className="flex items-center">
+        <Link href="/" className="flex items-center flex-shrink-0">
           <Image
             src="/logo-white.png"
             alt="Labor Party"
             width={160}
             height={40}
-            className="h-8 w-auto"
+            className="h-7 sm:h-8 w-auto"
             priority
           />
         </Link>
 
-        {/* Navigation Links */}
-        <div className="flex items-center gap-1">
+        {/* Desktop Navigation Links */}
+        <div className="hidden md:flex items-center gap-1">
           <Link
             href="/chapters"
             className="px-3 py-2 text-sm font-medium text-white/80 hover:text-white hover:bg-white/10 rounded-md transition-colors"
@@ -66,14 +73,14 @@ export default async function Navigation() {
                 </Link>
               )}
 
-              <div className="ml-2 pl-3 border-l border-white/20 flex items-center gap-3">
-                <span className="text-sm text-white/70">
+              <div className="ml-2 pl-3 border-l border-white/20 flex items-center gap-2">
+                <span className="text-sm text-white/70 truncate max-w-[120px] lg:max-w-[180px]">
                   {memberName || user.email?.split('@')[0]}
                 </span>
                 <form action="/api/auth/logout" method="POST">
                   <button
                     type="submit"
-                    className="px-3 py-1.5 text-sm font-medium text-white/70 hover:text-white hover:bg-white/10 rounded-md transition-colors"
+                    className="px-3 py-1.5 text-sm font-medium text-white/70 hover:text-white hover:bg-white/10 rounded-md transition-colors whitespace-nowrap"
                   >
                     Log out
                   </button>
@@ -97,6 +104,9 @@ export default async function Navigation() {
             </>
           )}
         </div>
+
+        {/* Mobile Navigation */}
+        <MobileNav {...navData} />
       </div>
     </nav>
   )
