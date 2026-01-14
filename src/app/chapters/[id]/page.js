@@ -78,12 +78,24 @@ export default async function ChapterDetailPage({ params }) {
     .eq('parent_id', id)
     .order('name')
 
-  // Only fetch member data if admin
-  let directMembers = []
+  // Get total member count (visible to all members)
   let totalMemberCount = 0
+  const { data: allMemberIds } = await supabase
+    .rpc('get_chapter_descendants', { chapter_uuid: id })
 
+  if (allMemberIds) {
+    const descendantIds = allMemberIds.map(c => c.id)
+    const { count } = await supabase
+      .from('members')
+      .select('*', { count: 'exact', head: true })
+      .in('chapter_id', descendantIds)
+      .eq('status', 'active')
+    totalMemberCount = count || 0
+  }
+
+  // Only fetch direct members list if admin
+  let directMembers = []
   if (isAdmin) {
-    // Get direct members
     const { data: members } = await supabase
       .from('members')
       .select('*')
@@ -91,20 +103,6 @@ export default async function ChapterDetailPage({ params }) {
       .eq('status', 'active')
       .order('last_name')
     directMembers = members || []
-
-    // Get all members (including sub-chapters) using RPC
-    const { data: allMemberIds } = await supabase
-      .rpc('get_chapter_descendants', { chapter_uuid: id })
-
-    if (allMemberIds) {
-      const descendantIds = allMemberIds.map(c => c.id)
-      const { count } = await supabase
-        .from('members')
-        .select('*', { count: 'exact', head: true })
-        .in('chapter_id', descendantIds)
-        .eq('status', 'active')
-      totalMemberCount = count || 0
-    }
   }
 
   return (
@@ -143,29 +141,22 @@ export default async function ChapterDetailPage({ params }) {
         )}
       </div>
 
-      {isAdmin ? (
-        <div className="grid md:grid-cols-3 gap-6 mb-8">
+      <div className={`grid gap-6 mb-8 ${isAdmin ? 'md:grid-cols-3' : 'md:grid-cols-2'}`}>
+        {isAdmin && (
           <div className="card text-center">
             <div className="text-3xl font-bold text-labor-red">{directMembers?.length || 0}</div>
             <div className="text-gray-600">Direct Members</div>
           </div>
-          <div className="card text-center">
-            <div className="text-3xl font-bold text-gray-900">{totalMemberCount}</div>
-            <div className="text-gray-600">Total Members</div>
-          </div>
-          <div className="card text-center">
-            <div className="text-3xl font-bold text-gray-900">{children?.length || 0}</div>
-            <div className="text-gray-600">Sub-Chapters</div>
-          </div>
+        )}
+        <div className="card text-center">
+          <div className="text-3xl font-bold text-gray-900">{totalMemberCount}</div>
+          <div className="text-gray-600">Total Members</div>
         </div>
-      ) : (
-        <div className="grid md:grid-cols-1 gap-6 mb-8">
-          <div className="card text-center">
-            <div className="text-3xl font-bold text-gray-900">{children?.length || 0}</div>
-            <div className="text-gray-600">Sub-Chapters</div>
-          </div>
+        <div className="card text-center">
+          <div className="text-3xl font-bold text-gray-900">{children?.length || 0}</div>
+          <div className="text-gray-600">Sub-Chapters</div>
         </div>
-      )}
+      </div>
 
       {children && children.length > 0 && (
         <div className="card mb-8">
