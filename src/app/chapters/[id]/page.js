@@ -1,6 +1,6 @@
 import Link from 'next/link'
 import { notFound } from 'next/navigation'
-import { createAdminClient } from '@/lib/supabase/server'
+import { createAdminClient, createClient } from '@/lib/supabase/server'
 
 export const dynamic = 'force-dynamic'
 
@@ -14,6 +14,19 @@ const LEVEL_COLORS = {
 export default async function ChapterDetailPage({ params }) {
   const { id } = await params
   const supabase = createAdminClient()
+  const supabaseAuth = await createClient()
+
+  // Check if current user is an admin
+  const { data: { user } } = await supabaseAuth.auth.getUser()
+  let isAdmin = false
+  if (user) {
+    const { data: adminUser } = await supabase
+      .from('admin_users')
+      .select('role')
+      .eq('user_id', user.id)
+      .single()
+    isAdmin = !!adminUser
+  }
 
   const { data: chapter } = await supabase
     .from('chapters')
@@ -41,27 +54,33 @@ export default async function ChapterDetailPage({ params }) {
     .eq('parent_id', id)
     .order('name')
 
-  // Get direct members
-  const { data: directMembers } = await supabase
-    .from('members')
-    .select('*')
-    .eq('chapter_id', id)
-    .eq('status', 'active')
-    .order('last_name')
-
-  // Get all members (including sub-chapters) using RPC
-  const { data: allMemberIds } = await supabase
-    .rpc('get_chapter_descendants', { chapter_uuid: id })
-
+  // Only fetch member data if admin
+  let directMembers = []
   let totalMemberCount = 0
-  if (allMemberIds) {
-    const descendantIds = allMemberIds.map(c => c.id)
-    const { count } = await supabase
+
+  if (isAdmin) {
+    // Get direct members
+    const { data: members } = await supabase
       .from('members')
-      .select('*', { count: 'exact', head: true })
-      .in('chapter_id', descendantIds)
+      .select('*')
+      .eq('chapter_id', id)
       .eq('status', 'active')
-    totalMemberCount = count || 0
+      .order('last_name')
+    directMembers = members || []
+
+    // Get all members (including sub-chapters) using RPC
+    const { data: allMemberIds } = await supabase
+      .rpc('get_chapter_descendants', { chapter_uuid: id })
+
+    if (allMemberIds) {
+      const descendantIds = allMemberIds.map(c => c.id)
+      const { count } = await supabase
+        .from('members')
+        .select('*', { count: 'exact', head: true })
+        .in('chapter_id', descendantIds)
+        .eq('status', 'active')
+      totalMemberCount = count || 0
+    }
   }
 
   return (
@@ -89,20 +108,29 @@ export default async function ChapterDetailPage({ params }) {
         </Link>
       </div>
 
-      <div className="grid md:grid-cols-3 gap-6 mb-8">
-        <div className="card text-center">
-          <div className="text-3xl font-bold text-labor-red">{directMembers?.length || 0}</div>
-          <div className="text-gray-600">Direct Members</div>
+      {isAdmin ? (
+        <div className="grid md:grid-cols-3 gap-6 mb-8">
+          <div className="card text-center">
+            <div className="text-3xl font-bold text-labor-red">{directMembers?.length || 0}</div>
+            <div className="text-gray-600">Direct Members</div>
+          </div>
+          <div className="card text-center">
+            <div className="text-3xl font-bold text-gray-900">{totalMemberCount}</div>
+            <div className="text-gray-600">Total Members</div>
+          </div>
+          <div className="card text-center">
+            <div className="text-3xl font-bold text-gray-900">{children?.length || 0}</div>
+            <div className="text-gray-600">Sub-Chapters</div>
+          </div>
         </div>
-        <div className="card text-center">
-          <div className="text-3xl font-bold text-gray-900">{totalMemberCount}</div>
-          <div className="text-gray-600">Total Members</div>
+      ) : (
+        <div className="grid md:grid-cols-1 gap-6 mb-8">
+          <div className="card text-center">
+            <div className="text-3xl font-bold text-gray-900">{children?.length || 0}</div>
+            <div className="text-gray-600">Sub-Chapters</div>
+          </div>
         </div>
-        <div className="card text-center">
-          <div className="text-3xl font-bold text-gray-900">{children?.length || 0}</div>
-          <div className="text-gray-600">Sub-Chapters</div>
-        </div>
-      </div>
+      )}
 
       {children && children.length > 0 && (
         <div className="card mb-8">
@@ -124,26 +152,28 @@ export default async function ChapterDetailPage({ params }) {
         </div>
       )}
 
-      <div className="card">
-        <h2 className="text-xl font-bold mb-4">Direct Members ({directMembers?.length || 0})</h2>
-        {directMembers && directMembers.length > 0 ? (
-          <div className="divide-y">
-            {directMembers.map(member => (
-              <div key={member.id} className="py-3 flex justify-between">
-                <div>
-                  <div className="font-medium">{member.first_name} {member.last_name}</div>
-                  <div className="text-sm text-gray-500">{member.email}</div>
+      {isAdmin && (
+        <div className="card">
+          <h2 className="text-xl font-bold mb-4">Direct Members ({directMembers?.length || 0})</h2>
+          {directMembers && directMembers.length > 0 ? (
+            <div className="divide-y">
+              {directMembers.map(member => (
+                <div key={member.id} className="py-3 flex justify-between">
+                  <div>
+                    <div className="font-medium">{member.first_name} {member.last_name}</div>
+                    <div className="text-sm text-gray-500">{member.email}</div>
+                  </div>
+                  <div className="text-sm text-gray-500">
+                    Joined {new Date(member.joined_date).toLocaleDateString()}
+                  </div>
                 </div>
-                <div className="text-sm text-gray-500">
-                  Joined {new Date(member.joined_date).toLocaleDateString()}
-                </div>
-              </div>
-            ))}
-          </div>
-        ) : (
-          <p className="text-gray-500">No direct members yet.</p>
-        )}
-      </div>
+              ))}
+            </div>
+          ) : (
+            <p className="text-gray-500">No direct members yet.</p>
+          )}
+        </div>
+      )}
     </div>
   )
 }
