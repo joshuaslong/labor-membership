@@ -98,7 +98,10 @@ export default async function MembersPage({ searchParams }) {
                 <tr key={member.id} className="hover:bg-gray-50">
                   <td className="px-6 py-4 whitespace-nowrap">
                     <Link href={`/members/${member.id}`} className="font-medium text-gray-900 hover:text-labor-red">
-                      {member.first_name} {member.last_name}
+                      {member.first_name || member.last_name
+                        ? `${member.first_name || ''} ${member.last_name || ''}`.trim()
+                        : <span className="text-gray-500 italic">{member.email || 'No name'}</span>
+                      }
                     </Link>
                   </td>
                   <td className="px-6 py-4 whitespace-nowrap text-gray-500">{member.email}</td>
