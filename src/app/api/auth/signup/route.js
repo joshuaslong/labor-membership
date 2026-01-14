@@ -60,6 +60,9 @@ export async function POST(request) {
       zip_code: data.zip_code || null,
       chapter_id: data.chapter_id,
       status: 'active',
+      wants_to_volunteer: data.wants_to_volunteer || false,
+      volunteer_interests: data.volunteer_interests || null,
+      mailing_list_opted_in: data.mailing_list_opted_in !== false,
     })
     .select()
     .single()

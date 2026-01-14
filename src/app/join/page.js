@@ -27,6 +27,9 @@ function JoinForm() {
     state: '',
     zip_code: '',
     chapter_id: preselectedChapter || '',
+    wants_to_volunteer: false,
+    volunteer_interests: '',
+    mailing_list_opted_in: true,
   })
 
   useEffect(() => {
@@ -258,6 +261,50 @@ function JoinForm() {
           <p className="text-xs text-gray-500 mt-1">
             Joining a local chapter automatically includes you in all parent chapters.
           </p>
+        </div>
+
+        {/* Volunteer */}
+        <div className="border-t border-gray-200 pt-4 mt-4">
+          <label className="flex items-start gap-3 cursor-pointer">
+            <input
+              type="checkbox"
+              className="mt-1 h-4 w-4 rounded border-gray-300 text-labor-red focus:ring-labor-red"
+              checked={form.wants_to_volunteer}
+              onChange={e => updateField('wants_to_volunteer', e.target.checked)}
+            />
+            <div>
+              <span className="text-sm font-medium text-gray-900">I want to volunteer</span>
+              <p className="text-xs text-gray-500">Help with events, outreach, or other organizing work</p>
+            </div>
+          </label>
+          {form.wants_to_volunteer && (
+            <div className="mt-3 ml-7">
+              <label className="block text-sm font-medium text-gray-700 mb-1">What interests you?</label>
+              <textarea
+                className="input-field"
+                rows={2}
+                placeholder="e.g., door knocking, phone banking, event planning..."
+                value={form.volunteer_interests}
+                onChange={e => updateField('volunteer_interests', e.target.value)}
+              />
+            </div>
+          )}
+        </div>
+
+        {/* Mailing list */}
+        <div>
+          <label className="flex items-start gap-3 cursor-pointer">
+            <input
+              type="checkbox"
+              className="mt-1 h-4 w-4 rounded border-gray-300 text-labor-red focus:ring-labor-red"
+              checked={form.mailing_list_opted_in}
+              onChange={e => updateField('mailing_list_opted_in', e.target.checked)}
+            />
+            <div>
+              <span className="text-sm font-medium text-gray-900">Keep me updated</span>
+              <p className="text-xs text-gray-500">Receive news, updates, and action alerts via email</p>
+            </div>
+          </label>
         </div>
 
         <button type="submit" disabled={loading} className="w-full btn-primary py-3">

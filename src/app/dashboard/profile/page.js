@@ -53,6 +53,9 @@ export default function ProfilePage() {
         city: member.city,
         state: member.state,
         zip_code: member.zip_code,
+        wants_to_volunteer: member.wants_to_volunteer,
+        volunteer_interests: member.volunteer_interests,
+        mailing_list_opted_in: member.mailing_list_opted_in,
       })
       .eq('id', member.id)
 
@@ -79,7 +82,7 @@ export default function ProfilePage() {
       </Link>
 
       <h1 className="text-3xl font-bold text-gray-900 mb-2">Edit Profile</h1>
-      <p className="text-gray-600 mb-8">Update your contact information.</p>
+      <p className="text-gray-600 mb-8">Update your contact information and preferences.</p>
 
       {error && <div className="bg-red-50 text-red-700 p-4 rounded-lg mb-6">{error}</div>}
       {success && <div className="bg-green-50 text-green-700 p-4 rounded-lg mb-6">Profile updated!</div>}
@@ -147,6 +150,50 @@ export default function ProfilePage() {
               onChange={(e) => setMember({ ...member, zip_code: e.target.value })}
             />
           </div>
+        </div>
+
+        {/* Volunteer */}
+        <div className="border-t border-gray-200 pt-4 mt-4">
+          <label className="flex items-start gap-3 cursor-pointer">
+            <input
+              type="checkbox"
+              className="mt-1 h-4 w-4 rounded border-gray-300 text-labor-red focus:ring-labor-red"
+              checked={member.wants_to_volunteer || false}
+              onChange={(e) => setMember({ ...member, wants_to_volunteer: e.target.checked })}
+            />
+            <div>
+              <span className="text-sm font-medium text-gray-900">I want to volunteer</span>
+              <p className="text-xs text-gray-500">Help with events, outreach, or other organizing work</p>
+            </div>
+          </label>
+          {member.wants_to_volunteer && (
+            <div className="mt-3 ml-7">
+              <label className="block text-sm font-medium text-gray-700 mb-1">What interests you?</label>
+              <textarea
+                className="input-field"
+                rows={2}
+                placeholder="e.g., door knocking, phone banking, event planning..."
+                value={member.volunteer_interests || ''}
+                onChange={(e) => setMember({ ...member, volunteer_interests: e.target.value })}
+              />
+            </div>
+          )}
+        </div>
+
+        {/* Mailing list */}
+        <div>
+          <label className="flex items-start gap-3 cursor-pointer">
+            <input
+              type="checkbox"
+              className="mt-1 h-4 w-4 rounded border-gray-300 text-labor-red focus:ring-labor-red"
+              checked={member.mailing_list_opted_in !== false}
+              onChange={(e) => setMember({ ...member, mailing_list_opted_in: e.target.checked })}
+            />
+            <div>
+              <span className="text-sm font-medium text-gray-900">Keep me updated</span>
+              <p className="text-xs text-gray-500">Receive news, updates, and action alerts via email</p>
+            </div>
+          </label>
         </div>
 
         <button type="submit" disabled={saving} className="w-full btn-primary py-3">
