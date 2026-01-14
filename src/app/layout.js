@@ -4,6 +4,9 @@ import Navigation from '@/components/Navigation'
 export const metadata = {
   title: 'Labor Party Membership',
   description: 'Membership management for the Labor Party',
+  icons: {
+    icon: '/favicon.png',
+  },
 }
 
 export default function RootLayout({ children }) {

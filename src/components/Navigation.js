@@ -1,4 +1,5 @@
 import Link from 'next/link'
+import Image from 'next/image'
 import { createClient } from '@/lib/supabase/server'
 
 export default async function Navigation() {
@@ -25,34 +26,73 @@ export default async function Navigation() {
   }
 
   return (
-    <nav className="bg-labor-red text-white shadow-lg">
-      <div className="max-w-7xl mx-auto px-4 h-16 flex items-center justify-between">
-        <Link href="/" className="font-bold text-xl">Labor Party</Link>
-        <div className="flex gap-6 items-center">
-          <Link href="/chapters" className="hover:text-red-200">Chapters</Link>
+    <nav className="sticky top-0 z-50 bg-labor-red border-b border-labor-red-600">
+      <div className="max-w-6xl mx-auto px-6 h-16 flex items-center justify-between">
+        {/* Logo */}
+        <Link href="/" className="flex items-center">
+          <Image
+            src="/logo-white.png"
+            alt="Labor Party"
+            width={160}
+            height={40}
+            className="h-8 w-auto"
+            priority
+          />
+        </Link>
+
+        {/* Navigation Links */}
+        <div className="flex items-center gap-1">
+          <Link
+            href="/chapters"
+            className="px-3 py-2 text-sm font-medium text-white/80 hover:text-white hover:bg-white/10 rounded-md transition-colors"
+          >
+            Chapters
+          </Link>
 
           {user ? (
             <>
-              <Link href="/dashboard" className="hover:text-red-200">Dashboard</Link>
+              <Link
+                href="/dashboard"
+                className="px-3 py-2 text-sm font-medium text-white/80 hover:text-white hover:bg-white/10 rounded-md transition-colors"
+              >
+                Dashboard
+              </Link>
               {isAdmin && (
-                <Link href="/admin" className="hover:text-red-200">Admin</Link>
+                <Link
+                  href="/admin"
+                  className="px-3 py-2 text-sm font-medium text-white/80 hover:text-white hover:bg-white/10 rounded-md transition-colors"
+                >
+                  Admin
+                </Link>
               )}
-              <div className="flex items-center gap-3">
-                <span className="text-red-200 text-sm">
-                  {memberName || user.email}
+
+              <div className="ml-2 pl-3 border-l border-white/20 flex items-center gap-3">
+                <span className="text-sm text-white/70">
+                  {memberName || user.email?.split('@')[0]}
                 </span>
                 <form action="/api/auth/logout" method="POST">
-                  <button type="submit" className="text-sm hover:text-red-200">
-                    Log Out
+                  <button
+                    type="submit"
+                    className="px-3 py-1.5 text-sm font-medium text-white/70 hover:text-white hover:bg-white/10 rounded-md transition-colors"
+                  >
+                    Log out
                   </button>
                 </form>
               </div>
             </>
           ) : (
             <>
-              <Link href="/join" className="hover:text-red-200">Join</Link>
-              <Link href="/login" className="bg-white text-labor-red px-4 py-2 rounded-lg font-medium hover:bg-red-50">
-                Log In
+              <Link
+                href="/join"
+                className="px-3 py-2 text-sm font-medium text-white/80 hover:text-white hover:bg-white/10 rounded-md transition-colors"
+              >
+                Join
+              </Link>
+              <Link
+                href="/login"
+                className="ml-2 px-4 py-2 text-sm font-medium bg-white text-labor-red rounded-md hover:bg-white/90 transition-colors"
+              >
+                Log in
               </Link>
             </>
           )}
