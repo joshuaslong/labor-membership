@@ -70,5 +70,40 @@ export async function POST(request) {
     return NextResponse.json({ error: memberError.message }, { status: 500 })
   }
 
+  // Create member_chapters records for the primary chapter and all parent chapters
+  // First, get the chapter hierarchy
+  const { data: chapters } = await supabase
+    .from('chapters')
+    .select('id, parent_id')
+
+  const chapterMap = {}
+  chapters?.forEach(c => { chapterMap[c.id] = c })
+
+  // Build list of chapters to add (primary + all parents)
+  const chapterIds = []
+  let currentChapterId = data.chapter_id
+  while (currentChapterId) {
+    chapterIds.push(currentChapterId)
+    currentChapterId = chapterMap[currentChapterId]?.parent_id
+  }
+
+  // Insert member_chapters records
+  const memberChaptersData = chapterIds.map((chapterId, index) => ({
+    member_id: member.id,
+    chapter_id: chapterId,
+    is_primary: index === 0, // First one is primary
+  }))
+
+  if (memberChaptersData.length > 0) {
+    const { error: mcError } = await supabase
+      .from('member_chapters')
+      .insert(memberChaptersData)
+
+    if (mcError) {
+      console.error('Error creating member_chapters:', mcError)
+      // Don't fail signup, just log the error
+    }
+  }
+
   return NextResponse.json({ member, user: authData.user }, { status: 201 })
 }
