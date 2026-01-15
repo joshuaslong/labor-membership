@@ -119,7 +119,7 @@ export async function POST(request) {
   } catch (error) {
     console.error('Stripe checkout error:', error)
     return NextResponse.json(
-      { error: 'Failed to create checkout session', details: error.message },
+      { error: 'Unable to process request' },
       { status: 500 }
     )
   }

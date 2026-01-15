@@ -66,7 +66,7 @@ export async function POST(request) {
   } catch (error) {
     console.error('Cancel subscription error:', error)
     return NextResponse.json(
-      { error: 'Failed to cancel subscription', details: error.message },
+      { error: 'Unable to process request' },
       { status: 500 }
     )
   }
