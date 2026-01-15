@@ -87,6 +87,28 @@ export default function HomePage() {
         </div>
       </section>
 
+      {/* Donate Section */}
+      <section className="py-20 bg-labor-red-50 border-t border-labor-red-100">
+        <div className="max-w-3xl mx-auto px-6 text-center">
+          <h2 className="text-3xl font-bold text-gray-900 tracking-tight">
+            Fund the fight
+          </h2>
+          <p className="mt-4 text-lg text-gray-600">
+            We don't take corporate money. Every dollar comes from working people like you.
+            Your contribution—big or small—keeps us independent and accountable to you, not billionaires.
+          </p>
+          <div className="mt-8 flex flex-col sm:flex-row items-center justify-center gap-4">
+            <Link
+              href="/donate"
+              className="btn-primary text-lg px-8 py-3.5 w-full sm:w-auto"
+            >
+              Donate Now
+            </Link>
+            <span className="text-sm text-gray-500">100% funds the movement</span>
+          </div>
+        </div>
+      </section>
+
       {/* CTA Section */}
       <section className="py-20 bg-gray-900">
         <div className="max-w-3xl mx-auto px-6 text-center">
@@ -96,12 +118,20 @@ export default function HomePage() {
           <p className="mt-4 text-lg text-gray-400">
             Politicians won't save you. Organized people will. Join us.
           </p>
-          <Link
-            href="/join"
-            className="inline-flex items-center justify-center mt-8 px-8 py-3.5 bg-white text-gray-900 font-medium rounded-md hover:bg-gray-100 transition-colors"
-          >
-            Join the Labor Party
-          </Link>
+          <div className="mt-8 flex flex-col sm:flex-row items-center justify-center gap-4">
+            <Link
+              href="/join"
+              className="inline-flex items-center justify-center px-8 py-3.5 bg-white text-gray-900 font-medium rounded-md hover:bg-gray-100 transition-colors"
+            >
+              Join the Labor Party
+            </Link>
+            <Link
+              href="/donate"
+              className="inline-flex items-center justify-center px-8 py-3.5 border border-white/30 text-white font-medium rounded-md hover:bg-white/10 transition-colors"
+            >
+              Donate
+            </Link>
+          </div>
         </div>
       </section>
     </div>

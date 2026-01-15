@@ -102,7 +102,7 @@ function JoinForm() {
         password: form.password,
       })
 
-      router.push('/dashboard')
+      router.push('/welcome')
       router.refresh()
     } catch (err) {
       setError(err.message)
