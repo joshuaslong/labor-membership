@@ -55,14 +55,20 @@ export async function POST(request) {
         .eq('id', member.id)
     }
 
-    const baseUrl = process.env.APP_URL || process.env.NEXT_PUBLIC_APP_URL || 'https://members.votelabor.org'
+    // Hardcode the URL to avoid any env variable issues
+    const baseUrl = 'https://members.votelabor.org'
+
+    const successUrl = `${baseUrl}/dashboard/dues/success?session_id={CHECKOUT_SESSION_ID}`
+    const cancelUrl = `${baseUrl}/dashboard/dues`
+
+    console.log('Stripe checkout URLs:', { successUrl, cancelUrl })
 
     // Build checkout session config
     const sessionConfig = {
       customer: stripeCustomerId,
       customer_email: undefined, // Don't set if customer is set
-      success_url: `${baseUrl}/dashboard/dues/success?session_id={CHECKOUT_SESSION_ID}`,
-      cancel_url: `${baseUrl}/dashboard/dues`,
+      success_url: successUrl,
+      cancel_url: cancelUrl,
       metadata: {
         member_id: member.id,
         payment_type: isRecurring ? 'recurring' : 'one_time',
