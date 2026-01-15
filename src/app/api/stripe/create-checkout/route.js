@@ -55,7 +55,7 @@ export async function POST(request) {
         .eq('id', member.id)
     }
 
-    const baseUrl = process.env.NEXT_PUBLIC_APP_URL || 'http://localhost:3000'
+    const baseUrl = process.env.APP_URL || process.env.NEXT_PUBLIC_APP_URL || 'https://members.votelabor.org'
 
     // Build checkout session config
     const sessionConfig = {
