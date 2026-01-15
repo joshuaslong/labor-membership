@@ -193,13 +193,13 @@ export default function ChaptersPage() {
 
   return (
     <div className="max-w-4xl mx-auto px-4 py-8">
-      <div className="flex justify-between items-center mb-8">
+      <div className="flex flex-col sm:flex-row sm:justify-between sm:items-center gap-4 mb-8">
         <div>
-          <h1 className="text-3xl font-bold text-gray-900">Chapters</h1>
+          <h1 className="text-2xl sm:text-3xl font-bold text-gray-900">Chapters</h1>
           <p className="text-gray-600">Browse the chapter hierarchy</p>
         </div>
         {isAdmin && (
-          <Link href="/admin/chapters/new" className="btn-primary">
+          <Link href="/admin/chapters/new" className="btn-primary w-full sm:w-auto text-center">
             Create Chapter
           </Link>
         )}

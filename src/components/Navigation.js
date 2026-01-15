@@ -33,7 +33,7 @@ export default async function Navigation() {
   }
 
   return (
-    <nav className="sticky top-0 z-50 bg-labor-red border-b border-labor-red-600">
+    <nav className="sticky top-0 z-50 bg-labor-red-700 shadow-sm">
       <div className="max-w-6xl mx-auto px-4 sm:px-6 h-16 flex items-center justify-between">
         {/* Logo */}
         <Link href="/" className="flex items-center flex-shrink-0">

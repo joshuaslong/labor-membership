@@ -4,33 +4,34 @@ module.exports = {
   theme: {
     extend: {
       colors: {
-        // Primary brand color - Labor Red
+        // Primary brand color - refined crimson with warmth
         'labor-red': {
-          50: '#fef2f2',
-          100: '#fee2e2',
-          200: '#fecaca',
-          300: '#fca5a5',
-          400: '#f87171',
-          500: '#dc2626',
-          600: '#b91c1c',
-          700: '#991b1b',
-          800: '#7f1d1d',
-          900: '#450a0a',
-          DEFAULT: '#dc2626',
+          50: '#fef7f7',
+          100: '#fdeaea',
+          200: '#fbd5d5',
+          300: '#f7b3b3',
+          400: '#ef8585',
+          500: '#e25555',  // Main brand - warm crimson, less aggressive
+          600: '#cc3d3d',  // Hover state
+          700: '#ab3333',  // Dark variant for nav
+          800: '#8e2b2b',  // Darker shade
+          900: '#762626',  // Darkest
+          950: '#3f1111',
+          DEFAULT: '#e25555',
         },
-        // Neutral grays - warm-tinted for approachability
+        // Warm neutral grays for a friendlier feel
         gray: {
-          50: '#fafafa',
-          100: '#f5f5f5',
-          200: '#e5e5e5',
-          300: '#d4d4d4',
-          400: '#a3a3a3',
-          500: '#737373',
-          600: '#525252',
-          700: '#404040',
-          800: '#262626',
-          900: '#171717',
-          950: '#0a0a0a',
+          50: '#fafaf9',
+          100: '#f5f5f4',
+          200: '#e7e5e4',
+          300: '#d6d3d1',
+          400: '#a8a29e',
+          500: '#78716c',
+          600: '#57534e',
+          700: '#44403c',
+          800: '#292524',
+          900: '#1c1917',
+          950: '#0c0a09',
         },
       },
       fontFamily: {

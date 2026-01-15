@@ -1,6 +1,6 @@
 import { redirect } from 'next/navigation'
 import Link from 'next/link'
-import { createClient } from '@/lib/supabase/server'
+import { createClient, createAdminClient } from '@/lib/supabase/server'
 
 export const dynamic = 'force-dynamic'
 
@@ -25,6 +25,42 @@ export default async function DashboardPage() {
     .single()
 
   const isAdmin = !!adminUser
+
+  // Get payment data (use admin client since RLS might not allow cross-table access)
+  let subscription = null
+  let recentPayments = []
+  let totalContributed = 0
+
+  if (member) {
+    const adminSupabase = createAdminClient()
+
+    // Get active subscription
+    const { data: sub } = await adminSupabase
+      .from('member_subscriptions')
+      .select('*')
+      .eq('member_id', member.id)
+      .eq('status', 'active')
+      .single()
+    subscription = sub
+
+    // Get recent payments
+    const { data: payments } = await adminSupabase
+      .from('payments')
+      .select('*')
+      .eq('member_id', member.id)
+      .eq('status', 'succeeded')
+      .order('created_at', { ascending: false })
+      .limit(3)
+    recentPayments = payments || []
+
+    // Calculate total contributed
+    const { data: allPayments } = await adminSupabase
+      .from('payments')
+      .select('amount_cents')
+      .eq('member_id', member.id)
+      .eq('status', 'succeeded')
+    totalContributed = allPayments?.reduce((sum, p) => sum + p.amount_cents, 0) / 100 || 0
+  }
 
   if (!member) {
     if (isAdmin) {
@@ -51,15 +87,15 @@ export default async function DashboardPage() {
 
   return (
     <div className="max-w-4xl mx-auto px-4 py-8">
-      <div className="flex justify-between items-start mb-8">
+      <div className="flex flex-col sm:flex-row sm:justify-between sm:items-start gap-4 mb-8">
         <div>
-          <h1 className="text-3xl font-bold text-gray-900">
+          <h1 className="text-2xl sm:text-3xl font-bold text-gray-900">
             Welcome, {member.first_name}!
           </h1>
           <p className="text-gray-600">Member Dashboard</p>
         </div>
         {isAdmin && (
-          <Link href="/admin" className="btn-primary">
+          <Link href="/admin" className="btn-primary w-full sm:w-auto text-center">
             Admin Dashboard
           </Link>
         )}
@@ -105,6 +141,69 @@ export default async function DashboardPage() {
               <p><span className="text-gray-500">Location:</span> {member.city}, {member.state}</p>
             )}
           </div>
+        </div>
+      </div>
+
+      {/* Support Section */}
+      <div className="mt-6">
+        <div className="card">
+          <div className="flex flex-col sm:flex-row sm:justify-between sm:items-start gap-4 mb-4">
+            <div>
+              <h2 className="text-xl font-bold">Support the Party</h2>
+              <p className="text-sm text-gray-500">Your contributions power our movement</p>
+            </div>
+            <Link href="/dashboard/dues" className="btn-primary w-full sm:w-auto text-center">
+              {subscription ? 'Manage Dues' : 'Contribute'}
+            </Link>
+          </div>
+
+          {subscription && (
+            <div className="bg-labor-red-50 rounded-lg p-4 mb-4">
+              <div className="flex justify-between items-center">
+                <div>
+                  <span className="text-sm text-labor-red-600 font-medium">Active Monthly Dues</span>
+                  <p className="text-2xl font-bold text-labor-red">
+                    ${(subscription.amount_cents / 100).toFixed(2)}/month
+                  </p>
+                </div>
+                <span className="text-xs text-gray-500">
+                  Next: {new Date(subscription.current_period_end).toLocaleDateString()}
+                </span>
+              </div>
+            </div>
+          )}
+
+          <div className="flex justify-between items-center py-3 border-b border-gray-100">
+            <span className="text-gray-600">Total Contributed</span>
+            <span className="text-xl font-bold text-gray-900">${totalContributed.toFixed(2)}</span>
+          </div>
+
+          {recentPayments.length > 0 && (
+            <div className="mt-4">
+              <h3 className="text-sm font-medium text-gray-500 mb-2">Recent Contributions</h3>
+              <div className="space-y-2">
+                {recentPayments.map((payment) => (
+                  <div key={payment.id} className="flex justify-between text-sm">
+                    <span className="text-gray-600">
+                      {new Date(payment.created_at).toLocaleDateString()}
+                      <span className="text-gray-400 ml-2">
+                        {payment.payment_type === 'recurring' ? '(Monthly)' : '(One-time)'}
+                      </span>
+                    </span>
+                    <span className="font-medium text-gray-900">
+                      ${(payment.amount_cents / 100).toFixed(2)}
+                    </span>
+                  </div>
+                ))}
+              </div>
+            </div>
+          )}
+
+          {!subscription && recentPayments.length === 0 && (
+            <p className="text-sm text-gray-500 mt-2">
+              No contributions yet. Your support helps us fight for working people.
+            </p>
+          )}
         </div>
       </div>
     </div>

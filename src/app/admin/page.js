@@ -58,35 +58,35 @@ export default async function AdminPage() {
 
   return (
     <div className="max-w-6xl mx-auto px-4 py-8">
-      <h1 className="text-3xl font-bold text-gray-900 mb-8">Admin Dashboard</h1>
+      <h1 className="text-2xl sm:text-3xl font-bold text-gray-900 mb-6 sm:mb-8">Admin Dashboard</h1>
 
       {/* Stats grid */}
-      <div className="grid grid-cols-2 md:grid-cols-4 gap-6 mb-8">
-        <div className="card">
-          <div className="text-sm text-gray-500">Total Members</div>
-          <div className="text-3xl font-bold text-gray-900">{memberStats.total}</div>
-          <div className="text-sm text-gray-500">{memberStats.active || 0} active</div>
+      <div className="grid grid-cols-2 lg:grid-cols-4 gap-4 sm:gap-6 mb-6 sm:mb-8">
+        <div className="card p-4 sm:p-6">
+          <div className="text-xs sm:text-sm text-gray-500">Total Members</div>
+          <div className="text-2xl sm:text-3xl font-bold text-gray-900">{memberStats.total}</div>
+          <div className="text-xs sm:text-sm text-gray-500">{memberStats.active || 0} active</div>
         </div>
-        <div className="card">
-          <div className="text-sm text-gray-500">Pending</div>
-          <div className="text-3xl font-bold text-yellow-600">{memberStats.pending || 0}</div>
-          <div className="text-sm text-gray-500">Awaiting review</div>
+        <div className="card p-4 sm:p-6">
+          <div className="text-xs sm:text-sm text-gray-500">Pending</div>
+          <div className="text-2xl sm:text-3xl font-bold text-yellow-600">{memberStats.pending || 0}</div>
+          <div className="text-xs sm:text-sm text-gray-500">Awaiting review</div>
         </div>
-        <div className="card">
-          <div className="text-sm text-gray-500">Chapters</div>
-          <div className="text-3xl font-bold text-labor-red">{chapterStats.total}</div>
-          <div className="text-sm text-gray-500">
-            {chapterStats.state || 0} state, {chapterStats.county || 0} county, {chapterStats.city || 0} city
+        <div className="card p-4 sm:p-6">
+          <div className="text-xs sm:text-sm text-gray-500">Chapters</div>
+          <div className="text-2xl sm:text-3xl font-bold text-labor-red">{chapterStats.total}</div>
+          <div className="text-xs sm:text-sm text-gray-500 truncate">
+            {chapterStats.state || 0}s {chapterStats.county || 0}c {chapterStats.city || 0}ci
           </div>
         </div>
-        <div className="card">
-          <div className="text-sm text-gray-500">Total Revenue</div>
-          <div className="text-3xl font-bold text-green-600">${totalRevenue.toLocaleString()}</div>
-          <div className="text-sm text-gray-500">From dues payments</div>
+        <div className="card p-4 sm:p-6">
+          <div className="text-xs sm:text-sm text-gray-500">Total Revenue</div>
+          <div className="text-2xl sm:text-3xl font-bold text-green-600">${totalRevenue.toLocaleString()}</div>
+          <div className="text-xs sm:text-sm text-gray-500">From dues</div>
         </div>
       </div>
 
-      <div className="grid md:grid-cols-2 gap-8">
+      <div className="grid md:grid-cols-2 gap-6 sm:gap-8">
         {/* Recent Members */}
         <div className="card">
           <div className="flex justify-between items-center mb-4">

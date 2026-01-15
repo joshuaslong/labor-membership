@@ -133,7 +133,7 @@ function JoinForm() {
       )}
 
       <form onSubmit={handleSubmit} className="card space-y-4">
-        <div className="grid grid-cols-2 gap-4">
+        <div className="grid sm:grid-cols-2 gap-4">
           <div>
             <label className="block text-sm font-medium text-gray-700 mb-1">First Name *</label>
             <input
@@ -165,7 +165,7 @@ function JoinForm() {
           />
         </div>
 
-        <div className="grid grid-cols-2 gap-4">
+        <div className="grid sm:grid-cols-2 gap-4">
           <div>
             <label className="block text-sm font-medium text-gray-700 mb-1">Password *</label>
             <input
@@ -210,8 +210,8 @@ function JoinForm() {
           />
         </div>
 
-        <div className="grid grid-cols-3 gap-4">
-          <div>
+        <div className="grid grid-cols-2 sm:grid-cols-3 gap-4">
+          <div className="col-span-2 sm:col-span-1">
             <label className="block text-sm font-medium text-gray-700 mb-1">City</label>
             <input
               className="input-field"

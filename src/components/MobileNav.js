@@ -57,7 +57,7 @@ export default function MobileNav({ isLoggedIn, isAdmin, memberName }) {
 
       {/* Slide-out Menu */}
       <div
-        className={`fixed top-0 right-0 h-full w-72 max-w-[80vw] bg-labor-red z-50 transform transition-transform duration-300 ease-in-out ${
+        className={`fixed top-0 right-0 h-full w-72 max-w-[80vw] bg-labor-red-700 z-50 transform transition-transform duration-300 ease-in-out ${
           isOpen ? 'translate-x-0' : 'translate-x-full'
         }`}
       >
