@@ -33,7 +33,7 @@ export default function MemberDetailPage() {
   const [error, setError] = useState(null)
   const [success, setSuccess] = useState(null)
   const [selectedChapter, setSelectedChapter] = useState('')
-  const [selectedAdminRole, setSelectedAdminRole] = useState('chapter_admin')
+  const [selectedAdminRole, setSelectedAdminRole] = useState('state_admin')
   const [selectedAdminChapter, setSelectedAdminChapter] = useState('')
 
   useEffect(() => {
@@ -489,7 +489,6 @@ export default function MemberDetailPage() {
                   onChange={(e) => setSelectedAdminRole(e.target.value)}
                   className="input-field"
                 >
-                  <option value="chapter_admin">Chapter Admin</option>
                   <option value="city_admin">City Admin</option>
                   <option value="county_admin">County Admin</option>
                   <option value="state_admin">State Admin</option>
