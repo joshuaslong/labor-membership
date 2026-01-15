@@ -37,7 +37,7 @@ export default function DuesPage() {
             .select('*')
             .eq('member_id', member.id)
             .eq('status', 'active')
-            .single()
+            .maybeSingle()
 
           setSubscription(sub)
         }
