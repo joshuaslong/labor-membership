@@ -128,8 +128,9 @@ export default function ContributePage() {
 
       setSubscription({
         ...subscription,
-        status: 'cancelling',
+        status: 'active', // Keep status as active in local state (matches DB)
         cancelled_at: new Date().toISOString(),
+        isCancelling: true,
       })
       setSuccess('Your subscription has been cancelled. You\'ll still have access until the end of your billing period.')
     } catch (err) {
@@ -160,6 +161,7 @@ export default function ContributePage() {
         ...subscription,
         status: 'active',
         cancelled_at: null,
+        isCancelling: false,
       })
       setSuccess('Your subscription has been restored!')
     } catch (err) {
@@ -200,6 +202,7 @@ export default function ContributePage() {
         amount_cents: Math.round(amount * 100),
         status: 'active',
         cancelled_at: null,
+        isCancelling: false,
       })
       setShowUpdateModal(false)
       setNewAmount('')
