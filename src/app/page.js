@@ -6,13 +6,7 @@ export default function HomePage() {
       {/* Ticker Banner - Urgent, movement feel */}
       <div className="bg-gray-900 text-white py-2.5 px-4 border-b border-white/10">
         <div className="max-w-5xl mx-auto flex items-center justify-center gap-3 text-sm">
-          <span className="inline-flex items-center gap-2">
-            <span className="relative flex h-2 w-2">
-              <span className="animate-ping absolute inline-flex h-full w-full rounded-full bg-green-400 opacity-75"></span>
-              <span className="relative inline-flex rounded-full h-2 w-2 bg-green-500"></span>
-            </span>
-            <span className="text-gray-400">We take $0 from corporations</span>
-          </span>
+          <span className="text-gray-400">We take $0 from corporations</span>
           <span className="text-gray-600">•</span>
           <Link
             href="/contribute"
@@ -27,7 +21,7 @@ export default function HomePage() {
       <section className="relative overflow-hidden bg-gradient-to-b from-gray-50 to-white">
         <div className="absolute inset-0 bg-[radial-gradient(circle_at_top_right,_rgba(226,85,85,0.06)_0%,_transparent_50%)]" />
 
-        <div className="relative max-w-5xl mx-auto px-6 py-24 text-center">
+        <div className="relative max-w-5xl mx-auto px-6 py-16 text-center">
           <div className="inline-flex items-center gap-2 px-3 py-1 rounded-full bg-labor-red-50 text-labor-red-600 text-sm font-medium mb-8">
             <span className="w-2 h-2 rounded-full bg-labor-red animate-pulse" />
             Zero corporate donors. We answer to you.
@@ -59,9 +53,9 @@ export default function HomePage() {
       </section>
 
       {/* Why We're Different Section */}
-      <section className="py-20 bg-white border-t border-gray-100">
+      <section className="py-12 bg-white border-t border-gray-100">
         <div className="max-w-5xl mx-auto px-6">
-          <div className="text-center mb-16">
+          <div className="text-center mb-10">
             <h2 className="text-2xl font-semibold text-gray-900 tracking-tight">
               Why we can say what others won't
             </h2>
