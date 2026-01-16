@@ -29,6 +29,7 @@ function JoinForm() {
     chapter_id: preselectedChapter || '',
     wants_to_volunteer: false,
     volunteer_interests: '',
+    volunteer_skills: '',
     mailing_list_opted_in: true,
   })
 
@@ -278,15 +279,28 @@ function JoinForm() {
             </div>
           </label>
           {form.wants_to_volunteer && (
-            <div className="mt-3 ml-7">
-              <label className="block text-sm font-medium text-gray-700 mb-1">What interests you?</label>
-              <textarea
-                className="input-field"
-                rows={2}
-                placeholder="e.g., door knocking, phone banking, event planning..."
-                value={form.volunteer_interests}
-                onChange={e => updateField('volunteer_interests', e.target.value)}
-              />
+            <div className="mt-3 ml-7 space-y-3">
+              <div>
+                <label className="block text-sm font-medium text-gray-700 mb-1">What kind of work interests you?</label>
+                <textarea
+                  className="input-field"
+                  rows={2}
+                  placeholder="e.g., door knocking, phone banking, event planning, social media..."
+                  value={form.volunteer_interests}
+                  onChange={e => updateField('volunteer_interests', e.target.value)}
+                />
+              </div>
+              <div>
+                <label className="block text-sm font-medium text-gray-700 mb-1">What skills or experience do you have?</label>
+                <textarea
+                  className="input-field"
+                  rows={2}
+                  placeholder="e.g., graphic design, web development, legal, healthcare, union organizing, teaching..."
+                  value={form.volunteer_skills}
+                  onChange={e => updateField('volunteer_skills', e.target.value)}
+                />
+                <p className="text-xs text-gray-500 mt-1">Help us match you with the right opportunities</p>
+              </div>
             </div>
           )}
         </div>

@@ -62,6 +62,7 @@ export async function POST(request) {
       status: 'active',
       wants_to_volunteer: data.wants_to_volunteer || false,
       volunteer_interests: data.volunteer_interests || null,
+      volunteer_skills: data.volunteer_skills || null,
       mailing_list_opted_in: data.mailing_list_opted_in !== false,
     })
     .select()
