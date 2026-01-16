@@ -8,6 +8,7 @@ export const dynamic = 'force-dynamic'
 // Helper to sync Stripe data for a member
 async function syncStripeData(member, adminSupabase) {
   let stripeCustomerId = member.stripe_customer_id
+  console.log('Syncing Stripe data for member:', member.id, 'email:', member.email, 'existing customer:', stripeCustomerId)
 
   // Try to find customer by email if no ID stored
   if (!stripeCustomerId) {
@@ -16,8 +17,10 @@ async function syncStripeData(member, adminSupabase) {
         email: member.email,
         limit: 1,
       })
+      console.log('Stripe customer search result:', customers.data.length, 'customers found')
       if (customers.data.length > 0) {
         stripeCustomerId = customers.data[0].id
+        console.log('Found Stripe customer:', stripeCustomerId)
         await adminSupabase
           .from('members')
           .update({ stripe_customer_id: stripeCustomerId })
@@ -28,7 +31,10 @@ async function syncStripeData(member, adminSupabase) {
     }
   }
 
-  if (!stripeCustomerId) return
+  if (!stripeCustomerId) {
+    console.log('No Stripe customer found, skipping sync')
+    return
+  }
 
   try {
     // Sync subscriptions
@@ -36,8 +42,10 @@ async function syncStripeData(member, adminSupabase) {
       customer: stripeCustomerId,
       limit: 10,
     })
+    console.log('Found', subscriptions.data.length, 'subscriptions in Stripe')
 
     for (const sub of subscriptions.data) {
+      console.log('Syncing subscription:', sub.id, 'status:', sub.status, 'amount:', sub.items.data[0]?.price?.unit_amount)
       await adminSupabase.from('member_subscriptions').upsert({
         member_id: member.id,
         stripe_subscription_id: sub.id,
