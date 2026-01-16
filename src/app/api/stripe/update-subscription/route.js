@@ -56,7 +56,8 @@ export async function POST(request) {
       )
     }
 
-    if (subscription.status !== 'active' && subscription.status !== 'cancelling') {
+    // Can update if status is 'active' (even if cancelling - cancelled_at is set)
+    if (subscription.status !== 'active') {
       return NextResponse.json(
         { error: 'Subscription cannot be updated' },
         { status: 400 }

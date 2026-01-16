@@ -36,7 +36,7 @@ export async function POST(request) {
     // Verify the subscription belongs to this member
     const { data: subscription } = await supabase
       .from('member_subscriptions')
-      .select('id, stripe_subscription_id, status')
+      .select('id, stripe_subscription_id, status, cancelled_at')
       .eq('stripe_subscription_id', subscriptionId)
       .eq('member_id', member.id)
       .single()
@@ -48,8 +48,9 @@ export async function POST(request) {
       )
     }
 
-    // Can only restore if it's in "cancelling" state (cancel_at_period_end was set)
-    if (subscription.status !== 'cancelling') {
+    // Can only restore if it's in "cancelling" state (status is active but cancelled_at is set)
+    const isCancelling = subscription.status === 'active' && subscription.cancelled_at
+    if (!isCancelling) {
       return NextResponse.json(
         { error: 'Subscription cannot be restored' },
         { status: 400 }
