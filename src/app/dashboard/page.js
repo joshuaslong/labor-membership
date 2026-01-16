@@ -180,7 +180,12 @@ export default async function DashboardPage() {
 
           {recentPayments.length > 0 && (
             <div className="mt-4">
-              <h3 className="text-sm font-medium text-gray-500 mb-2">Recent Contributions</h3>
+              <div className="flex justify-between items-center mb-2">
+                <h3 className="text-sm font-medium text-gray-500">Recent Contributions</h3>
+                <Link href="/dashboard/contributions" className="text-xs text-labor-red hover:underline">
+                  View All
+                </Link>
+              </div>
               <div className="space-y-2">
                 {recentPayments.map((payment) => (
                   <div key={payment.id} className="flex justify-between text-sm">
@@ -204,6 +209,12 @@ export default async function DashboardPage() {
               No contributions yet. Your support helps us fight for working people.
             </p>
           )}
+
+          <div className="mt-4 pt-4 border-t border-gray-100">
+            <Link href="/dashboard/contributions" className="text-sm text-gray-500 hover:text-labor-red">
+              View full contribution history →
+            </Link>
+          </div>
         </div>
       </div>
     </div>
