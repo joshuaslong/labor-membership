@@ -77,11 +77,16 @@ export async function POST(request) {
       })
       .eq('stripe_subscription_id', subscriptionId)
 
+    // Safely convert period end
+    const periodEnd = updatedSub.current_period_end
+      ? new Date(updatedSub.current_period_end * 1000).toISOString()
+      : null
+
     return NextResponse.json({
       success: true,
       subscription: {
         status: 'active',
-        current_period_end: new Date(updatedSub.current_period_end * 1000).toISOString(),
+        current_period_end: periodEnd,
       }
     })
   } catch (error) {
