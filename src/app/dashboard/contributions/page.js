@@ -35,15 +35,20 @@ async function syncStripeData(member, adminSupabase) {
     })
 
     for (const sub of subscriptions.data) {
+      // Safely convert timestamps
+      const periodStart = sub.current_period_start ? new Date(sub.current_period_start * 1000).toISOString() : null
+      const periodEnd = sub.current_period_end ? new Date(sub.current_period_end * 1000).toISOString() : null
+      const cancelledAt = sub.canceled_at ? new Date(sub.canceled_at * 1000).toISOString() : null
+
       await adminSupabase.from('member_subscriptions').upsert({
         member_id: member.id,
         stripe_subscription_id: sub.id,
         stripe_price_id: sub.items.data[0]?.price?.id,
         amount_cents: sub.items.data[0]?.price?.unit_amount || 0,
         status: sub.status === 'canceled' ? 'cancelled' : sub.status,
-        current_period_start: new Date(sub.current_period_start * 1000).toISOString(),
-        current_period_end: new Date(sub.current_period_end * 1000).toISOString(),
-        cancelled_at: sub.canceled_at ? new Date(sub.canceled_at * 1000).toISOString() : null,
+        current_period_start: periodStart,
+        current_period_end: periodEnd,
+        cancelled_at: cancelledAt,
       }, {
         onConflict: 'stripe_subscription_id',
       })
