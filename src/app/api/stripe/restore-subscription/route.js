@@ -50,6 +50,8 @@ export async function POST(request) {
 
     // Can only restore if it's in "cancelling" state (status is active but cancelled_at is set)
     const isCancelling = subscription.status === 'active' && subscription.cancelled_at
+    console.log('Restore check - status:', subscription.status, 'cancelled_at:', subscription.cancelled_at, 'isCancelling:', isCancelling)
+
     if (!isCancelling) {
       return NextResponse.json(
         { error: 'Subscription cannot be restored' },
@@ -57,10 +59,14 @@ export async function POST(request) {
       )
     }
 
+    console.log('Attempting to restore Stripe subscription:', subscriptionId)
+
     // Restore the subscription in Stripe
     const updatedSub = await stripe.subscriptions.update(subscriptionId, {
       cancel_at_period_end: false,
     })
+
+    console.log('Stripe subscription restored, updating DB')
 
     // Update our record
     await supabase
