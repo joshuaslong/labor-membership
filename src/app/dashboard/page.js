@@ -69,7 +69,9 @@ async function syncStripeData(member, adminSupabase) {
         ourStatus = 'cancelling'
       }
 
-      await adminSupabase.from('member_subscriptions').upsert({
+      console.log('Setting subscription status to:', ourStatus, 'period_end:', periodEnd)
+
+      const { error: upsertError } = await adminSupabase.from('member_subscriptions').upsert({
         member_id: member.id,
         stripe_subscription_id: sub.id,
         stripe_price_id: sub.items.data[0]?.price?.id,
@@ -81,6 +83,10 @@ async function syncStripeData(member, adminSupabase) {
       }, {
         onConflict: 'stripe_subscription_id',
       })
+
+      if (upsertError) {
+        console.error('Upsert error:', upsertError)
+      }
     }
 
     // Sync payments
@@ -158,6 +164,7 @@ export default async function DashboardPage() {
       .limit(1)
       .maybeSingle()
     subscription = sub
+    console.log('Fetched subscription from DB:', sub?.status, sub?.current_period_end)
 
     // Get recent payments
     const { data: payments } = await adminSupabase
