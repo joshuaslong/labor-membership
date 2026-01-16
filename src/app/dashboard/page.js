@@ -62,14 +62,17 @@ async function syncStripeData(member, adminSupabase) {
       const cancelledAt = sub.canceled_at ? new Date(sub.canceled_at * 1000).toISOString() : null
 
       // Determine our status based on Stripe's status and cancel_at_period_end
+      // Note: DB constraint may not allow 'cancelling', so we use 'active' but track cancel_at_period_end
       let ourStatus = sub.status
       if (sub.status === 'canceled') {
         ourStatus = 'cancelled'
-      } else if (sub.status === 'active' && sub.cancel_at_period_end) {
-        ourStatus = 'cancelling'
       }
+      // Keep as 'active' for DB but we'll detect cancelling via cancel_at_period_end field
 
-      console.log('Setting subscription status to:', ourStatus, 'period_end:', periodEnd)
+      // Store cancel_at_period_end timestamp if set
+      const cancelAtPeriodEnd = sub.cancel_at_period_end ? periodEnd : null
+
+      console.log('Setting subscription status to:', ourStatus, 'period_end:', periodEnd, 'cancel_at_period_end:', sub.cancel_at_period_end)
 
       const { error: upsertError } = await adminSupabase.from('member_subscriptions').upsert({
         member_id: member.id,
@@ -79,7 +82,7 @@ async function syncStripeData(member, adminSupabase) {
         status: ourStatus,
         current_period_start: periodStart,
         current_period_end: periodEnd,
-        cancelled_at: cancelledAt,
+        cancelled_at: sub.cancel_at_period_end ? (cancelledAt || new Date().toISOString()) : cancelledAt,
       }, {
         onConflict: 'stripe_subscription_id',
       })
@@ -154,17 +157,22 @@ export default async function DashboardPage() {
     // Auto-sync from Stripe (this ensures data is always up to date)
     await syncStripeData(member, adminSupabase)
 
-    // Get active or cancelling subscription
+    // Get active subscription (we detect cancelling via cancelled_at field)
     const { data: sub } = await adminSupabase
       .from('member_subscriptions')
       .select('*')
       .eq('member_id', member.id)
-      .in('status', ['active', 'cancelling'])
+      .eq('status', 'active')
       .order('created_at', { ascending: false })
       .limit(1)
       .maybeSingle()
+
+    // Add a computed 'isCancelling' flag if cancelled_at is set but status is still active
+    if (sub) {
+      sub.isCancelling = !!sub.cancelled_at
+    }
     subscription = sub
-    console.log('Fetched subscription from DB:', sub?.status, sub?.current_period_end)
+    console.log('Fetched subscription from DB:', sub?.status, sub?.current_period_end, 'isCancelling:', sub?.isCancelling)
 
     // Get recent payments
     const { data: payments } = await adminSupabase
@@ -281,10 +289,10 @@ export default async function DashboardPage() {
           </div>
 
           {subscription && (
-            <div className={`rounded-lg p-4 mb-4 ${subscription.status === 'cancelling' ? 'bg-orange-50 border border-orange-200' : 'bg-labor-red-50'}`}>
+            <div className={`rounded-lg p-4 mb-4 ${subscription.isCancelling ? 'bg-orange-50 border border-orange-200' : 'bg-labor-red-50'}`}>
               <div className="flex flex-col sm:flex-row sm:justify-between sm:items-center gap-3">
                 <div>
-                  {subscription.status === 'cancelling' ? (
+                  {subscription.isCancelling ? (
                     <>
                       <span className="text-sm text-orange-600 font-medium">Subscription Ending</span>
                       <p className="text-2xl font-bold text-gray-900">
@@ -313,7 +321,7 @@ export default async function DashboardPage() {
                     </>
                   )}
                 </div>
-                {subscription.status === 'cancelling' && (
+                {subscription.isCancelling && (
                   <Link
                     href="/dashboard/contribute"
                     className="inline-flex items-center justify-center px-4 py-2 bg-orange-600 text-white text-sm font-medium rounded-lg hover:bg-orange-700 transition-colors"

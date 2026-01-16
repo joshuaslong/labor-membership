@@ -46,16 +46,20 @@ export default function ContributePage() {
           .single()
 
         if (member) {
-          // Get active OR cancelling subscription (cancelling means it's still active until period end)
+          // Get active subscription (we detect cancelling via cancelled_at field)
           const { data: sub } = await supabase
             .from('member_subscriptions')
             .select('*')
             .eq('member_id', member.id)
-            .in('status', ['active', 'cancelling'])
+            .eq('status', 'active')
             .order('created_at', { ascending: false })
             .limit(1)
             .maybeSingle()
 
+          // Add isCancelling flag if cancelled_at is set
+          if (sub) {
+            sub.isCancelling = !!sub.cancelled_at
+          }
           setSubscription(sub)
         }
       }
@@ -220,8 +224,8 @@ export default function ContributePage() {
 
       {/* Current Subscription */}
       {!loadingSubscription && subscription && (
-        <div className={`card mb-6 border-l-4 ${subscription.status === 'cancelling' ? 'border-orange-500' : 'border-labor-red'}`}>
-          {subscription.status === 'cancelling' ? (
+        <div className={`card mb-6 border-l-4 ${subscription.isCancelling ? 'border-orange-500' : 'border-labor-red'}`}>
+          {subscription.isCancelling ? (
             // Cancelling state - show end date and restore option
             <>
               <div className="flex items-center gap-2 mb-3">
