@@ -40,7 +40,7 @@ export default async function DashboardPage() {
       .select('*')
       .eq('member_id', member.id)
       .eq('status', 'active')
-      .single()
+      .maybeSingle()
     subscription = sub
 
     // Get recent payments
