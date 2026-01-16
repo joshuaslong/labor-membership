@@ -3,6 +3,24 @@ import Link from 'next/link'
 export default function HomePage() {
   return (
     <div className="min-h-[calc(100vh-64px)]">
+      {/* Donation Banner - Top */}
+      <div className="bg-labor-red text-white py-3 px-4">
+        <div className="max-w-5xl mx-auto flex flex-col sm:flex-row items-center justify-center gap-2 sm:gap-4 text-center">
+          <span className="text-sm sm:text-base font-medium">
+            We take $0 from corporations. Help us stay that way.
+          </span>
+          <Link
+            href="/contribute"
+            className="inline-flex items-center gap-2 px-4 py-1.5 bg-white text-labor-red font-semibold rounded-full text-sm hover:bg-gray-100 transition-colors"
+          >
+            Donate Now
+            <svg className="w-4 h-4" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+              <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M13 7l5 5m0 0l-5 5m5-5H6" />
+            </svg>
+          </Link>
+        </div>
+      </div>
+
       {/* Hero Section */}
       <section className="relative overflow-hidden bg-gradient-to-b from-gray-50 to-white">
         <div className="absolute inset-0 bg-[radial-gradient(circle_at_top_right,_rgba(226,85,85,0.06)_0%,_transparent_50%)]" />
@@ -27,10 +45,14 @@ export default function HomePage() {
             <Link href="/join" className="btn-primary text-lg px-8 py-3.5 w-full sm:w-auto">
               Join the Fight
             </Link>
-            <Link href="/chapters" className="btn-secondary text-lg px-8 py-3.5 w-full sm:w-auto">
-              Find Your Chapter
+            <Link href="/contribute" className="btn-secondary text-lg px-8 py-3.5 w-full sm:w-auto">
+              Contribute
             </Link>
           </div>
+
+          <p className="mt-4 text-sm text-gray-500">
+            <Link href="/chapters" className="hover:text-labor-red underline">Find your local chapter</Link>
+          </p>
         </div>
       </section>
 
@@ -82,6 +104,28 @@ export default function HomePage() {
               <p className="mt-2 text-gray-500 text-sm leading-relaxed">
                 Real change happens locally. Join your city or county chapter and connect with neighbors who are done waiting for the two parties to save them.
               </p>
+            </div>
+          </div>
+
+          {/* Inline Donation CTA */}
+          <div className="mt-16 p-6 sm:p-8 bg-gradient-to-r from-labor-red to-red-700 rounded-2xl text-white text-center">
+            <h3 className="text-xl sm:text-2xl font-bold">Every dollar fights back</h3>
+            <p className="mt-2 text-white/90 max-w-lg mx-auto">
+              $10 prints flyers. $25 trains an organizer. $100 funds a local campaign. What can you spare?
+            </p>
+            <div className="mt-6 flex flex-wrap items-center justify-center gap-3">
+              <Link href="/contribute?amount=10" className="px-6 py-2.5 bg-white text-labor-red font-semibold rounded-lg hover:bg-gray-100 transition-colors">
+                $10
+              </Link>
+              <Link href="/contribute?amount=25" className="px-6 py-2.5 bg-white text-labor-red font-semibold rounded-lg hover:bg-gray-100 transition-colors">
+                $25
+              </Link>
+              <Link href="/contribute?amount=50" className="px-6 py-2.5 bg-white text-labor-red font-semibold rounded-lg hover:bg-gray-100 transition-colors">
+                $50
+              </Link>
+              <Link href="/contribute" className="px-6 py-2.5 bg-white/20 text-white font-semibold rounded-lg hover:bg-white/30 transition-colors border border-white/30">
+                Other Amount
+              </Link>
             </div>
           </div>
         </div>

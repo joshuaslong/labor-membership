@@ -1,7 +1,7 @@
 'use client'
 
 import { useState, useEffect } from 'react'
-import { useRouter } from 'next/navigation'
+import { useRouter, useSearchParams } from 'next/navigation'
 import Link from 'next/link'
 import { createClient } from '@/lib/supabase/client'
 
@@ -18,9 +18,16 @@ function formatDate(dateString, options = {}) {
 
 export default function ContributePage() {
   const router = useRouter()
-  const [selectedAmount, setSelectedAmount] = useState(25)
-  const [customAmount, setCustomAmount] = useState('')
-  const [isCustom, setIsCustom] = useState(false)
+  const searchParams = useSearchParams()
+
+  // Get amount from URL if provided
+  const urlAmount = searchParams.get('amount')
+  const initialAmount = urlAmount ? parseInt(urlAmount, 10) : 25
+  const isInitialCustom = urlAmount && !PRESET_AMOUNTS.includes(initialAmount)
+
+  const [selectedAmount, setSelectedAmount] = useState(isInitialCustom ? 25 : initialAmount)
+  const [customAmount, setCustomAmount] = useState(isInitialCustom ? urlAmount : '')
+  const [isCustom, setIsCustom] = useState(isInitialCustom)
   const [isRecurring, setIsRecurring] = useState(false)
   const [loading, setLoading] = useState(false)
   const [error, setError] = useState(null)
