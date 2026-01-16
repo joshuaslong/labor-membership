@@ -87,7 +87,7 @@ export default function HomePage() {
         </div>
       </section>
 
-      {/* Donate Section */}
+      {/* Contribute Section */}
       <section className="py-20 bg-labor-red-50 border-t border-labor-red-100">
         <div className="max-w-3xl mx-auto px-6 text-center">
           <h2 className="text-3xl font-bold text-gray-900 tracking-tight">
@@ -99,10 +99,10 @@ export default function HomePage() {
           </p>
           <div className="mt-8 flex flex-col sm:flex-row items-center justify-center gap-4">
             <Link
-              href="/donate"
+              href="/contribute"
               className="btn-primary text-lg px-8 py-3.5 w-full sm:w-auto"
             >
-              Donate Now
+              Contribute Now
             </Link>
             <span className="text-sm text-gray-500">100% funds the movement</span>
           </div>
@@ -126,10 +126,10 @@ export default function HomePage() {
               Join the Labor Party
             </Link>
             <Link
-              href="/donate"
+              href="/contribute"
               className="inline-flex items-center justify-center px-8 py-3.5 border border-white/30 text-white font-medium rounded-md hover:bg-white/10 transition-colors"
             >
-              Donate
+              Contribute
             </Link>
           </div>
         </div>

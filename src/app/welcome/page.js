@@ -40,7 +40,7 @@ export default async function WelcomePage() {
           Together, we're building something different.
         </p>
 
-        {/* Donation Card */}
+        {/* Contribution Card */}
         <div className="card bg-labor-red-50 border border-labor-red-100 mb-6">
           <h2 className="text-xl font-bold text-gray-900 mb-2">
             Power the movement
@@ -53,7 +53,7 @@ export default async function WelcomePage() {
             Contribute Now
           </Link>
           <p className="text-xs text-gray-500 mt-2">
-            Monthly dues or one-time donations welcome
+            Monthly dues or one-time contributions welcome
           </p>
         </div>
 

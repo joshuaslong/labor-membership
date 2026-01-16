@@ -178,7 +178,7 @@ export default async function ContributionsPage() {
           <p className="text-3xl font-bold text-labor-red">${totalContributed.toFixed(2)}</p>
         </div>
         <div className="card text-center">
-          <p className="text-sm text-gray-500 mb-1">One-time Donations</p>
+          <p className="text-sm text-gray-500 mb-1">One-time Contributions</p>
           <p className="text-2xl font-bold text-gray-900">${oneTimeTotal.toFixed(2)}</p>
         </div>
         <div className="card text-center">

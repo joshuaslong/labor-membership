@@ -6,7 +6,7 @@ export const dynamic = 'force-dynamic'
 
 const PRESET_AMOUNTS = [5, 10, 25, 50, 100, 250]
 
-export default async function DonatePage() {
+export default async function ContributePage() {
   const supabase = await createClient()
   const { data: { user } } = await supabase.auth.getUser()
 
@@ -25,13 +25,13 @@ export default async function DonatePage() {
           </h1>
           <p className="mt-4 text-lg text-gray-600">
             We refuse corporate money. That means we answer to you—not billionaires,
-            not lobbyists, not special interests. Your donation powers a movement
+            not lobbyists, not special interests. Your contribution powers a movement
             that actually fights for working families.
           </p>
         </div>
       </section>
 
-      {/* Donation Options */}
+      {/* Contribution Options */}
       <section className="py-12">
         <div className="max-w-xl mx-auto px-6">
           <div className="card">
@@ -55,21 +55,21 @@ export default async function DonatePage() {
             {/* CTA */}
             <div className="bg-labor-red-50 rounded-lg p-6 text-center">
               <p className="text-gray-700 mb-4">
-                <strong>Ready to contribute?</strong> Create a free account to donate
+                <strong>Ready to contribute?</strong> Create a free account to contribute
                 and track your support for the movement.
               </p>
               <div className="flex flex-col sm:flex-row gap-3 justify-center">
                 <Link href="/join" className="btn-primary py-3 px-6">
-                  Join & Donate
+                  Join & Contribute
                 </Link>
                 <Link href="/login" className="btn-secondary py-3 px-6">
-                  Log In to Donate
+                  Log In to Contribute
                 </Link>
               </div>
             </div>
           </div>
 
-          {/* Why Donate */}
+          {/* Why Contribute */}
           <div className="mt-8 space-y-6">
             <div className="flex gap-4">
               <div className="flex-shrink-0 w-10 h-10 rounded-full bg-labor-red-50 flex items-center justify-center">
@@ -80,7 +80,7 @@ export default async function DonatePage() {
               <div>
                 <h3 className="font-semibold text-gray-900">100% Member-Funded</h3>
                 <p className="text-sm text-gray-600">
-                  We take $0 from corporations. Your donation goes directly to organizing
+                  We take $0 from corporations. Your contribution goes directly to organizing
                   working people, not paying back special interests.
                 </p>
               </div>
