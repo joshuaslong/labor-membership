@@ -13,7 +13,7 @@ const LEVEL_COLORS = {
 }
 const LEVEL_LABELS = {
   national: 'National',
-  state: 'State/Territory',
+  state: 'State',
   county: 'County',
   city: 'City',
 }
