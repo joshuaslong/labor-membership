@@ -69,7 +69,7 @@ export async function POST(request) {
 
     // Create a new price for the new amount
     const product = await stripe.products.create({
-      name: `Labor Party Monthly Dues - $${newAmount}`,
+      name: `Labor Party Monthly Contribution - $${newAmount}`,
       metadata: { member_id: member.id },
     })
 

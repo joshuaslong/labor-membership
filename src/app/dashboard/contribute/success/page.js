@@ -1,6 +1,6 @@
 import Link from 'next/link'
 
-export default function DuesSuccessPage() {
+export default function ContributeSuccessPage() {
   return (
     <div className="max-w-xl mx-auto px-4 py-12">
       <div className="card text-center">

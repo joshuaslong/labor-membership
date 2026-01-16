@@ -5,6 +5,15 @@ import { stripe } from '@/lib/stripe'
 
 export const dynamic = 'force-dynamic'
 
+// Helper to safely format dates - returns null if invalid
+function formatDate(dateString) {
+  if (!dateString) return null
+  const date = new Date(dateString)
+  // Check for invalid date or Unix epoch (1970)
+  if (isNaN(date.getTime()) || date.getFullYear() < 2000) return null
+  return date.toLocaleDateString()
+}
+
 // Helper to sync Stripe data for a member
 async function syncStripeData(member, adminSupabase) {
   let stripeCustomerId = member.stripe_customer_id
@@ -259,8 +268,8 @@ export default async function DashboardPage() {
               <h2 className="text-xl font-bold">Support the Party</h2>
               <p className="text-sm text-gray-500">Your contributions power our movement</p>
             </div>
-            <Link href="/dashboard/dues" className="btn-primary w-full sm:w-auto text-center">
-              {subscription ? 'Manage Dues' : 'Contribute'}
+            <Link href="/dashboard/contribute" className="btn-primary w-full sm:w-auto text-center">
+              {subscription ? 'Manage Contribution' : 'Contribute'}
             </Link>
           </div>
 
@@ -274,22 +283,24 @@ export default async function DashboardPage() {
                       <p className="text-2xl font-bold text-gray-900">
                         ${(subscription.amount_cents / 100).toFixed(2)}/month
                       </p>
-                      <p className="text-xs text-orange-600 mt-1">
-                        Ends {new Date(subscription.current_period_end).toLocaleDateString()}
-                      </p>
+                      {formatDate(subscription.current_period_end) && (
+                        <p className="text-xs text-orange-600 mt-1">
+                          Ends {formatDate(subscription.current_period_end)}
+                        </p>
+                      )}
                     </>
                   ) : (
                     <>
-                      <span className="text-sm text-labor-red-600 font-medium">Active Monthly Dues</span>
+                      <span className="text-sm text-labor-red-600 font-medium">Active Monthly Contribution</span>
                       <p className="text-2xl font-bold text-labor-red">
                         ${(subscription.amount_cents / 100).toFixed(2)}/month
                       </p>
                     </>
                   )}
                 </div>
-                {subscription.status !== 'cancelling' && (
+                {subscription.status !== 'cancelling' && formatDate(subscription.current_period_end) && (
                   <span className="text-xs text-gray-500">
-                    Next: {new Date(subscription.current_period_end).toLocaleDateString()}
+                    Next: {formatDate(subscription.current_period_end)}
                   </span>
                 )}
               </div>

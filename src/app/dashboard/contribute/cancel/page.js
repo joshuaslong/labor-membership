@@ -1,6 +1,6 @@
 import Link from 'next/link'
 
-export default function DuesCancelPage() {
+export default function ContributeCancelPage() {
   return (
     <div className="max-w-xl mx-auto px-4 py-12">
       <div className="card text-center">
@@ -16,7 +16,7 @@ export default function DuesCancelPage() {
         </p>
 
         <div className="flex flex-col sm:flex-row gap-3 justify-center">
-          <Link href="/dashboard/dues" className="btn-primary">
+          <Link href="/dashboard/contribute" className="btn-primary">
             Try Again
           </Link>
           <Link href="/dashboard" className="btn-secondary">

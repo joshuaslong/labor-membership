@@ -166,7 +166,7 @@ export default async function ContributionsPage() {
           <h1 className="text-2xl sm:text-3xl font-bold text-gray-900">Contribution History</h1>
           <p className="text-gray-600">Your complete payment and subscription history</p>
         </div>
-        <Link href="/dashboard/dues" className="btn-primary w-full sm:w-auto text-center">
+        <Link href="/dashboard/contribute" className="btn-primary w-full sm:w-auto text-center">
           Make a Contribution
         </Link>
       </div>
@@ -182,7 +182,7 @@ export default async function ContributionsPage() {
           <p className="text-2xl font-bold text-gray-900">${oneTimeTotal.toFixed(2)}</p>
         </div>
         <div className="card text-center">
-          <p className="text-sm text-gray-500 mb-1">Monthly Dues</p>
+          <p className="text-sm text-gray-500 mb-1">Monthly Contributions</p>
           <p className="text-2xl font-bold text-gray-900">${recurringTotal.toFixed(2)}</p>
         </div>
       </div>
@@ -203,7 +203,7 @@ export default async function ContributionsPage() {
                 Started: {new Date(activeSubscription.created_at).toLocaleDateString()}
               </p>
             </div>
-            <Link href="/dashboard/dues" className="text-sm text-gray-500 hover:text-red-600">
+            <Link href="/dashboard/contribute" className="text-sm text-gray-500 hover:text-red-600">
               Manage Subscription
             </Link>
           </div>
@@ -295,7 +295,7 @@ export default async function ContributionsPage() {
         ) : (
           <div className="text-center py-8">
             <p className="text-gray-500 mb-4">No payment history yet.</p>
-            <Link href="/dashboard/dues" className="btn-primary">
+            <Link href="/dashboard/contribute" className="btn-primary">
               Make Your First Contribution
             </Link>
           </div>

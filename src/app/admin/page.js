@@ -82,7 +82,7 @@ export default async function AdminPage() {
         <div className="card p-4 sm:p-6">
           <div className="text-xs sm:text-sm text-gray-500">Total Revenue</div>
           <div className="text-2xl sm:text-3xl font-bold text-green-600">${totalRevenue.toLocaleString()}</div>
-          <div className="text-xs sm:text-sm text-gray-500">From dues</div>
+          <div className="text-xs sm:text-sm text-gray-500">From contributions</div>
         </div>
       </div>
 

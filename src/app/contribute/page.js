@@ -10,9 +10,9 @@ export default async function ContributePage() {
   const supabase = await createClient()
   const { data: { user } } = await supabase.auth.getUser()
 
-  // If logged in, redirect to the member dues page
+  // If logged in, redirect to the member contribution page
   if (user) {
-    redirect('/dashboard/dues')
+    redirect('/dashboard/contribute')
   }
 
   return (
@@ -110,7 +110,7 @@ export default async function ContributePage() {
               <div>
                 <h3 className="font-semibold text-gray-900">Monthly or One-Time</h3>
                 <p className="text-sm text-gray-600">
-                  Set up recurring dues to provide steady support, or make a
+                  Set up a recurring contribution to provide steady support, or make a
                   one-time contribution. Every bit helps.
                 </p>
               </div>

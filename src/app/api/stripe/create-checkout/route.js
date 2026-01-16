@@ -58,8 +58,8 @@ export async function POST(request) {
     // Hardcode the URL to avoid any env variable issues
     const baseUrl = 'https://members.votelabor.org'
 
-    const successUrl = `${baseUrl}/dashboard/dues/success?session_id={CHECKOUT_SESSION_ID}`
-    const cancelUrl = `${baseUrl}/dashboard/dues`
+    const successUrl = `${baseUrl}/dashboard/contribute/success?session_id={CHECKOUT_SESSION_ID}`
+    const cancelUrl = `${baseUrl}/dashboard/contribute`
 
     console.log('Stripe checkout URLs:', { successUrl, cancelUrl })
 
@@ -78,7 +78,7 @@ export async function POST(request) {
     if (isRecurring) {
       // Create a product and price for the subscription
       const product = await stripe.products.create({
-        name: `Labor Party Monthly Dues - $${amount}`,
+        name: `Labor Party Monthly Contribution - $${amount}`,
         metadata: { member_id: member.id },
       })
 
@@ -104,7 +104,7 @@ export async function POST(request) {
           price_data: {
             currency: 'usd',
             product_data: {
-              name: 'Labor Party Dues',
+              name: 'Labor Party Contribution',
               description: 'One-time contribution',
             },
             unit_amount: amountCents,

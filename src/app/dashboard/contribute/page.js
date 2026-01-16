@@ -7,7 +7,16 @@ import { createClient } from '@/lib/supabase/client'
 
 const PRESET_AMOUNTS = [5, 10, 25, 50, 100, 250]
 
-export default function DuesPage() {
+// Helper to safely format dates - returns null if invalid
+function formatDate(dateString, options = {}) {
+  if (!dateString) return null
+  const date = new Date(dateString)
+  // Check for invalid date or Unix epoch (1970)
+  if (isNaN(date.getTime()) || date.getFullYear() < 2000) return null
+  return date.toLocaleDateString('en-US', options)
+}
+
+export default function ContributePage() {
   const router = useRouter()
   const [selectedAmount, setSelectedAmount] = useState(25)
   const [customAmount, setCustomAmount] = useState('')
@@ -221,18 +230,15 @@ export default function DuesPage() {
                 </span>
               </div>
               <div className="mb-4">
-                <p className="text-gray-600 text-sm">Your monthly dues of</p>
+                <p className="text-gray-600 text-sm">Your monthly contribution of</p>
                 <p className="text-2xl font-bold text-gray-900">
                   ${(subscription.amount_cents / 100).toFixed(2)}/month
                 </p>
-                <p className="text-sm text-orange-600 font-medium mt-2">
-                  Ends on {new Date(subscription.current_period_end).toLocaleDateString('en-US', {
-                    weekday: 'long',
-                    year: 'numeric',
-                    month: 'long',
-                    day: 'numeric'
-                  })}
-                </p>
+                {formatDate(subscription.current_period_end, { weekday: 'long', year: 'numeric', month: 'long', day: 'numeric' }) && (
+                  <p className="text-sm text-orange-600 font-medium mt-2">
+                    Ends on {formatDate(subscription.current_period_end, { weekday: 'long', year: 'numeric', month: 'long', day: 'numeric' })}
+                  </p>
+                )}
                 <p className="text-xs text-gray-500 mt-1">
                   You won't be charged again after this date.
                 </p>
@@ -265,13 +271,15 @@ export default function DuesPage() {
                 </span>
               </div>
               <div className="mb-4">
-                <p className="text-gray-600 text-sm">Monthly dues</p>
+                <p className="text-gray-600 text-sm">Monthly contribution</p>
                 <p className="text-2xl font-bold text-labor-red">
                   ${(subscription.amount_cents / 100).toFixed(2)}/month
                 </p>
-                <p className="text-sm text-gray-500 mt-1">
-                  Next payment: {new Date(subscription.current_period_end).toLocaleDateString()}
-                </p>
+                {formatDate(subscription.current_period_end) && (
+                  <p className="text-sm text-gray-500 mt-1">
+                    Next payment: {formatDate(subscription.current_period_end)}
+                  </p>
+                )}
               </div>
               <div className="flex flex-col sm:flex-row gap-3">
                 <button
@@ -466,7 +474,7 @@ export default function DuesPage() {
         <div className="bg-gray-50 rounded-lg p-4 mb-6">
           <div className="flex justify-between items-center">
             <span className="text-gray-600">
-              {isRecurring ? 'Monthly dues' : 'One-time contribution'}
+              {isRecurring ? 'Monthly contribution' : 'One-time contribution'}
             </span>
             <span className="text-xl font-bold text-gray-900">
               ${getAmount().toFixed(2)}

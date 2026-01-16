@@ -49,11 +49,11 @@ export default async function WelcomePage() {
             We don't take corporate money—ever. Your contribution, big or small,
             keeps us independent and fighting for working people.
           </p>
-          <Link href="/dashboard/dues" className="btn-primary w-full py-3">
+          <Link href="/dashboard/contribute" className="btn-primary w-full py-3">
             Contribute Now
           </Link>
           <p className="text-xs text-gray-500 mt-2">
-            Monthly dues or one-time contributions welcome
+            Monthly or one-time contributions welcome
           </p>
         </div>
 
