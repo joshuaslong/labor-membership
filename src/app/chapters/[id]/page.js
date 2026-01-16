@@ -10,6 +10,12 @@ const LEVEL_COLORS = {
   county: 'bg-green-600',
   city: 'bg-purple-600',
 }
+const LEVEL_LABELS = {
+  national: 'National',
+  state: 'State/Territory',
+  county: 'County',
+  city: 'City',
+}
 
 export default async function ChapterDetailPage({ params }) {
   const { id } = await params
@@ -115,7 +121,7 @@ export default async function ChapterDetailPage({ params }) {
         <div>
           <div className="flex items-center gap-3 mb-2">
             <span className={`px-3 py-1 rounded text-white text-sm ${LEVEL_COLORS[chapter.level]}`}>
-              {chapter.level}
+              {LEVEL_LABELS[chapter.level] || chapter.level}
             </span>
             <h1 className="text-3xl font-bold text-gray-900">{chapter.name}</h1>
           </div>
@@ -169,7 +175,7 @@ export default async function ChapterDetailPage({ params }) {
                 className="flex items-center gap-3 p-3 bg-gray-50 rounded-lg hover:bg-gray-100"
               >
                 <span className={`px-2 py-1 rounded text-white text-xs ${LEVEL_COLORS[child.level]}`}>
-                  {child.level}
+                  {LEVEL_LABELS[child.level] || child.level}
                 </span>
                 <span className="font-medium">{child.name}</span>
               </Link>

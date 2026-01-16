@@ -11,6 +11,12 @@ const LEVEL_COLORS = {
   county: 'bg-green-600 text-white',
   city: 'bg-purple-600 text-white',
 }
+const LEVEL_LABELS = {
+  national: 'National',
+  state: 'State/Territory',
+  county: 'County',
+  city: 'City',
+}
 
 export default function ChaptersPage() {
   const [chapters, setChapters] = useState([])
@@ -115,7 +121,7 @@ export default function ChaptersPage() {
       style={{ marginLeft: indent * 24 }}
     >
       <span className={'px-2 py-1 rounded text-xs font-medium ' + LEVEL_COLORS[chapter.level]}>
-        {chapter.level}
+        {LEVEL_LABELS[chapter.level] || chapter.level}
       </span>
       <span className="font-medium text-gray-900 flex-1">{chapter.name}</span>
       {isAdmin && (
@@ -226,7 +232,7 @@ export default function ChaptersPage() {
                     : 'bg-gray-100 text-gray-700 hover:bg-gray-200'
                 )}
               >
-                {level === 'all' ? 'All' : level.charAt(0).toUpperCase() + level.slice(1)}
+                {level === 'all' ? 'All' : (LEVEL_LABELS[level] || level)}
                 <span className="ml-1 opacity-75">({counts[level] || 0})</span>
               </button>
             ))}
@@ -241,7 +247,7 @@ export default function ChaptersPage() {
             onClick={expandAll}
             className="text-sm text-gray-600 hover:text-gray-900"
           >
-            Expand all states
+            Expand all
           </button>
           <span className="text-gray-300">|</span>
           <button
