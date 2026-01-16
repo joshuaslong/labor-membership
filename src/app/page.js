@@ -117,9 +117,9 @@ export default function HomePage() {
             <p className="text-labor-red font-semibold text-sm tracking-wide uppercase mb-3">
               People-Powered
             </p>
-            <h2 className="text-3xl md:text-4xl font-bold text-white tracking-tight">
-              They have billionaires.<br />
-              <span className="text-gray-400">We have each other.</span>
+            <h2 className="text-3xl md:text-4xl font-bold tracking-tight">
+              <span className="text-gray-400">They have billionaires.</span><br />
+              <span className="text-white">We have each other.</span>
             </h2>
           </div>
 
