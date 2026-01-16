@@ -36,7 +36,7 @@ export async function POST(request) {
     // Verify the subscription belongs to this member
     const { data: subscription } = await supabase
       .from('member_subscriptions')
-      .select('id, stripe_subscription_id')
+      .select('id, stripe_subscription_id, status')
       .eq('stripe_subscription_id', subscriptionId)
       .eq('member_id', member.id)
       .single()
@@ -48,27 +48,37 @@ export async function POST(request) {
       )
     }
 
-    // Cancel the subscription in Stripe (at period end to give them remaining time)
+    // Can only restore if it's in "cancelling" state (cancel_at_period_end was set)
+    if (subscription.status !== 'cancelling') {
+      return NextResponse.json(
+        { error: 'Subscription cannot be restored' },
+        { status: 400 }
+      )
+    }
+
+    // Restore the subscription in Stripe
     const updatedSub = await stripe.subscriptions.update(subscriptionId, {
-      cancel_at_period_end: true,
+      cancel_at_period_end: false,
     })
 
-    // Update our record - mark as "cancelling" not "cancelled" since it's still active until period end
+    // Update our record
     await supabase
       .from('member_subscriptions')
       .update({
-        status: 'cancelling',
-        cancelled_at: new Date().toISOString(),
-        current_period_end: new Date(updatedSub.current_period_end * 1000).toISOString(),
+        status: 'active',
+        cancelled_at: null,
       })
       .eq('stripe_subscription_id', subscriptionId)
 
     return NextResponse.json({
       success: true,
-      endsAt: new Date(updatedSub.current_period_end * 1000).toISOString()
+      subscription: {
+        status: 'active',
+        current_period_end: new Date(updatedSub.current_period_end * 1000).toISOString(),
+      }
     })
   } catch (error) {
-    console.error('Cancel subscription error:', error)
+    console.error('Restore subscription error:', error)
     return NextResponse.json(
       { error: 'Unable to process request' },
       { status: 500 }

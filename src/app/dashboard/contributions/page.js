@@ -40,12 +40,20 @@ async function syncStripeData(member, adminSupabase) {
       const periodEnd = sub.current_period_end ? new Date(sub.current_period_end * 1000).toISOString() : null
       const cancelledAt = sub.canceled_at ? new Date(sub.canceled_at * 1000).toISOString() : null
 
+      // Determine our status based on Stripe's status and cancel_at_period_end
+      let ourStatus = sub.status
+      if (sub.status === 'canceled') {
+        ourStatus = 'cancelled'
+      } else if (sub.status === 'active' && sub.cancel_at_period_end) {
+        ourStatus = 'cancelling'
+      }
+
       await adminSupabase.from('member_subscriptions').upsert({
         member_id: member.id,
         stripe_subscription_id: sub.id,
         stripe_price_id: sub.items.data[0]?.price?.id,
         amount_cents: sub.items.data[0]?.price?.unit_amount || 0,
-        status: sub.status === 'canceled' ? 'cancelled' : sub.status,
+        status: ourStatus,
         current_period_start: periodStart,
         current_period_end: periodEnd,
         cancelled_at: cancelledAt,

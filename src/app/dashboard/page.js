@@ -52,12 +52,20 @@ async function syncStripeData(member, adminSupabase) {
       const periodEnd = sub.current_period_end ? new Date(sub.current_period_end * 1000).toISOString() : null
       const cancelledAt = sub.canceled_at ? new Date(sub.canceled_at * 1000).toISOString() : null
 
+      // Determine our status based on Stripe's status and cancel_at_period_end
+      let ourStatus = sub.status
+      if (sub.status === 'canceled') {
+        ourStatus = 'cancelled'
+      } else if (sub.status === 'active' && sub.cancel_at_period_end) {
+        ourStatus = 'cancelling'
+      }
+
       await adminSupabase.from('member_subscriptions').upsert({
         member_id: member.id,
         stripe_subscription_id: sub.id,
         stripe_price_id: sub.items.data[0]?.price?.id,
         amount_cents: sub.items.data[0]?.price?.unit_amount || 0,
-        status: sub.status === 'canceled' ? 'cancelled' : sub.status,
+        status: ourStatus,
         current_period_start: periodStart,
         current_period_end: periodEnd,
         cancelled_at: cancelledAt,
@@ -131,12 +139,14 @@ export default async function DashboardPage() {
     // Auto-sync from Stripe (this ensures data is always up to date)
     await syncStripeData(member, adminSupabase)
 
-    // Get active subscription
+    // Get active or cancelling subscription
     const { data: sub } = await adminSupabase
       .from('member_subscriptions')
       .select('*')
       .eq('member_id', member.id)
-      .eq('status', 'active')
+      .in('status', ['active', 'cancelling'])
+      .order('created_at', { ascending: false })
+      .limit(1)
       .maybeSingle()
     subscription = sub
 
@@ -255,17 +265,33 @@ export default async function DashboardPage() {
           </div>
 
           {subscription && (
-            <div className="bg-labor-red-50 rounded-lg p-4 mb-4">
+            <div className={`rounded-lg p-4 mb-4 ${subscription.status === 'cancelling' ? 'bg-orange-50' : 'bg-labor-red-50'}`}>
               <div className="flex justify-between items-center">
                 <div>
-                  <span className="text-sm text-labor-red-600 font-medium">Active Monthly Dues</span>
-                  <p className="text-2xl font-bold text-labor-red">
-                    ${(subscription.amount_cents / 100).toFixed(2)}/month
-                  </p>
+                  {subscription.status === 'cancelling' ? (
+                    <>
+                      <span className="text-sm text-orange-600 font-medium">Subscription Ending</span>
+                      <p className="text-2xl font-bold text-gray-900">
+                        ${(subscription.amount_cents / 100).toFixed(2)}/month
+                      </p>
+                      <p className="text-xs text-orange-600 mt-1">
+                        Ends {new Date(subscription.current_period_end).toLocaleDateString()}
+                      </p>
+                    </>
+                  ) : (
+                    <>
+                      <span className="text-sm text-labor-red-600 font-medium">Active Monthly Dues</span>
+                      <p className="text-2xl font-bold text-labor-red">
+                        ${(subscription.amount_cents / 100).toFixed(2)}/month
+                      </p>
+                    </>
+                  )}
                 </div>
-                <span className="text-xs text-gray-500">
-                  Next: {new Date(subscription.current_period_end).toLocaleDateString()}
-                </span>
+                {subscription.status !== 'cancelling' && (
+                  <span className="text-xs text-gray-500">
+                    Next: {new Date(subscription.current_period_end).toLocaleDateString()}
+                  </span>
+                )}
               </div>
             </div>
           )}

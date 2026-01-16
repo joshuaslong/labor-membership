@@ -15,9 +15,14 @@ export default function DuesPage() {
   const [isRecurring, setIsRecurring] = useState(false)
   const [loading, setLoading] = useState(false)
   const [error, setError] = useState(null)
+  const [success, setSuccess] = useState(null)
   const [subscription, setSubscription] = useState(null)
   const [loadingSubscription, setLoadingSubscription] = useState(true)
   const [cancellingSubscription, setCancellingSubscription] = useState(false)
+  const [restoringSubscription, setRestoringSubscription] = useState(false)
+  const [showUpdateModal, setShowUpdateModal] = useState(false)
+  const [updatingSubscription, setUpdatingSubscription] = useState(false)
+  const [newAmount, setNewAmount] = useState('')
 
   useEffect(() => {
     const loadSubscription = async () => {
@@ -32,11 +37,14 @@ export default function DuesPage() {
           .single()
 
         if (member) {
+          // Get active OR cancelling subscription (cancelling means it's still active until period end)
           const { data: sub } = await supabase
             .from('member_subscriptions')
             .select('*')
             .eq('member_id', member.id)
-            .eq('status', 'active')
+            .in('status', ['active', 'cancelling'])
+            .order('created_at', { ascending: false })
+            .limit(1)
             .maybeSingle()
 
           setSubscription(sub)
@@ -89,11 +97,10 @@ export default function DuesPage() {
   }
 
   const handleCancelSubscription = async () => {
-    if (!subscription || !confirm('Are you sure you want to cancel your recurring dues?')) {
-      return
-    }
+    if (!subscription) return
 
     setCancellingSubscription(true)
+    setError(null)
     try {
       const res = await fetch('/api/stripe/cancel-subscription', {
         method: 'POST',
@@ -101,17 +108,93 @@ export default function DuesPage() {
         body: JSON.stringify({ subscriptionId: subscription.stripe_subscription_id }),
       })
 
+      const data = await res.json()
       if (!res.ok) {
-        const data = await res.json()
         throw new Error(data.error || 'Failed to cancel subscription')
       }
 
-      setSubscription(null)
-      router.refresh()
+      setSubscription({
+        ...subscription,
+        status: 'cancelling',
+        cancelled_at: new Date().toISOString(),
+      })
+      setSuccess('Your subscription has been cancelled. You\'ll still have access until the end of your billing period.')
     } catch (err) {
       setError(err.message)
     } finally {
       setCancellingSubscription(false)
+    }
+  }
+
+  const handleRestoreSubscription = async () => {
+    if (!subscription) return
+
+    setRestoringSubscription(true)
+    setError(null)
+    try {
+      const res = await fetch('/api/stripe/restore-subscription', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ subscriptionId: subscription.stripe_subscription_id }),
+      })
+
+      const data = await res.json()
+      if (!res.ok) {
+        throw new Error(data.error || 'Failed to restore subscription')
+      }
+
+      setSubscription({
+        ...subscription,
+        status: 'active',
+        cancelled_at: null,
+      })
+      setSuccess('Your subscription has been restored!')
+    } catch (err) {
+      setError(err.message)
+    } finally {
+      setRestoringSubscription(false)
+    }
+  }
+
+  const handleUpdateSubscription = async () => {
+    if (!subscription || !newAmount) return
+
+    const amount = parseFloat(newAmount)
+    if (amount < 1 || amount > 5000) {
+      setError('Amount must be between $1 and $5,000')
+      return
+    }
+
+    setUpdatingSubscription(true)
+    setError(null)
+    try {
+      const res = await fetch('/api/stripe/update-subscription', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          subscriptionId: subscription.stripe_subscription_id,
+          newAmount: amount,
+        }),
+      })
+
+      const data = await res.json()
+      if (!res.ok) {
+        throw new Error(data.error || 'Failed to update subscription')
+      }
+
+      setSubscription({
+        ...subscription,
+        amount_cents: Math.round(amount * 100),
+        status: 'active',
+        cancelled_at: null,
+      })
+      setShowUpdateModal(false)
+      setNewAmount('')
+      setSuccess('Your subscription has been updated!')
+    } catch (err) {
+      setError(err.message)
+    } finally {
+      setUpdatingSubscription(false)
     }
   }
 
@@ -128,30 +211,174 @@ export default function DuesPage() {
 
       {/* Current Subscription */}
       {!loadingSubscription && subscription && (
-        <div className="card mb-6 border-l-4 border-labor-red">
-          <div className="flex justify-between items-start">
-            <div>
-              <h3 className="font-semibold text-gray-900">Active Monthly Dues</h3>
-              <p className="text-2xl font-bold text-labor-red">
-                ${(subscription.amount_cents / 100).toFixed(2)}/month
-              </p>
-              <p className="text-sm text-gray-500">
-                Next payment: {new Date(subscription.current_period_end).toLocaleDateString()}
-              </p>
+        <div className={`card mb-6 border-l-4 ${subscription.status === 'cancelling' ? 'border-orange-500' : 'border-labor-red'}`}>
+          {subscription.status === 'cancelling' ? (
+            // Cancelling state - show end date and restore option
+            <>
+              <div className="flex items-center gap-2 mb-3">
+                <span className="px-2 py-1 bg-orange-100 text-orange-800 text-xs font-medium rounded-full">
+                  Cancelling
+                </span>
+              </div>
+              <div className="mb-4">
+                <p className="text-gray-600 text-sm">Your monthly dues of</p>
+                <p className="text-2xl font-bold text-gray-900">
+                  ${(subscription.amount_cents / 100).toFixed(2)}/month
+                </p>
+                <p className="text-sm text-orange-600 font-medium mt-2">
+                  Ends on {new Date(subscription.current_period_end).toLocaleDateString('en-US', {
+                    weekday: 'long',
+                    year: 'numeric',
+                    month: 'long',
+                    day: 'numeric'
+                  })}
+                </p>
+                <p className="text-xs text-gray-500 mt-1">
+                  You won't be charged again after this date.
+                </p>
+              </div>
+              <div className="flex flex-col sm:flex-row gap-3">
+                <button
+                  onClick={handleRestoreSubscription}
+                  disabled={restoringSubscription}
+                  className="btn-primary flex-1"
+                >
+                  {restoringSubscription ? 'Restoring...' : 'Keep My Subscription'}
+                </button>
+                <button
+                  onClick={() => {
+                    setNewAmount((subscription.amount_cents / 100).toString())
+                    setShowUpdateModal(true)
+                  }}
+                  className="px-4 py-2 border border-gray-300 rounded-lg text-gray-700 hover:bg-gray-50 text-sm font-medium"
+                >
+                  Change Amount
+                </button>
+              </div>
+            </>
+          ) : (
+            // Active state
+            <>
+              <div className="flex items-center gap-2 mb-3">
+                <span className="px-2 py-1 bg-green-100 text-green-800 text-xs font-medium rounded-full">
+                  Active
+                </span>
+              </div>
+              <div className="mb-4">
+                <p className="text-gray-600 text-sm">Monthly dues</p>
+                <p className="text-2xl font-bold text-labor-red">
+                  ${(subscription.amount_cents / 100).toFixed(2)}/month
+                </p>
+                <p className="text-sm text-gray-500 mt-1">
+                  Next payment: {new Date(subscription.current_period_end).toLocaleDateString()}
+                </p>
+              </div>
+              <div className="flex flex-col sm:flex-row gap-3">
+                <button
+                  onClick={() => {
+                    setNewAmount((subscription.amount_cents / 100).toString())
+                    setShowUpdateModal(true)
+                  }}
+                  className="px-4 py-2 border border-gray-300 rounded-lg text-gray-700 hover:bg-gray-50 text-sm font-medium flex-1"
+                >
+                  Change Amount
+                </button>
+                <button
+                  onClick={handleCancelSubscription}
+                  disabled={cancellingSubscription}
+                  className="px-4 py-2 border border-red-200 rounded-lg text-red-600 hover:bg-red-50 text-sm font-medium"
+                >
+                  {cancellingSubscription ? 'Cancelling...' : 'Cancel Subscription'}
+                </button>
+              </div>
+            </>
+          )}
+        </div>
+      )}
+
+      {/* Update Amount Modal */}
+      {showUpdateModal && (
+        <div className="fixed inset-0 bg-black/50 flex items-center justify-center p-4 z-50">
+          <div className="bg-white rounded-xl max-w-md w-full p-6">
+            <h3 className="text-lg font-bold text-gray-900 mb-4">Update Monthly Amount</h3>
+            <p className="text-sm text-gray-600 mb-4">
+              Change your monthly contribution. The new amount will be prorated for the current billing period.
+            </p>
+            <div className="mb-4">
+              <label className="block text-sm font-medium text-gray-700 mb-2">New monthly amount</label>
+              <div className="relative">
+                <span className="absolute left-3 top-1/2 -translate-y-1/2 text-gray-500">$</span>
+                <input
+                  type="number"
+                  min="1"
+                  max="5000"
+                  step="1"
+                  value={newAmount}
+                  onChange={(e) => setNewAmount(e.target.value)}
+                  className="input-field pl-7"
+                  placeholder="Enter amount"
+                />
+              </div>
+              <p className="text-xs text-gray-500 mt-1">Minimum $1, maximum $5,000</p>
             </div>
-            <button
-              onClick={handleCancelSubscription}
-              disabled={cancellingSubscription}
-              className="text-sm text-gray-500 hover:text-red-600 transition-colors"
-            >
-              {cancellingSubscription ? 'Cancelling...' : 'Cancel'}
-            </button>
+            <div className="grid grid-cols-3 gap-2 mb-6">
+              {[10, 25, 50].map((amt) => (
+                <button
+                  key={amt}
+                  type="button"
+                  onClick={() => setNewAmount(amt.toString())}
+                  className={`py-2 px-3 rounded-lg border text-sm font-medium transition-colors ${
+                    newAmount === amt.toString()
+                      ? 'border-labor-red bg-labor-red-50 text-labor-red'
+                      : 'border-gray-200 text-gray-700 hover:border-gray-300'
+                  }`}
+                >
+                  ${amt}
+                </button>
+              ))}
+            </div>
+            <div className="flex gap-3">
+              <button
+                onClick={() => {
+                  setShowUpdateModal(false)
+                  setNewAmount('')
+                }}
+                className="flex-1 px-4 py-2 border border-gray-300 rounded-lg text-gray-700 hover:bg-gray-50 font-medium"
+              >
+                Cancel
+              </button>
+              <button
+                onClick={handleUpdateSubscription}
+                disabled={updatingSubscription || !newAmount}
+                className="flex-1 btn-primary"
+              >
+                {updatingSubscription ? 'Updating...' : 'Update Amount'}
+              </button>
+            </div>
           </div>
         </div>
       )}
 
+      {success && (
+        <div className="bg-green-50 text-green-700 p-4 rounded-lg mb-6 flex justify-between items-center">
+          <span>{success}</span>
+          <button onClick={() => setSuccess(null)} className="text-green-600 hover:text-green-800">
+            <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+              <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M6 18L18 6M6 6l12 12" />
+            </svg>
+          </button>
+        </div>
+      )}
+
       {error && (
-        <div className="bg-red-50 text-red-700 p-4 rounded-lg mb-6">{error}</div>
+        <div className="bg-red-50 text-red-700 p-4 rounded-lg mb-6 flex justify-between items-center">
+          <span>{error}</span>
+          <button onClick={() => setError(null)} className="text-red-600 hover:text-red-800">
+            <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+              <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M6 18L18 6M6 6l12 12" />
+            </svg>
+          </button>
+        </div>
       )}
 
       <form onSubmit={handleSubmit} className="card">
