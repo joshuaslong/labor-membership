@@ -1,6 +1,6 @@
 'use client'
 
-import { useState, useEffect } from 'react'
+import { useState, useEffect, Suspense } from 'react'
 import { useRouter, useSearchParams } from 'next/navigation'
 import Link from 'next/link'
 import { createClient } from '@/lib/supabase/client'
@@ -16,7 +16,27 @@ function formatDate(dateString, options = {}) {
   return date.toLocaleDateString('en-US', options)
 }
 
+// Wrapper component to handle Suspense for useSearchParams
 export default function ContributePage() {
+  return (
+    <Suspense fallback={
+      <div className="max-w-xl mx-auto px-4 py-8">
+        <div className="animate-pulse">
+          <div className="h-4 bg-gray-200 rounded w-24 mb-4"></div>
+          <div className="h-8 bg-gray-200 rounded w-64 mb-2"></div>
+          <div className="h-4 bg-gray-200 rounded w-full mb-8"></div>
+          <div className="card">
+            <div className="h-32 bg-gray-100 rounded"></div>
+          </div>
+        </div>
+      </div>
+    }>
+      <ContributePageContent />
+    </Suspense>
+  )
+}
+
+function ContributePageContent() {
   const router = useRouter()
   const searchParams = useSearchParams()
 
