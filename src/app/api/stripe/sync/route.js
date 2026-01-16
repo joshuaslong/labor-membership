@@ -119,9 +119,9 @@ export async function POST(request) {
       stripeCustomerId,
     })
   } catch (error) {
-    console.error('Stripe sync error:', error)
+    console.error('Stripe sync error:', error.message, error)
     return NextResponse.json(
-      { error: 'Failed to sync Stripe data' },
+      { error: `Failed to sync: ${error.message}` },
       { status: 500 }
     )
   }

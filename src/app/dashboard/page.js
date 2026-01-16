@@ -1,8 +1,88 @@
 import { redirect } from 'next/navigation'
 import Link from 'next/link'
 import { createClient, createAdminClient } from '@/lib/supabase/server'
+import { stripe } from '@/lib/stripe'
 
 export const dynamic = 'force-dynamic'
+
+// Helper to sync Stripe data for a member
+async function syncStripeData(member, adminSupabase) {
+  let stripeCustomerId = member.stripe_customer_id
+
+  // Try to find customer by email if no ID stored
+  if (!stripeCustomerId) {
+    try {
+      const customers = await stripe.customers.list({
+        email: member.email,
+        limit: 1,
+      })
+      if (customers.data.length > 0) {
+        stripeCustomerId = customers.data[0].id
+        await adminSupabase
+          .from('members')
+          .update({ stripe_customer_id: stripeCustomerId })
+          .eq('id', member.id)
+      }
+    } catch (e) {
+      console.error('Error finding Stripe customer:', e)
+    }
+  }
+
+  if (!stripeCustomerId) return
+
+  try {
+    // Sync subscriptions
+    const subscriptions = await stripe.subscriptions.list({
+      customer: stripeCustomerId,
+      limit: 10,
+    })
+
+    for (const sub of subscriptions.data) {
+      await adminSupabase.from('member_subscriptions').upsert({
+        member_id: member.id,
+        stripe_subscription_id: sub.id,
+        stripe_price_id: sub.items.data[0]?.price?.id,
+        amount_cents: sub.items.data[0]?.price?.unit_amount || 0,
+        status: sub.status === 'canceled' ? 'cancelled' : sub.status,
+        current_period_start: new Date(sub.current_period_start * 1000).toISOString(),
+        current_period_end: new Date(sub.current_period_end * 1000).toISOString(),
+        cancelled_at: sub.canceled_at ? new Date(sub.canceled_at * 1000).toISOString() : null,
+      }, {
+        onConflict: 'stripe_subscription_id',
+      })
+    }
+
+    // Sync payments
+    const charges = await stripe.charges.list({
+      customer: stripeCustomerId,
+      limit: 50,
+    })
+
+    for (const charge of charges.data) {
+      if (charge.status !== 'succeeded') continue
+
+      const { data: existing } = await adminSupabase
+        .from('payments')
+        .select('id')
+        .eq('member_id', member.id)
+        .eq('stripe_payment_intent_id', charge.payment_intent)
+        .maybeSingle()
+
+      if (!existing && charge.payment_intent) {
+        await adminSupabase.from('payments').insert({
+          member_id: member.id,
+          stripe_payment_intent_id: charge.payment_intent,
+          amount_cents: charge.amount,
+          status: 'succeeded',
+          payment_type: charge.invoice ? 'recurring' : 'one_time',
+          created_at: new Date(charge.created * 1000).toISOString(),
+        })
+      }
+    }
+  } catch (e) {
+    console.error('Error syncing Stripe data:', e)
+  }
+}
 
 export default async function DashboardPage() {
   const supabase = await createClient()
@@ -33,6 +113,9 @@ export default async function DashboardPage() {
 
   if (member) {
     const adminSupabase = createAdminClient()
+
+    // Auto-sync from Stripe (this ensures data is always up to date)
+    await syncStripeData(member, adminSupabase)
 
     // Get active subscription
     const { data: sub } = await adminSupabase
