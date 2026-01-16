@@ -54,7 +54,7 @@ async function syncStripeData(member, adminSupabase) {
     console.log('Found', subscriptions.data.length, 'subscriptions in Stripe')
 
     for (const sub of subscriptions.data) {
-      console.log('Syncing subscription:', sub.id, 'status:', sub.status, 'amount:', sub.items.data[0]?.price?.unit_amount)
+      console.log('Syncing subscription:', sub.id, 'status:', sub.status, 'cancel_at_period_end:', sub.cancel_at_period_end, 'amount:', sub.items.data[0]?.price?.unit_amount)
 
       // Safely convert timestamps
       const periodStart = sub.current_period_start ? new Date(sub.current_period_start * 1000).toISOString() : null
@@ -274,8 +274,8 @@ export default async function DashboardPage() {
           </div>
 
           {subscription && (
-            <div className={`rounded-lg p-4 mb-4 ${subscription.status === 'cancelling' ? 'bg-orange-50' : 'bg-labor-red-50'}`}>
-              <div className="flex justify-between items-center">
+            <div className={`rounded-lg p-4 mb-4 ${subscription.status === 'cancelling' ? 'bg-orange-50 border border-orange-200' : 'bg-labor-red-50'}`}>
+              <div className="flex flex-col sm:flex-row sm:justify-between sm:items-center gap-3">
                 <div>
                   {subscription.status === 'cancelling' ? (
                     <>
@@ -284,10 +284,13 @@ export default async function DashboardPage() {
                         ${(subscription.amount_cents / 100).toFixed(2)}/month
                       </p>
                       {formatDate(subscription.current_period_end) && (
-                        <p className="text-xs text-orange-600 mt-1">
-                          Ends {formatDate(subscription.current_period_end)}
+                        <p className="text-sm text-orange-600 mt-1">
+                          Ends on {formatDate(subscription.current_period_end)}
                         </p>
                       )}
+                      <p className="text-xs text-gray-500 mt-1">
+                        You won't be charged after this date
+                      </p>
                     </>
                   ) : (
                     <>
@@ -295,13 +298,21 @@ export default async function DashboardPage() {
                       <p className="text-2xl font-bold text-labor-red">
                         ${(subscription.amount_cents / 100).toFixed(2)}/month
                       </p>
+                      {formatDate(subscription.current_period_end) && (
+                        <p className="text-xs text-gray-500 mt-1">
+                          Next payment: {formatDate(subscription.current_period_end)}
+                        </p>
+                      )}
                     </>
                   )}
                 </div>
-                {subscription.status !== 'cancelling' && formatDate(subscription.current_period_end) && (
-                  <span className="text-xs text-gray-500">
-                    Next: {formatDate(subscription.current_period_end)}
-                  </span>
+                {subscription.status === 'cancelling' && (
+                  <Link
+                    href="/dashboard/contribute"
+                    className="inline-flex items-center justify-center px-4 py-2 bg-orange-600 text-white text-sm font-medium rounded-lg hover:bg-orange-700 transition-colors"
+                  >
+                    Keep My Subscription
+                  </Link>
                 )}
               </div>
             </div>
