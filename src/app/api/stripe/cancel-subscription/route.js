@@ -53,19 +53,23 @@ export async function POST(request) {
       cancel_at_period_end: true,
     })
 
-    // Update our record - mark as "cancelling" not "cancelled" since it's still active until period end
+    // Update our record - keep status as 'active' (DB constraint), use cancelled_at to indicate cancelling
+    const periodEnd = updatedSub.current_period_end
+      ? new Date(updatedSub.current_period_end * 1000).toISOString()
+      : null
+
     await supabase
       .from('member_subscriptions')
       .update({
-        status: 'cancelling',
+        status: 'active', // Keep as active - we detect cancelling via cancelled_at field
         cancelled_at: new Date().toISOString(),
-        current_period_end: new Date(updatedSub.current_period_end * 1000).toISOString(),
+        current_period_end: periodEnd,
       })
       .eq('stripe_subscription_id', subscriptionId)
 
     return NextResponse.json({
       success: true,
-      endsAt: new Date(updatedSub.current_period_end * 1000).toISOString()
+      endsAt: periodEnd
     })
   } catch (error) {
     console.error('Cancel subscription error:', error)
