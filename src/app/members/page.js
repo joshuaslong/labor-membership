@@ -1,5 +1,6 @@
+import { redirect } from 'next/navigation'
 import Link from 'next/link'
-import { createAdminClient } from '@/lib/supabase/server'
+import { createClient, createAdminClient } from '@/lib/supabase/server'
 
 export const dynamic = 'force-dynamic'
 
@@ -15,12 +16,45 @@ export default async function MembersPage({ searchParams }) {
   const status = params.status || 'all'
   const search = params.search || ''
 
+  // Get current user and their admin record
+  const authClient = await createClient()
+  const { data: { user } } = await authClient.auth.getUser()
+
+  if (!user) {
+    redirect('/login')
+  }
+
   const supabase = createAdminClient()
 
+  // Get current admin's role and chapter
+  const { data: currentAdmin } = await supabase
+    .from('admin_users')
+    .select('id, role, chapter_id')
+    .eq('user_id', user.id)
+    .single()
+
+  if (!currentAdmin) {
+    redirect('/dashboard')
+  }
+
+  // Get chapter IDs this admin can access
+  let allowedChapterIds = null
+  if (currentAdmin.role !== 'super_admin') {
+    const { data: descendants } = await supabase
+      .rpc('get_chapter_descendants', { chapter_uuid: currentAdmin.chapter_id })
+    allowedChapterIds = descendants?.map(d => d.id) || []
+  }
+
+  // Build query with chapter filtering
   let query = supabase
     .from('members')
     .select('*, chapters(name, level)')
     .order('last_name')
+
+  // Apply chapter filter for non-super admins
+  if (allowedChapterIds) {
+    query = query.in('chapter_id', allowedChapterIds)
+  }
 
   if (status !== 'all') {
     query = query.eq('status', status)
@@ -32,8 +66,13 @@ export default async function MembersPage({ searchParams }) {
 
   const { data: members } = await query.limit(100)
 
-  // Get counts by status
-  const { data: allMembers } = await supabase.from('members').select('status')
+  // Get counts by status (filtered by chapter for non-super admins)
+  let countsQuery = supabase.from('members').select('status')
+  if (allowedChapterIds) {
+    countsQuery = countsQuery.in('chapter_id', allowedChapterIds)
+  }
+  const { data: allMembers } = await countsQuery
+
   const counts = allMembers?.reduce((acc, m) => {
     acc[m.status] = (acc[m.status] || 0) + 1
     acc.all = (acc.all || 0) + 1
@@ -45,7 +84,11 @@ export default async function MembersPage({ searchParams }) {
       <div className="flex justify-between items-center mb-8">
         <div>
           <h1 className="text-3xl font-bold text-gray-900">Members</h1>
-          <p className="text-gray-600">Manage membership across all chapters</p>
+          <p className="text-gray-600">
+            {currentAdmin.role === 'super_admin'
+              ? 'Manage membership across all chapters'
+              : 'Manage membership in your chapter jurisdiction'}
+          </p>
         </div>
         <Link href="/join" className="btn-primary">Add Member</Link>
       </div>

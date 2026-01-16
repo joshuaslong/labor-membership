@@ -1,19 +1,56 @@
 import { NextResponse } from 'next/server'
-import { createAdminClient } from '@/lib/supabase/server'
+import { createClient, createAdminClient } from '@/lib/supabase/server'
 
 export async function GET(request) {
+  // Authenticate user
+  const authClient = await createClient()
+  const { data: { user } } = await authClient.auth.getUser()
+
+  if (!user) {
+    return NextResponse.json({ error: 'Unauthorized' }, { status: 401 })
+  }
+
+  const supabase = createAdminClient()
+
+  // Get current admin's role and chapter
+  const { data: currentAdmin } = await supabase
+    .from('admin_users')
+    .select('id, role, chapter_id')
+    .eq('user_id', user.id)
+    .single()
+
+  if (!currentAdmin) {
+    return NextResponse.json({ error: 'Not an admin' }, { status: 403 })
+  }
+
   const { searchParams } = new URL(request.url)
   const chapter_id = searchParams.get('chapter_id')
   const status = searchParams.get('status')
 
-  const supabase = createAdminClient()
+  // Get chapter IDs this admin can access
+  let allowedChapterIds = null
+  if (currentAdmin.role !== 'super_admin') {
+    const { data: descendants } = await supabase
+      .rpc('get_chapter_descendants', { chapter_uuid: currentAdmin.chapter_id })
+    allowedChapterIds = descendants?.map(d => d.id) || []
+  }
 
   let query = supabase
     .from('members')
     .select('*, chapters(name, level)')
     .order('last_name')
 
-  if (chapter_id) query = query.eq('chapter_id', chapter_id)
+  // If a specific chapter is requested, verify admin has access to it
+  if (chapter_id) {
+    if (allowedChapterIds && !allowedChapterIds.includes(chapter_id)) {
+      return NextResponse.json({ error: 'Access denied to this chapter' }, { status: 403 })
+    }
+    query = query.eq('chapter_id', chapter_id)
+  } else if (allowedChapterIds) {
+    // No specific chapter requested, filter to admin's jurisdiction
+    query = query.in('chapter_id', allowedChapterIds)
+  }
+
   if (status) query = query.eq('status', status)
 
   const { data: members, error } = await query

@@ -13,52 +13,97 @@ export default async function AdminPage() {
     redirect('/login')
   }
 
-  const { data: adminUser } = await authClient
+  const supabase = createAdminClient()
+
+  // Get current admin's role and chapter
+  const { data: currentAdmin } = await supabase
     .from('admin_users')
-    .select('role')
+    .select('id, role, chapter_id, chapters(name)')
     .eq('user_id', user.id)
     .single()
 
-  if (!adminUser) {
+  if (!currentAdmin) {
     redirect('/dashboard')
   }
 
-  const supabase = createAdminClient()
+  // Get chapter IDs this admin can access
+  let allowedChapterIds = null
+  if (currentAdmin.role !== 'super_admin') {
+    const { data: descendants } = await supabase
+      .rpc('get_chapter_descendants', { chapter_uuid: currentAdmin.chapter_id })
+    allowedChapterIds = descendants?.map(d => d.id) || []
+  }
 
-  // Get member stats
-  const { data: members } = await supabase.from('members').select('status')
+  // Get member stats (filtered by chapter for non-super admins)
+  let membersQuery = supabase.from('members').select('id, status, chapter_id')
+  if (allowedChapterIds) {
+    membersQuery = membersQuery.in('chapter_id', allowedChapterIds)
+  }
+  const { data: members } = await membersQuery
+
   const memberStats = members?.reduce((acc, m) => {
     acc[m.status] = (acc[m.status] || 0) + 1
     acc.total = (acc.total || 0) + 1
     return acc
   }, { total: 0 }) || { total: 0 }
 
-  // Get chapter counts by level
-  const { data: chapters } = await supabase.from('chapters').select('level')
+  // Get chapter counts by level (filtered for non-super admins)
+  let chaptersQuery = supabase.from('chapters').select('id, level')
+  if (allowedChapterIds) {
+    chaptersQuery = chaptersQuery.in('id', allowedChapterIds)
+  }
+  const { data: chapters } = await chaptersQuery
+
   const chapterStats = chapters?.reduce((acc, c) => {
     acc[c.level] = (acc[c.level] || 0) + 1
     acc.total = (acc.total || 0) + 1
     return acc
   }, { total: 0 }) || { total: 0 }
 
-  // Get payment totals
-  const { data: payments } = await supabase
-    .from('payments')
-    .select('amount_cents')
-    .eq('status', 'succeeded')
+  // Get payment totals (filtered by member's chapter for non-super admins)
+  let totalRevenue = 0
+  if (allowedChapterIds && members?.length > 0) {
+    // Get member IDs in allowed chapters
+    const memberIds = members.map(m => m.id)
+    const { data: payments } = await supabase
+      .from('payments')
+      .select('amount_cents')
+      .eq('status', 'succeeded')
+      .in('member_id', memberIds)
+    totalRevenue = payments?.reduce((sum, p) => sum + p.amount_cents, 0) / 100 || 0
+  } else if (!allowedChapterIds) {
+    // Super admin sees all payments
+    const { data: payments } = await supabase
+      .from('payments')
+      .select('amount_cents')
+      .eq('status', 'succeeded')
+    totalRevenue = payments?.reduce((sum, p) => sum + p.amount_cents, 0) / 100 || 0
+  }
 
-  const totalRevenue = payments?.reduce((sum, p) => sum + p.amount_cents, 0) / 100 || 0
-
-  // Recent members
-  const { data: recentMembers } = await supabase
+  // Recent members (filtered by chapter for non-super admins)
+  let recentMembersQuery = supabase
     .from('members')
     .select('id, first_name, last_name, email, status, joined_date')
     .order('joined_date', { ascending: false })
     .limit(5)
 
+  if (allowedChapterIds) {
+    recentMembersQuery = recentMembersQuery.in('chapter_id', allowedChapterIds)
+  }
+  const { data: recentMembers } = await recentMembersQuery
+
+  const isSuperAdmin = currentAdmin.role === 'super_admin'
+
   return (
     <div className="max-w-6xl mx-auto px-4 py-8">
-      <h1 className="text-2xl sm:text-3xl font-bold text-gray-900 mb-6 sm:mb-8">Admin Dashboard</h1>
+      <div className="mb-6 sm:mb-8">
+        <h1 className="text-2xl sm:text-3xl font-bold text-gray-900">Admin Dashboard</h1>
+        {!isSuperAdmin && currentAdmin.chapters && (
+          <p className="text-gray-600 mt-1">
+            Managing: {currentAdmin.chapters.name} and sub-chapters
+          </p>
+        )}
+      </div>
 
       {/* Stats grid */}
       <div className="grid grid-cols-2 lg:grid-cols-4 gap-4 sm:gap-6 mb-6 sm:mb-8">
@@ -121,14 +166,16 @@ export default async function AdminPage() {
             <Link href="/admin/import" className="block w-full btn-primary text-center">
               Import Members
             </Link>
-            <Link href="/admin/chapters/new" className="block w-full btn-secondary text-center">
-              Create New Chapter
-            </Link>
+            {isSuperAdmin && (
+              <Link href="/admin/chapters/new" className="block w-full btn-secondary text-center">
+                Create New Chapter
+              </Link>
+            )}
             <Link href="/chapters" className="block w-full btn-secondary text-center">
-              Manage Chapters
+              {isSuperAdmin ? 'Manage Chapters' : 'View Chapters'}
             </Link>
             <Link href="/members" className="block w-full btn-secondary text-center">
-              View All Members
+              {isSuperAdmin ? 'View All Members' : 'View Members'}
             </Link>
             <Link href="/members?status=pending" className="block w-full btn-secondary text-center">
               Review Pending Members
