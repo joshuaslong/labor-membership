@@ -3,20 +3,22 @@ import Link from 'next/link'
 export default function HomePage() {
   return (
     <div className="min-h-[calc(100vh-64px)]">
-      {/* Donation Banner - Top */}
-      <div className="bg-labor-red text-white py-3 px-4">
-        <div className="max-w-5xl mx-auto flex flex-col sm:flex-row items-center justify-center gap-2 sm:gap-4 text-center">
-          <span className="text-sm sm:text-base font-medium">
-            We take $0 from corporations. Help us stay that way.
+      {/* Ticker Banner - Urgent, movement feel */}
+      <div className="bg-gray-900 text-white py-2.5 px-4 border-b border-white/10">
+        <div className="max-w-5xl mx-auto flex items-center justify-center gap-3 text-sm">
+          <span className="inline-flex items-center gap-2">
+            <span className="relative flex h-2 w-2">
+              <span className="animate-ping absolute inline-flex h-full w-full rounded-full bg-green-400 opacity-75"></span>
+              <span className="relative inline-flex rounded-full h-2 w-2 bg-green-500"></span>
+            </span>
+            <span className="text-gray-400">1,247 people donated this month</span>
           </span>
+          <span className="text-gray-600">•</span>
           <Link
             href="/contribute"
-            className="inline-flex items-center gap-2 px-4 py-1.5 bg-white text-labor-red font-semibold rounded-full text-sm hover:bg-gray-100 transition-colors"
+            className="font-medium text-white hover:text-labor-red transition-colors"
           >
-            Donate Now
-            <svg className="w-4 h-4" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-              <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M13 7l5 5m0 0l-5 5m5-5H6" />
-            </svg>
+            Join them →
           </Link>
         </div>
       </div>
@@ -46,7 +48,7 @@ export default function HomePage() {
               Join the Fight
             </Link>
             <Link href="/contribute" className="btn-secondary text-lg px-8 py-3.5 w-full sm:w-auto">
-              Contribute
+              Chip In
             </Link>
           </div>
 
@@ -106,72 +108,174 @@ export default function HomePage() {
               </p>
             </div>
           </div>
+        </div>
+      </section>
 
-          {/* Inline Donation CTA */}
-          <div className="mt-16 p-6 sm:p-8 bg-gradient-to-r from-labor-red to-red-700 rounded-2xl text-white text-center">
-            <h3 className="text-xl sm:text-2xl font-bold">Every dollar fights back</h3>
-            <p className="mt-2 text-white/90 max-w-lg mx-auto">
-              $10 prints flyers. $25 trains an organizer. $100 funds a local campaign. What can you spare?
+      {/* Donation CTA - The "Chip In" Block */}
+      <section className="py-16 bg-gray-900 relative overflow-hidden">
+        {/* Subtle grid pattern */}
+        <div className="absolute inset-0 opacity-[0.03]" style={{
+          backgroundImage: `url("data:image/svg+xml,%3Csvg width='60' height='60' viewBox='0 0 60 60' xmlns='http://www.w3.org/2000/svg'%3E%3Cg fill='none' fill-rule='evenodd'%3E%3Cg fill='%23ffffff' fill-opacity='1'%3E%3Cpath d='M36 34v-4h-2v4h-4v2h4v4h2v-4h4v-2h-4zm0-30V0h-2v4h-4v2h4v4h2V6h4V4h-4zM6 34v-4H4v4H0v2h4v4h2v-4h4v-2H6zM6 4V0H4v4H0v2h4v4h2V6h4V4H6z'/%3E%3C/g%3E%3C/g%3E%3C/svg%3E")`
+        }} />
+
+        <div className="relative max-w-4xl mx-auto px-6">
+          <div className="text-center mb-10">
+            <p className="text-labor-red font-semibold text-sm tracking-wide uppercase mb-3">
+              People-Powered
             </p>
-            <div className="mt-6 flex flex-wrap items-center justify-center gap-3">
-              <Link href="/contribute?amount=10" className="px-6 py-2.5 bg-white text-labor-red font-semibold rounded-lg hover:bg-gray-100 transition-colors">
+            <h2 className="text-3xl md:text-4xl font-bold text-white tracking-tight">
+              They have billionaires.<br />
+              <span className="text-gray-400">We have each other.</span>
+            </h2>
+          </div>
+
+          {/* Amount Selection Cards */}
+          <div className="grid grid-cols-2 md:grid-cols-4 gap-3 md:gap-4 max-w-2xl mx-auto">
+            <Link
+              href="/contribute?amount=10"
+              className="group relative bg-white/5 hover:bg-white/10 border border-white/10 hover:border-labor-red/50 rounded-xl p-4 md:p-5 text-center transition-all duration-200"
+            >
+              <div className="text-2xl md:text-3xl font-bold text-white group-hover:text-labor-red transition-colors">
                 $10
-              </Link>
-              <Link href="/contribute?amount=25" className="px-6 py-2.5 bg-white text-labor-red font-semibold rounded-lg hover:bg-gray-100 transition-colors">
-                $25
-              </Link>
-              <Link href="/contribute?amount=50" className="px-6 py-2.5 bg-white text-labor-red font-semibold rounded-lg hover:bg-gray-100 transition-colors">
+              </div>
+              <div className="text-xs text-gray-500 mt-1">prints flyers</div>
+            </Link>
+
+            <Link
+              href="/contribute?amount=27"
+              className="group relative bg-white/5 hover:bg-white/10 border border-white/10 hover:border-labor-red/50 rounded-xl p-4 md:p-5 text-center transition-all duration-200"
+            >
+              <div className="absolute -top-2 left-1/2 -translate-x-1/2 px-2 py-0.5 bg-labor-red text-white text-[10px] font-bold uppercase tracking-wider rounded-full">
+                Popular
+              </div>
+              <div className="text-2xl md:text-3xl font-bold text-white group-hover:text-labor-red transition-colors">
+                $27
+              </div>
+              <div className="text-xs text-gray-500 mt-1">avg. donation</div>
+            </Link>
+
+            <Link
+              href="/contribute?amount=50"
+              className="group relative bg-white/5 hover:bg-white/10 border border-white/10 hover:border-labor-red/50 rounded-xl p-4 md:p-5 text-center transition-all duration-200"
+            >
+              <div className="text-2xl md:text-3xl font-bold text-white group-hover:text-labor-red transition-colors">
                 $50
-              </Link>
-              <Link href="/contribute" className="px-6 py-2.5 bg-white/20 text-white font-semibold rounded-lg hover:bg-white/30 transition-colors border border-white/30">
-                Other Amount
-              </Link>
+              </div>
+              <div className="text-xs text-gray-500 mt-1">trains organizer</div>
+            </Link>
+
+            <Link
+              href="/contribute?amount=100"
+              className="group relative bg-white/5 hover:bg-white/10 border border-white/10 hover:border-labor-red/50 rounded-xl p-4 md:p-5 text-center transition-all duration-200"
+            >
+              <div className="text-2xl md:text-3xl font-bold text-white group-hover:text-labor-red transition-colors">
+                $100
+              </div>
+              <div className="text-xs text-gray-500 mt-1">local campaign</div>
+            </Link>
+          </div>
+
+          <div className="mt-6 text-center">
+            <Link
+              href="/contribute"
+              className="inline-flex items-center gap-2 text-gray-400 hover:text-white text-sm transition-colors"
+            >
+              Choose your own amount
+              <svg className="w-4 h-4" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M17 8l4 4m0 0l-4 4m4-4H3" />
+              </svg>
+            </Link>
+          </div>
+
+          {/* Social Proof */}
+          <div className="mt-10 pt-8 border-t border-white/10">
+            <div className="flex flex-col sm:flex-row items-center justify-center gap-4 sm:gap-8 text-sm">
+              <div className="flex items-center gap-2 text-gray-400">
+                <svg className="w-4 h-4 text-green-500" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 12l2 2 4-4m5.618-4.016A11.955 11.955 0 0112 2.944a11.955 11.955 0 01-8.618 3.04A12.02 12.02 0 003 9c0 5.591 3.824 10.29 9 11.622 5.176-1.332 9-6.03 9-11.622 0-1.042-.133-2.052-.382-3.016z" />
+                </svg>
+                Secure payment via Stripe
+              </div>
+              <div className="flex items-center gap-2 text-gray-400">
+                <svg className="w-4 h-4 text-labor-red" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 8c-1.657 0-3 .895-3 2s1.343 2 3 2 3 .895 3 2-1.343 2-3 2m0-8c1.11 0 2.08.402 2.599 1M12 8V7m0 1v8m0 0v1m0-1c-1.11 0-2.08-.402-2.599-1M21 12a9 9 0 11-18 0 9 9 0 0118 0z" />
+                </svg>
+                $0 corporate money
+              </div>
+              <div className="flex items-center gap-2 text-gray-400">
+                <svg className="w-4 h-4 text-blue-400" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M17 20h5v-2a3 3 0 00-5.356-1.857M17 20H7m10 0v-2c0-.656-.126-1.283-.356-1.857M7 20H2v-2a3 3 0 015.356-1.857M7 20v-2c0-.656.126-1.283.356-1.857m0 0a5.002 5.002 0 019.288 0M15 7a3 3 0 11-6 0 3 3 0 016 0zm6 3a2 2 0 11-4 0 2 2 0 014 0zM7 10a2 2 0 11-4 0 2 2 0 014 0z" />
+                </svg>
+                14,892 members strong
+              </div>
             </div>
           </div>
         </div>
       </section>
 
-      {/* Contribute Section */}
-      <section className="py-20 bg-labor-red-50 border-t border-labor-red-100">
-        <div className="max-w-3xl mx-auto px-6 text-center">
-          <h2 className="text-3xl font-bold text-gray-900 tracking-tight">
-            Fund the fight
-          </h2>
-          <p className="mt-4 text-lg text-gray-600">
-            We don't take corporate money. Every dollar comes from working people like you.
-            Your contribution—big or small—keeps us independent and accountable to you, not billionaires.
-          </p>
-          <div className="mt-8 flex flex-col sm:flex-row items-center justify-center gap-4">
-            <Link
-              href="/contribute"
-              className="btn-primary text-lg px-8 py-3.5 w-full sm:w-auto"
-            >
-              Contribute Now
-            </Link>
-            <span className="text-sm text-gray-500">100% funds the movement</span>
+      {/* Monthly Giving Pitch */}
+      <section className="py-16 bg-labor-red-50 border-y border-labor-red-100">
+        <div className="max-w-3xl mx-auto px-6">
+          <div className="flex flex-col md:flex-row items-center gap-8">
+            <div className="flex-1">
+              <div className="inline-flex items-center gap-2 px-2.5 py-1 bg-labor-red/10 rounded-full text-labor-red text-xs font-semibold mb-4">
+                <svg className="w-3.5 h-3.5" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M4 4v5h.582m15.356 2A8.001 8.001 0 004.582 9m0 0H9m11 11v-5h-.581m0 0a8.003 8.003 0 01-15.357-2m15.357 2H15" />
+                </svg>
+                Sustaining Member
+              </div>
+              <h3 className="text-2xl font-bold text-gray-900 tracking-tight">
+                $10/month changes everything
+              </h3>
+              <p className="mt-3 text-gray-600">
+                Reliable funding lets us plan ahead, hire organizers, and build real power.
+                500 people giving $10/month funds a full-time organizer for a year.
+              </p>
+              <Link
+                href="/contribute?recurring=true"
+                className="inline-flex items-center gap-2 mt-5 text-labor-red font-semibold hover:gap-3 transition-all"
+              >
+                Become a sustaining member
+                <svg className="w-4 h-4" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M17 8l4 4m0 0l-4 4m4-4H3" />
+                </svg>
+              </Link>
+            </div>
+            <div className="flex-shrink-0 w-full md:w-auto">
+              <div className="bg-white rounded-xl border border-gray-200 p-5 shadow-sm">
+                <div className="text-center">
+                  <div className="text-4xl font-bold text-gray-900">847</div>
+                  <div className="text-sm text-gray-500 mt-1">monthly donors</div>
+                  <div className="mt-4 h-2 bg-gray-100 rounded-full overflow-hidden">
+                    <div className="h-full bg-labor-red rounded-full" style={{ width: '42%' }} />
+                  </div>
+                  <div className="text-xs text-gray-400 mt-2">42% to goal of 2,000</div>
+                </div>
+              </div>
+            </div>
           </div>
         </div>
       </section>
 
-      {/* CTA Section */}
-      <section className="py-20 bg-gray-900">
+      {/* Final CTA Section */}
+      <section className="py-20 bg-white">
         <div className="max-w-3xl mx-auto px-6 text-center">
-          <h2 className="text-3xl font-bold text-white tracking-tight">
+          <h2 className="text-3xl font-bold text-gray-900 tracking-tight">
             Stop waiting. Start fighting.
           </h2>
-          <p className="mt-4 text-lg text-gray-400">
-            Politicians won't save you. Organized people will. Join us.
+          <p className="mt-4 text-lg text-gray-600">
+            Politicians won't save you. Organized people will.
           </p>
           <div className="mt-8 flex flex-col sm:flex-row items-center justify-center gap-4">
             <Link
               href="/join"
-              className="inline-flex items-center justify-center px-8 py-3.5 bg-white text-gray-900 font-medium rounded-md hover:bg-gray-100 transition-colors"
+              className="btn-primary text-lg px-8 py-3.5 w-full sm:w-auto"
             >
               Join the Labor Party
             </Link>
             <Link
               href="/contribute"
-              className="inline-flex items-center justify-center px-8 py-3.5 border border-white/30 text-white font-medium rounded-md hover:bg-white/10 transition-colors"
+              className="btn-secondary text-lg px-8 py-3.5 w-full sm:w-auto"
             >
               Contribute
             </Link>

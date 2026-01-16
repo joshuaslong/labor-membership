@@ -20,15 +20,16 @@ export default function ContributePage() {
   const router = useRouter()
   const searchParams = useSearchParams()
 
-  // Get amount from URL if provided
+  // Get amount and recurring from URL if provided
   const urlAmount = searchParams.get('amount')
+  const urlRecurring = searchParams.get('recurring')
   const initialAmount = urlAmount ? parseInt(urlAmount, 10) : 25
   const isInitialCustom = urlAmount && !PRESET_AMOUNTS.includes(initialAmount)
 
   const [selectedAmount, setSelectedAmount] = useState(isInitialCustom ? 25 : initialAmount)
   const [customAmount, setCustomAmount] = useState(isInitialCustom ? urlAmount : '')
   const [isCustom, setIsCustom] = useState(isInitialCustom)
-  const [isRecurring, setIsRecurring] = useState(false)
+  const [isRecurring, setIsRecurring] = useState(urlRecurring === 'true')
   const [loading, setLoading] = useState(false)
   const [error, setError] = useState(null)
   const [success, setSuccess] = useState(null)
