@@ -67,6 +67,19 @@ export default async function MembersPage({ searchParams }) {
 
   const { data: members } = await query.limit(100)
 
+  // Get admin records for these members to show admin badges
+  const memberUserIds = members?.filter(m => m.user_id).map(m => m.user_id) || []
+  let adminRecords = {}
+  if (memberUserIds.length > 0) {
+    const { data: admins } = await supabase
+      .from('admin_users')
+      .select('user_id, role')
+      .in('user_id', memberUserIds)
+    admins?.forEach(a => {
+      adminRecords[a.user_id] = a.role
+    })
+  }
+
   // Get counts by status (filtered by chapter for non-super admins)
   let countsQuery = supabase.from('members').select('status')
   if (allowedChapterIds) {
@@ -141,12 +154,24 @@ export default async function MembersPage({ searchParams }) {
               {members?.map(member => (
                 <tr key={member.id} className="hover:bg-gray-50">
                   <td className="px-6 py-4 whitespace-nowrap">
-                    <Link href={`/members/${member.id}`} className="font-medium text-gray-900 hover:text-labor-red">
-                      {member.first_name || member.last_name
-                        ? `${member.first_name || ''} ${member.last_name || ''}`.trim()
-                        : <span className="text-gray-500 italic">{member.email || 'No name'}</span>
-                      }
-                    </Link>
+                    <div className="flex items-center gap-2">
+                      <Link href={`/members/${member.id}`} className="font-medium text-gray-900 hover:text-labor-red">
+                        {member.first_name || member.last_name
+                          ? `${member.first_name || ''} ${member.last_name || ''}`.trim()
+                          : <span className="text-gray-500 italic">{member.email || 'No name'}</span>
+                        }
+                      </Link>
+                      {member.user_id && adminRecords[member.user_id] && (
+                        <span className="px-1.5 py-0.5 bg-purple-100 text-purple-700 text-xs font-medium rounded">
+                          {adminRecords[member.user_id] === 'super_admin' ? 'Super' :
+                           adminRecords[member.user_id] === 'national_admin' ? 'National' :
+                           adminRecords[member.user_id] === 'state_admin' ? 'State' :
+                           adminRecords[member.user_id] === 'county_admin' ? 'County' :
+                           adminRecords[member.user_id] === 'city_admin' ? 'City' :
+                           'Admin'}
+                        </span>
+                      )}
+                    </div>
                   </td>
                   <td className="px-6 py-4 whitespace-nowrap text-gray-500">{member.email}</td>
                   <td className="px-6 py-4 whitespace-nowrap">

@@ -8,8 +8,12 @@ import { createClient } from '@/lib/supabase/client'
 export default function ProfilePage() {
   const router = useRouter()
   const [member, setMember] = useState(null)
+  const [chapters, setChapters] = useState([])
+  const [memberChapters, setMemberChapters] = useState([])
+  const [selectedChapter, setSelectedChapter] = useState('')
   const [loading, setLoading] = useState(true)
   const [saving, setSaving] = useState(false)
+  const [savingChapter, setSavingChapter] = useState(false)
   const [error, setError] = useState(null)
   const [success, setSuccess] = useState(false)
 
@@ -31,7 +35,24 @@ export default function ProfilePage() {
 
       if (data) {
         setMember(data)
+        setSelectedChapter(data.chapter_id || '')
+
+        // Load member's chapter memberships
+        const { data: mcData } = await supabase
+          .from('member_chapters')
+          .select('chapter_id, is_primary, chapters(id, name, level)')
+          .eq('member_id', data.id)
+        setMemberChapters(mcData || [])
       }
+
+      // Load all chapters
+      const { data: chaptersData } = await supabase
+        .from('chapters')
+        .select('id, name, level')
+        .order('level')
+        .order('name')
+      setChapters(chaptersData || [])
+
       setLoading(false)
     }
 
@@ -67,6 +88,49 @@ export default function ProfilePage() {
     }
     setSaving(false)
   }
+
+  const handleChapterChange = async () => {
+    if (!selectedChapter || selectedChapter === member.chapter_id) return
+
+    setSavingChapter(true)
+    setError(null)
+    setSuccess(false)
+
+    try {
+      const res = await fetch(`/api/members/${member.id}/chapter`, {
+        method: 'PUT',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ chapter_id: selectedChapter }),
+      })
+
+      if (!res.ok) {
+        const data = await res.json()
+        throw new Error(data.error || 'Failed to update chapter')
+      }
+
+      // Reload member chapters
+      const supabase = createClient()
+      const { data: mcData } = await supabase
+        .from('member_chapters')
+        .select('chapter_id, is_primary, chapters(id, name, level)')
+        .eq('member_id', member.id)
+
+      setMemberChapters(mcData || [])
+      setMember({ ...member, chapter_id: selectedChapter })
+      setSuccess(true)
+    } catch (err) {
+      setError(err.message)
+    }
+
+    setSavingChapter(false)
+  }
+
+  // Group chapters by level
+  const chaptersByLevel = chapters.reduce((acc, c) => {
+    acc[c.level] = acc[c.level] || []
+    acc[c.level].push(c)
+    return acc
+  }, {})
 
   if (loading) {
     return <div className="max-w-xl mx-auto px-4 py-12 text-center">Loading...</div>
@@ -151,6 +215,62 @@ export default function ProfilePage() {
               onChange={(e) => setMember({ ...member, zip_code: e.target.value })}
             />
           </div>
+        </div>
+
+        {/* Chapter */}
+        <div className="border-t border-gray-200 pt-4 mt-4">
+          <label className="block text-sm font-medium text-gray-700 mb-2">Chapter</label>
+          <div className="flex gap-3">
+            <select
+              value={selectedChapter}
+              onChange={(e) => setSelectedChapter(e.target.value)}
+              className="input-field flex-1"
+            >
+              <option value="">No chapter selected</option>
+              {['national', 'state', 'county', 'city'].map(level => (
+                chaptersByLevel[level]?.length > 0 && (
+                  <optgroup key={level} label={level.charAt(0).toUpperCase() + level.slice(1)}>
+                    {chaptersByLevel[level].map(c => (
+                      <option key={c.id} value={c.id}>{c.name}</option>
+                    ))}
+                  </optgroup>
+                )
+              ))}
+            </select>
+            <button
+              type="button"
+              onClick={handleChapterChange}
+              disabled={savingChapter || selectedChapter === member.chapter_id}
+              className="btn-secondary px-4"
+            >
+              {savingChapter ? 'Updating...' : 'Update'}
+            </button>
+          </div>
+          <p className="text-xs text-gray-500 mt-1">
+            Joining a local chapter automatically includes you in all parent chapters.
+          </p>
+          {memberChapters.length > 0 && (
+            <div className="mt-3 flex flex-wrap gap-2">
+              {memberChapters
+                .sort((a, b) => {
+                  const order = ['national', 'state', 'county', 'city']
+                  return order.indexOf(a.chapters?.level) - order.indexOf(b.chapters?.level)
+                })
+                .map(mc => (
+                  <span
+                    key={mc.chapter_id}
+                    className={`px-2 py-1 rounded text-xs ${
+                      mc.is_primary
+                        ? 'bg-labor-red text-white'
+                        : 'bg-gray-100 text-gray-700'
+                    }`}
+                  >
+                    {mc.chapters?.name}
+                    {mc.is_primary && ' (primary)'}
+                  </span>
+                ))}
+            </div>
+          )}
         </div>
 
         {/* Volunteer */}

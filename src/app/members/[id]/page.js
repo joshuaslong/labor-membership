@@ -296,9 +296,21 @@ export default function MemberDetailPage() {
       <div className="card mb-6">
         <div className="flex justify-between items-start mb-6">
           <div>
-            <h1 className="text-2xl font-bold text-gray-900">
-              {member.first_name} {member.last_name}
-            </h1>
+            <div className="flex items-center gap-3">
+              <h1 className="text-2xl font-bold text-gray-900">
+                {member.first_name} {member.last_name}
+              </h1>
+              {memberAdminRecord && (
+                <span className="px-2 py-1 bg-purple-100 text-purple-800 text-xs font-semibold rounded">
+                  {memberAdminRecord.role === 'super_admin' ? 'Super Admin' :
+                   memberAdminRecord.role === 'national_admin' ? 'National Admin' :
+                   memberAdminRecord.role === 'state_admin' ? 'State Admin' :
+                   memberAdminRecord.role === 'county_admin' ? 'County Admin' :
+                   memberAdminRecord.role === 'city_admin' ? 'City Admin' :
+                   'Admin'}
+                </span>
+              )}
+            </div>
             <p className="text-gray-600">{member.email}</p>
           </div>
           <span className={`px-3 py-1 rounded-full text-sm font-medium ${STATUS_BADGES[member.status]}`}>

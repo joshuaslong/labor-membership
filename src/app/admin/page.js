@@ -36,9 +36,34 @@ export default async function AdminPage() {
   }
 
   // Get member stats (filtered by chapter for non-super admins)
-  let membersQuery = supabase.from('members').select('id, status, chapter_id')
+  // Use member_chapters junction table for accurate counts
+  let memberIds = []
   if (allowedChapterIds) {
-    membersQuery = membersQuery.in('chapter_id', allowedChapterIds)
+    // Get members in allowed chapters via member_chapters junction table
+    const { data: memberChapterData } = await supabase
+      .from('member_chapters')
+      .select('member_id')
+      .in('chapter_id', allowedChapterIds)
+
+    memberIds = [...new Set(memberChapterData?.map(mc => mc.member_id) || [])]
+
+    // Also include members with legacy chapter_id that aren't in member_chapters
+    const { data: legacyMembers } = await supabase
+      .from('members')
+      .select('id')
+      .in('chapter_id', allowedChapterIds)
+
+    legacyMembers?.forEach(m => {
+      if (!memberIds.includes(m.id)) memberIds.push(m.id)
+    })
+  }
+
+  let membersQuery = supabase.from('members').select('id, status, chapter_id')
+  if (allowedChapterIds && memberIds.length > 0) {
+    membersQuery = membersQuery.in('id', memberIds)
+  } else if (allowedChapterIds && memberIds.length === 0) {
+    // No members in allowed chapters
+    membersQuery = membersQuery.eq('id', '00000000-0000-0000-0000-000000000000') // Will return empty
   }
   const { data: members } = await membersQuery
 
@@ -63,9 +88,8 @@ export default async function AdminPage() {
 
   // Get payment totals (filtered by member's chapter for non-super admins)
   let totalRevenue = 0
-  if (allowedChapterIds && members?.length > 0) {
-    // Get member IDs in allowed chapters
-    const memberIds = members.map(m => m.id)
+  if (allowedChapterIds && memberIds.length > 0) {
+    // Use the memberIds from member_chapters junction table
     const { data: payments } = await supabase
       .from('payments')
       .select('amount_cents')
@@ -185,6 +209,11 @@ export default async function AdminPage() {
             {isSuperAdmin && (
               <Link href="/admin/admins" className="block w-full btn-secondary text-center">
                 Manage Administrators
+              </Link>
+            )}
+            {isSuperAdmin && (
+              <Link href="/admin/sync-payments" className="block w-full btn-secondary text-center">
+                Sync Stripe Payments
               </Link>
             )}
           </div>

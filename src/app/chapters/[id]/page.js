@@ -84,19 +84,41 @@ export default async function ChapterDetailPage({ params }) {
     .eq('parent_id', id)
     .order('name')
 
-  // Get total member count (visible to all members)
+  // Get total member count using member_chapters junction table
+  // This includes all members in this chapter AND all descendant chapters
   let totalMemberCount = 0
-  const { data: allMemberIds } = await supabase
+  const { data: allChapterIds } = await supabase
     .rpc('get_chapter_descendants', { chapter_uuid: id })
 
-  if (allMemberIds) {
-    const descendantIds = allMemberIds.map(c => c.id)
+  if (allChapterIds) {
+    const descendantIds = allChapterIds.map(c => c.id)
+    // Count unique members in member_chapters for this chapter and all descendants
     const { count } = await supabase
+      .from('member_chapters')
+      .select('member_id', { count: 'exact', head: true })
+      .eq('chapter_id', id) // Members directly in THIS chapter (includes inherited)
+    totalMemberCount = count || 0
+  }
+
+  // Also count members who may only have chapter_id set but not member_chapters
+  // (legacy data from before junction table was added)
+  if (allChapterIds) {
+    const descendantIds = allChapterIds.map(c => c.id)
+    const { data: membersWithoutMC } = await supabase
       .from('members')
-      .select('*', { count: 'exact', head: true })
+      .select('id')
       .in('chapter_id', descendantIds)
       .eq('status', 'active')
-    totalMemberCount = count || 0
+
+    // Get member IDs already counted in member_chapters for this chapter
+    const { data: memberChapterIds } = await supabase
+      .from('member_chapters')
+      .select('member_id')
+      .eq('chapter_id', id)
+
+    const mcMemberIds = new Set(memberChapterIds?.map(mc => mc.member_id) || [])
+    const additionalMembers = membersWithoutMC?.filter(m => !mcMemberIds.has(m.id)).length || 0
+    totalMemberCount += additionalMembers
   }
 
   // Only fetch direct members list if admin

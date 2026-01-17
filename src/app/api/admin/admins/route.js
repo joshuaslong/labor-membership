@@ -56,18 +56,36 @@ export async function GET(request) {
     // Also get auth emails for admins without member records
     const { data: authUsers } = await adminClient.auth.admin.listUsers()
 
+    // Get descendant chapter IDs for the current admin's chapter (for can_manage check)
+    let descendantIds = new Set()
+    if (currentAdmin.role !== 'super_admin' && currentAdmin.chapter_id) {
+      const { data: descendants } = await adminClient
+        .rpc('get_chapter_descendants', { chapter_uuid: currentAdmin.chapter_id })
+      descendantIds = new Set(descendants?.map(d => d.id) || [])
+    }
+
     // Merge data and filter based on permissions
     const enrichedAdmins = admins.map(admin => {
       const member = members?.find(m => m.user_id === admin.user_id)
       const authUser = authUsers?.users?.find(u => u.id === admin.user_id)
+
+      // Determine if current user can manage this admin
+      let canManage = false
+      if (currentAdmin.role === 'super_admin') {
+        canManage = true
+      } else if (currentAdmin.role !== 'national_admin' && admin.chapter_id) {
+        // Can manage if admin's chapter is in our jurisdiction
+        // and they're not a super_admin or national_admin
+        canManage = descendantIds.has(admin.chapter_id) &&
+          !['super_admin', 'national_admin'].includes(admin.role)
+      }
 
       return {
         ...admin,
         email: member?.email || authUser?.email || 'Unknown',
         first_name: member?.first_name || '',
         last_name: member?.last_name || '',
-        can_manage: currentAdmin.role === 'super_admin' ||
-          (admin.chapter_id && canManageChapter(currentAdmin, admin.chapter_id, admins))
+        can_manage
       }
     })
 
@@ -206,6 +224,115 @@ export async function POST(request) {
   }
 }
 
+// PUT - Update an existing admin's role or chapter
+export async function PUT(request) {
+  try {
+    const supabase = await createClient()
+    const { data: { user } } = await supabase.auth.getUser()
+
+    if (!user) {
+      return NextResponse.json({ error: 'Unauthorized' }, { status: 401 })
+    }
+
+    const adminClient = createAdminClient()
+
+    // Get current user's admin record
+    const { data: currentAdmin } = await adminClient
+      .from('admin_users')
+      .select('id, role, chapter_id')
+      .eq('user_id', user.id)
+      .single()
+
+    if (!currentAdmin) {
+      return NextResponse.json({ error: 'Not an admin' }, { status: 403 })
+    }
+
+    const body = await request.json()
+    const { admin_id, role, chapter_id } = body
+
+    if (!admin_id) {
+      return NextResponse.json({ error: 'admin_id is required' }, { status: 400 })
+    }
+
+    // Get the target admin
+    const { data: targetAdmin } = await adminClient
+      .from('admin_users')
+      .select('id, role, chapter_id, user_id')
+      .eq('id', admin_id)
+      .single()
+
+    if (!targetAdmin) {
+      return NextResponse.json({ error: 'Admin not found' }, { status: 404 })
+    }
+
+    // Only super_admin can update super_admin or national_admin
+    if (['super_admin', 'national_admin'].includes(targetAdmin.role) && currentAdmin.role !== 'super_admin') {
+      return NextResponse.json({ error: 'Cannot modify this admin type' }, { status: 403 })
+    }
+
+    // national_admin cannot modify any admins
+    if (currentAdmin.role === 'national_admin') {
+      return NextResponse.json({ error: 'National admins cannot manage other admins' }, { status: 403 })
+    }
+
+    // Only super_admin can set national_admin role
+    if (role === 'national_admin' && currentAdmin.role !== 'super_admin') {
+      return NextResponse.json({ error: 'Only super admins can create national admins' }, { status: 403 })
+    }
+
+    // Check if current admin can manage the target's current chapter
+    if (currentAdmin.role !== 'super_admin') {
+      const { data: canManage } = await adminClient
+        .rpc('can_manage_admin', {
+          manager_user_id: user.id,
+          target_admin_id: admin_id
+        })
+
+      if (!canManage) {
+        return NextResponse.json({ error: 'You cannot modify this admin' }, { status: 403 })
+      }
+
+      // Also check if they can manage the new chapter if it's changing
+      if (chapter_id && chapter_id !== targetAdmin.chapter_id) {
+        const { data: canManageNewChapter } = await adminClient
+          .rpc('can_manage_chapter', {
+            admin_user_id: user.id,
+            target_chapter_id: chapter_id
+          })
+
+        if (!canManageNewChapter) {
+          return NextResponse.json({ error: 'You cannot assign admins to this chapter' }, { status: 403 })
+        }
+      }
+    }
+
+    // Build update object
+    const updateData = {}
+    if (role) updateData.role = role
+    if (chapter_id) updateData.chapter_id = chapter_id
+
+    if (Object.keys(updateData).length === 0) {
+      return NextResponse.json({ error: 'No changes provided' }, { status: 400 })
+    }
+
+    // Update the admin
+    const { data: updatedAdmin, error } = await adminClient
+      .from('admin_users')
+      .update(updateData)
+      .eq('id', admin_id)
+      .select()
+      .single()
+
+    if (error) throw error
+
+    return NextResponse.json({ admin: updatedAdmin })
+
+  } catch (error) {
+    console.error('Error updating admin:', error)
+    return NextResponse.json({ error: error.message }, { status: 500 })
+  }
+}
+
 // DELETE - Remove an admin
 export async function DELETE(request) {
   try {
@@ -289,12 +416,4 @@ export async function DELETE(request) {
     console.error('Error removing admin:', error)
     return NextResponse.json({ error: error.message }, { status: 500 })
   }
-}
-
-// Helper function (client-side approximation)
-function canManageChapter(currentAdmin, targetChapterId, allAdmins) {
-  if (currentAdmin.role === 'super_admin') return true
-  if (!currentAdmin.chapter_id) return false
-  // This is a simplified check - the real check happens server-side via RPC
-  return currentAdmin.chapter_id === targetChapterId
 }
