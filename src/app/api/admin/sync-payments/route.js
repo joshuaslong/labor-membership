@@ -148,10 +148,10 @@ export async function POST(request) {
           }
         }
 
-        // Check by member_id + amount + approximate date (within 1 hour to catch timezone/rounding issues)
+        // Check by member_id + amount + approximate date (within 24 hours to catch timezone/rounding issues)
         const chargeDate = new Date(charge.created * 1000)
-        const minDate = new Date(chargeDate.getTime() - 3600000).toISOString()
-        const maxDate = new Date(chargeDate.getTime() + 3600000).toISOString()
+        const minDate = new Date(chargeDate.getTime() - 24 * 60 * 60 * 1000).toISOString()
+        const maxDate = new Date(chargeDate.getTime() + 24 * 60 * 60 * 1000).toISOString()
 
         const { data: existingByAmountDate } = await adminClient
           .from('payments')
@@ -168,6 +168,27 @@ export async function POST(request) {
             .from('payments')
             .update({ stripe_charge_id: charge.id })
             .eq('id', existingByAmountDate.id)
+          results.updatedPayments++
+          continue
+        }
+
+        // Last resort: check if there's ANY payment for this member with same amount and no charge_id
+        // This catches old payments that were created before we started tracking charge_id
+        const { data: existingWithoutChargeId } = await adminClient
+          .from('payments')
+          .select('id')
+          .eq('member_id', memberId)
+          .eq('amount_cents', charge.amount)
+          .is('stripe_charge_id', null)
+          .limit(1)
+          .maybeSingle()
+
+        if (existingWithoutChargeId) {
+          // Update with charge_id
+          await adminClient
+            .from('payments')
+            .update({ stripe_charge_id: charge.id })
+            .eq('id', existingWithoutChargeId.id)
           results.updatedPayments++
           continue
         }
