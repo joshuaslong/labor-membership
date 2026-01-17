@@ -98,10 +98,10 @@ async function syncStripeData(member, adminSupabase) {
         }
       }
 
-      // Also check by member_id + amount + approximate date (within 1 minute)
+      // Also check by member_id + amount + approximate date (within 1 hour to catch timezone/rounding issues)
       const chargeDate = new Date(charge.created * 1000)
-      const minDate = new Date(chargeDate.getTime() - 60000).toISOString()
-      const maxDate = new Date(chargeDate.getTime() + 60000).toISOString()
+      const minDate = new Date(chargeDate.getTime() - 3600000).toISOString()
+      const maxDate = new Date(chargeDate.getTime() + 3600000).toISOString()
 
       const { data: existingByAmountDate } = await adminSupabase
         .from('payments')

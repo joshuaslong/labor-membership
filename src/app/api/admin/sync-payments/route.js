@@ -148,10 +148,10 @@ export async function POST(request) {
           }
         }
 
-        // Check by member_id + amount + approximate date (within 1 minute)
+        // Check by member_id + amount + approximate date (within 1 hour to catch timezone/rounding issues)
         const chargeDate = new Date(charge.created * 1000)
-        const minDate = new Date(chargeDate.getTime() - 60000).toISOString()
-        const maxDate = new Date(chargeDate.getTime() + 60000).toISOString()
+        const minDate = new Date(chargeDate.getTime() - 3600000).toISOString()
+        const maxDate = new Date(chargeDate.getTime() + 3600000).toISOString()
 
         const { data: existingByAmountDate } = await adminClient
           .from('payments')
@@ -259,8 +259,8 @@ export async function DELETE(request) {
         const currentDate = new Date(payment.created_at)
         const diffMs = Math.abs(currentDate - existingDate)
 
-        // If within 5 minutes, it's likely a duplicate
-        if (diffMs < 5 * 60 * 1000) {
+        // If within 24 hours and same amount, it's likely a duplicate
+        if (diffMs < 24 * 60 * 60 * 1000) {
           // Keep the one with more Stripe identifiers, delete the other
           const existingHasPI = !!existing.stripe_payment_intent_id
           const currentHasPI = !!payment.stripe_payment_intent_id
