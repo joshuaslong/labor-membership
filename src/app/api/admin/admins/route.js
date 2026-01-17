@@ -71,9 +71,9 @@ export async function GET(request) {
       }
     })
 
-    // Filter: super_admin sees all, others see only their jurisdiction
+    // Filter: super_admin and national_admin see all, others see only their jurisdiction
     let filteredAdmins = enrichedAdmins
-    if (currentAdmin.role !== 'super_admin') {
+    if (!['super_admin', 'national_admin'].includes(currentAdmin.role)) {
       // Get descendant chapter IDs for the current admin's chapter
       const { data: descendants } = await adminClient
         .rpc('get_chapter_descendants', { chapter_uuid: currentAdmin.chapter_id })
@@ -123,13 +123,20 @@ export async function POST(request) {
       return NextResponse.json({ error: 'Email, role, and chapter are required' }, { status: 400 })
     }
 
-    // Validate role
-    const validRoles = ['state_admin', 'county_admin', 'city_admin']
-    if (!validRoles.includes(role) && currentAdmin.role !== 'super_admin') {
+    // Validate role - only super_admin can create national_admin
+    const validRoles = ['national_admin', 'state_admin', 'county_admin', 'city_admin']
+    if (!validRoles.includes(role)) {
       return NextResponse.json({ error: 'Invalid role' }, { status: 400 })
+    }
+    if (role === 'national_admin' && currentAdmin.role !== 'super_admin') {
+      return NextResponse.json({ error: 'Only super admins can create national admins' }, { status: 403 })
     }
 
     // Check if current admin can manage the target chapter
+    // national_admin cannot create any admins
+    if (currentAdmin.role === 'national_admin') {
+      return NextResponse.json({ error: 'National admins cannot manage other admins' }, { status: 403 })
+    }
     if (currentAdmin.role !== 'super_admin') {
       const { data: canManage } = await adminClient
         .rpc('can_manage_chapter', {
@@ -245,9 +252,14 @@ export async function DELETE(request) {
       return NextResponse.json({ error: 'Admin not found' }, { status: 404 })
     }
 
-    // Can't delete super_admins unless you're a super_admin
-    if (targetAdmin.role === 'super_admin' && currentAdmin.role !== 'super_admin') {
-      return NextResponse.json({ error: 'Cannot remove a super admin' }, { status: 403 })
+    // Can't delete super_admins or national_admins unless you're a super_admin
+    if (['super_admin', 'national_admin'].includes(targetAdmin.role) && currentAdmin.role !== 'super_admin') {
+      return NextResponse.json({ error: 'Cannot remove this admin type' }, { status: 403 })
+    }
+
+    // national_admin cannot delete any admins
+    if (currentAdmin.role === 'national_admin') {
+      return NextResponse.json({ error: 'National admins cannot manage other admins' }, { status: 403 })
     }
 
     // Check permissions

@@ -27,8 +27,9 @@ export default async function AdminPage() {
   }
 
   // Get chapter IDs this admin can access
+  // super_admin and national_admin have access to all data
   let allowedChapterIds = null
-  if (currentAdmin.role !== 'super_admin') {
+  if (!['super_admin', 'national_admin'].includes(currentAdmin.role)) {
     const { data: descendants } = await supabase
       .rpc('get_chapter_descendants', { chapter_uuid: currentAdmin.chapter_id })
     allowedChapterIds = descendants?.map(d => d.id) || []
@@ -93,12 +94,13 @@ export default async function AdminPage() {
   const { data: recentMembers } = await recentMembersQuery
 
   const isSuperAdmin = currentAdmin.role === 'super_admin'
+  const hasFullDataAccess = ['super_admin', 'national_admin'].includes(currentAdmin.role)
 
   return (
     <div className="max-w-6xl mx-auto px-4 py-8">
       <div className="mb-6 sm:mb-8">
         <h1 className="text-2xl sm:text-3xl font-bold text-gray-900">Admin Dashboard</h1>
-        {!isSuperAdmin && currentAdmin.chapters && (
+        {!hasFullDataAccess && currentAdmin.chapters && (
           <p className="text-gray-600 mt-1">
             Managing: {currentAdmin.chapters.name} and sub-chapters
           </p>
@@ -175,14 +177,16 @@ export default async function AdminPage() {
               {isSuperAdmin ? 'Manage Chapters' : 'View Chapters'}
             </Link>
             <Link href="/members" className="block w-full btn-secondary text-center">
-              {isSuperAdmin ? 'View All Members' : 'View Members'}
+              {hasFullDataAccess ? 'View All Members' : 'View Members'}
             </Link>
             <Link href="/members?status=pending" className="block w-full btn-secondary text-center">
               Review Pending Members
             </Link>
-            <Link href="/admin/admins" className="block w-full btn-secondary text-center">
-              Manage Administrators
-            </Link>
+            {isSuperAdmin && (
+              <Link href="/admin/admins" className="block w-full btn-secondary text-center">
+                Manage Administrators
+              </Link>
+            )}
           </div>
         </div>
       </div>

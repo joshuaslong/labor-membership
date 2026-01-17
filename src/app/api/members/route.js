@@ -28,8 +28,9 @@ export async function GET(request) {
   const status = searchParams.get('status')
 
   // Get chapter IDs this admin can access
+  // super_admin and national_admin have access to all data
   let allowedChapterIds = null
-  if (currentAdmin.role !== 'super_admin') {
+  if (!['super_admin', 'national_admin'].includes(currentAdmin.role)) {
     const { data: descendants } = await supabase
       .rpc('get_chapter_descendants', { chapter_uuid: currentAdmin.chapter_id })
     allowedChapterIds = descendants?.map(d => d.id) || []

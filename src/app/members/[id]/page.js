@@ -455,6 +455,7 @@ export default function MemberDetailPage() {
               <div className="flex-1">
                 <div className="font-medium text-purple-900">
                   {memberAdminRecord.role === 'super_admin' ? 'Super Admin' :
+                   memberAdminRecord.role === 'national_admin' ? 'National Admin' :
                    memberAdminRecord.role === 'state_admin' ? 'State Admin' :
                    memberAdminRecord.role === 'county_admin' ? 'County Admin' :
                    memberAdminRecord.role === 'city_admin' ? 'City Admin' :
@@ -468,14 +469,14 @@ export default function MemberDetailPage() {
               </div>
               <button
                 onClick={handleRemoveAdmin}
-                disabled={saving || memberAdminRecord.role === 'super_admin'}
+                disabled={saving || ['super_admin', 'national_admin'].includes(memberAdminRecord.role)}
                 className="px-4 py-2 bg-red-100 text-red-700 rounded-lg text-sm font-medium hover:bg-red-200 disabled:opacity-50"
               >
                 {saving ? 'Removing...' : 'Remove Admin'}
               </button>
             </div>
-            {memberAdminRecord.role === 'super_admin' && (
-              <p className="text-sm text-gray-500">Super admins cannot be removed from this interface.</p>
+            {['super_admin', 'national_admin'].includes(memberAdminRecord.role) && (
+              <p className="text-sm text-gray-500">{memberAdminRecord.role === 'super_admin' ? 'Super' : 'National'} admins can only be managed by super admins.</p>
             )}
           </div>
         ) : (
@@ -493,7 +494,10 @@ export default function MemberDetailPage() {
                   <option value="county_admin">County Admin</option>
                   <option value="state_admin">State Admin</option>
                   {currentUserRole === 'super_admin' && (
-                    <option value="super_admin">Super Admin</option>
+                    <>
+                      <option value="national_admin">National Admin</option>
+                      <option value="super_admin">Super Admin</option>
+                    </>
                   )}
                 </select>
               </div>

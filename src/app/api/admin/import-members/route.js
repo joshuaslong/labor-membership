@@ -152,7 +152,7 @@ export async function POST(request) {
       .eq('user_id', user.id)
       .single()
 
-    if (!adminUser || !['admin', 'super_admin'].includes(adminUser.role)) {
+    if (!adminUser || !['admin', 'super_admin', 'national_admin'].includes(adminUser.role)) {
       return NextResponse.json({ error: 'Admin access required' }, { status: 403 })
     }
 

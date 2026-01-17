@@ -5,6 +5,7 @@ import Link from 'next/link'
 
 const ROLE_LABELS = {
   super_admin: 'Super Admin',
+  national_admin: 'National Admin',
   state_admin: 'State Admin',
   county_admin: 'County Admin',
   city_admin: 'City Admin',
@@ -12,6 +13,7 @@ const ROLE_LABELS = {
 
 const ROLE_COLORS = {
   super_admin: 'bg-purple-100 text-purple-800',
+  national_admin: 'bg-red-100 text-red-800',
   state_admin: 'bg-blue-100 text-blue-800',
   county_admin: 'bg-green-100 text-green-800',
   city_admin: 'bg-yellow-100 text-yellow-800',
@@ -23,7 +25,7 @@ export default function ManageAdminsPage() {
   const [loading, setLoading] = useState(true)
   const [error, setError] = useState(null)
   const [showAddForm, setShowAddForm] = useState(false)
-  const [formData, setFormData] = useState({ email: '', role: 'state_admin', chapter_id: '' })
+  const [formData, setFormData] = useState({ email: '', role: 'national_admin', chapter_id: '' })
   const [submitting, setSubmitting] = useState(false)
 
   useEffect(() => {
@@ -70,7 +72,7 @@ export default function ManageAdminsPage() {
       if (!res.ok) throw new Error(data.error)
 
       setShowAddForm(false)
-      setFormData({ email: '', role: 'state_admin', chapter_id: '' })
+      setFormData({ email: '', role: 'national_admin', chapter_id: '' })
       fetchAdmins()
     } catch (err) {
       setError(err.message)
@@ -100,6 +102,9 @@ export default function ManageAdminsPage() {
 
   // Filter chapters based on selected role
   const getChaptersForRole = (role) => {
+    if (role === 'national_admin') {
+      return chapters.filter(c => c.level === 'national')
+    }
     const levelMap = {
       state_admin: 'state',
       county_admin: 'county',
@@ -174,6 +179,7 @@ export default function ManageAdminsPage() {
                 value={formData.role}
                 onChange={(e) => setFormData({ ...formData, role: e.target.value, chapter_id: '' })}
               >
+                <option value="national_admin">National Admin</option>
                 <option value="state_admin">State Admin</option>
                 <option value="county_admin">County Admin</option>
                 <option value="city_admin">City Admin</option>
@@ -243,7 +249,7 @@ export default function ManageAdminsPage() {
                   )}
                 </div>
 
-                {admin.can_manage && admin.role !== 'super_admin' && (
+                {admin.can_manage && !['super_admin', 'national_admin'].includes(admin.role) && (
                   <button
                     onClick={() => handleRemoveAdmin(admin.id, `${admin.first_name} ${admin.last_name}`)}
                     className="text-red-600 hover:text-red-800 text-sm"
@@ -260,7 +266,8 @@ export default function ManageAdminsPage() {
       <div className="mt-8 p-4 bg-blue-50 rounded-lg">
         <h3 className="font-semibold text-blue-900 mb-2">Admin Hierarchy</h3>
         <ul className="text-sm text-blue-800 space-y-1">
-          <li><strong>Super Admin:</strong> Full access to all chapters and can manage all admins</li>
+          <li><strong>Super Admin:</strong> Full access to all chapters, can manage admins and create chapters</li>
+          <li><strong>National Admin:</strong> Full access to all member data, but cannot manage admins or chapters</li>
           <li><strong>State Admin:</strong> Manages their state chapter and all county/city chapters within</li>
           <li><strong>County Admin:</strong> Manages their county chapter and all city chapters within</li>
           <li><strong>City Admin:</strong> Manages their city chapter only</li>

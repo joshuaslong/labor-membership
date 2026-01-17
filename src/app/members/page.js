@@ -38,8 +38,9 @@ export default async function MembersPage({ searchParams }) {
   }
 
   // Get chapter IDs this admin can access
+  // super_admin and national_admin have access to all data
   let allowedChapterIds = null
-  if (currentAdmin.role !== 'super_admin') {
+  if (!['super_admin', 'national_admin'].includes(currentAdmin.role)) {
     const { data: descendants } = await supabase
       .rpc('get_chapter_descendants', { chapter_uuid: currentAdmin.chapter_id })
     allowedChapterIds = descendants?.map(d => d.id) || []
@@ -85,7 +86,7 @@ export default async function MembersPage({ searchParams }) {
         <div>
           <h1 className="text-3xl font-bold text-gray-900">Members</h1>
           <p className="text-gray-600">
-            {currentAdmin.role === 'super_admin'
+            {['super_admin', 'national_admin'].includes(currentAdmin.role)
               ? 'Manage membership across all chapters'
               : 'Manage membership in your chapter jurisdiction'}
           </p>
