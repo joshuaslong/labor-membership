@@ -98,16 +98,18 @@ export async function POST(request) {
           continue
         }
 
-        // Check if payment already exists by payment_intent
-        const { data: existing } = await adminClient
-          .from('payments')
-          .select('id')
-          .eq('stripe_payment_intent_id', charge.payment_intent)
-          .maybeSingle()
+        // Check if payment already exists by payment_intent OR by member+amount+date combo
+        if (charge.payment_intent) {
+          const { data: existing } = await adminClient
+            .from('payments')
+            .select('id')
+            .eq('stripe_payment_intent_id', charge.payment_intent)
+            .maybeSingle()
 
-        if (existing) {
-          results.updatedPayments++
-          continue
+          if (existing) {
+            results.updatedPayments++
+            continue
+          }
         }
 
         // Also check by checkout session if available in metadata
@@ -122,6 +124,25 @@ export async function POST(request) {
             results.updatedPayments++
             continue
           }
+        }
+
+        // Check by member_id + amount + approximate date (within 1 minute)
+        const chargeDate = new Date(charge.created * 1000)
+        const minDate = new Date(chargeDate.getTime() - 60000).toISOString()
+        const maxDate = new Date(chargeDate.getTime() + 60000).toISOString()
+
+        const { data: existingByAmountDate } = await adminClient
+          .from('payments')
+          .select('id')
+          .eq('member_id', memberId)
+          .eq('amount_cents', charge.amount)
+          .gte('created_at', minDate)
+          .lte('created_at', maxDate)
+          .maybeSingle()
+
+        if (existingByAmountDate) {
+          results.updatedPayments++
+          continue
         }
 
         // Insert new payment
