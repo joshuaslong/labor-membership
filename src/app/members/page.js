@@ -73,10 +73,10 @@ export default async function MembersPage({ searchParams }) {
   if (memberUserIds.length > 0) {
     const { data: admins } = await supabase
       .from('admin_users')
-      .select('user_id, role')
+      .select('user_id, role, chapters(name)')
       .in('user_id', memberUserIds)
     admins?.forEach(a => {
-      adminRecords[a.user_id] = a.role
+      adminRecords[a.user_id] = { role: a.role, chapter: a.chapters?.name }
     })
   }
 
@@ -163,12 +163,16 @@ export default async function MembersPage({ searchParams }) {
                       </Link>
                       {member.user_id && adminRecords[member.user_id] && (
                         <span className="px-1.5 py-0.5 bg-purple-100 text-purple-700 text-xs font-medium rounded">
-                          {adminRecords[member.user_id] === 'super_admin' ? 'Super' :
-                           adminRecords[member.user_id] === 'national_admin' ? 'National' :
-                           adminRecords[member.user_id] === 'state_admin' ? 'State' :
-                           adminRecords[member.user_id] === 'county_admin' ? 'County' :
-                           adminRecords[member.user_id] === 'city_admin' ? 'City' :
+                          {adminRecords[member.user_id].role === 'super_admin' ? 'Super' :
+                           adminRecords[member.user_id].role === 'national_admin' ? 'National' :
+                           adminRecords[member.user_id].role === 'state_admin' ? 'State' :
+                           adminRecords[member.user_id].role === 'county_admin' ? 'County' :
+                           adminRecords[member.user_id].role === 'city_admin' ? 'City' :
                            'Admin'}
+                          {adminRecords[member.user_id].chapter &&
+                           !['super_admin', 'national_admin'].includes(adminRecords[member.user_id].role) && (
+                            <span className="ml-1 opacity-75">({adminRecords[member.user_id].chapter})</span>
+                          )}
                         </span>
                       )}
                     </div>

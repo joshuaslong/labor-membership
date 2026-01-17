@@ -370,6 +370,9 @@ export default function MemberDetailPage() {
                    memberAdminRecord.role === 'county_admin' ? 'County Admin' :
                    memberAdminRecord.role === 'city_admin' ? 'City Admin' :
                    'Admin'}
+                  {memberAdminRecord.chapters && !['super_admin', 'national_admin'].includes(memberAdminRecord.role) && (
+                    <span className="ml-1 opacity-75">({memberAdminRecord.chapters.name})</span>
+                  )}
                 </span>
               )}
             </div>
