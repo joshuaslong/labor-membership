@@ -98,7 +98,19 @@ export async function POST(request) {
           continue
         }
 
-        // Check if payment already exists by payment_intent OR by member+amount+date combo
+        // Check if payment already exists by charge ID (most reliable)
+        const { data: existingByCharge } = await adminClient
+          .from('payments')
+          .select('id')
+          .eq('stripe_charge_id', charge.id)
+          .maybeSingle()
+
+        if (existingByCharge) {
+          results.updatedPayments++
+          continue
+        }
+
+        // Also check by payment_intent if available
         if (charge.payment_intent) {
           const { data: existing } = await adminClient
             .from('payments')
@@ -107,6 +119,11 @@ export async function POST(request) {
             .maybeSingle()
 
           if (existing) {
+            // Update with charge_id if missing
+            await adminClient
+              .from('payments')
+              .update({ stripe_charge_id: charge.id })
+              .eq('id', existing.id)
             results.updatedPayments++
             continue
           }
@@ -121,6 +138,11 @@ export async function POST(request) {
             .maybeSingle()
 
           if (existingBySession) {
+            // Update with charge_id if missing
+            await adminClient
+              .from('payments')
+              .update({ stripe_charge_id: charge.id })
+              .eq('id', existingBySession.id)
             results.updatedPayments++
             continue
           }
@@ -141,6 +163,11 @@ export async function POST(request) {
           .maybeSingle()
 
         if (existingByAmountDate) {
+          // Update with charge_id if missing
+          await adminClient
+            .from('payments')
+            .update({ stripe_charge_id: charge.id })
+            .eq('id', existingByAmountDate.id)
           results.updatedPayments++
           continue
         }
@@ -150,6 +177,7 @@ export async function POST(request) {
         const isRecurring = !!charge.invoice || !!charge.metadata?.subscription_id
         const { error } = await adminClient.from('payments').insert({
           member_id: memberId,
+          stripe_charge_id: charge.id,
           stripe_payment_intent_id: charge.payment_intent,
           amount_cents: charge.amount,
           status: 'succeeded',

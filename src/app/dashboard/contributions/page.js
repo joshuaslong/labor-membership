@@ -71,7 +71,16 @@ async function syncStripeData(member, adminSupabase) {
     for (const charge of charges.data) {
       if (charge.status !== 'succeeded') continue
 
-      // Check if payment already exists by payment_intent
+      // Check if payment already exists by charge ID (most reliable)
+      const { data: existingByCharge } = await adminSupabase
+        .from('payments')
+        .select('id')
+        .eq('stripe_charge_id', charge.id)
+        .maybeSingle()
+
+      if (existingByCharge) continue
+
+      // Also check by payment_intent if available
       if (charge.payment_intent) {
         const { data: existing } = await adminSupabase
           .from('payments')
@@ -79,7 +88,14 @@ async function syncStripeData(member, adminSupabase) {
           .eq('stripe_payment_intent_id', charge.payment_intent)
           .maybeSingle()
 
-        if (existing) continue
+        if (existing) {
+          // Update with charge_id if missing
+          await adminSupabase
+            .from('payments')
+            .update({ stripe_charge_id: charge.id })
+            .eq('id', existing.id)
+          continue
+        }
       }
 
       // Also check by member_id + amount + approximate date (within 1 minute)
@@ -96,21 +112,28 @@ async function syncStripeData(member, adminSupabase) {
         .lte('created_at', maxDate)
         .maybeSingle()
 
-      if (existingByAmountDate) continue
-
-      if (charge.payment_intent) {
-        // Determine if this is a recurring payment - check for invoice OR subscription
-        const isRecurring = !!charge.invoice || !!charge.metadata?.subscription_id
-
-        await adminSupabase.from('payments').insert({
-          member_id: member.id,
-          stripe_payment_intent_id: charge.payment_intent,
-          amount_cents: charge.amount,
-          status: 'succeeded',
-          payment_type: isRecurring ? 'recurring' : 'one_time',
-          created_at: new Date(charge.created * 1000).toISOString(),
-        })
+      if (existingByAmountDate) {
+        // Update with charge_id if missing
+        await adminSupabase
+          .from('payments')
+          .update({ stripe_charge_id: charge.id })
+          .eq('id', existingByAmountDate.id)
+        continue
       }
+
+      // Insert new payment
+      // Determine if this is a recurring payment - check for invoice OR subscription
+      const isRecurring = !!charge.invoice || !!charge.metadata?.subscription_id
+
+      await adminSupabase.from('payments').insert({
+        member_id: member.id,
+        stripe_charge_id: charge.id,
+        stripe_payment_intent_id: charge.payment_intent,
+        amount_cents: charge.amount,
+        status: 'succeeded',
+        payment_type: isRecurring ? 'recurring' : 'one_time',
+        created_at: new Date(charge.created * 1000).toISOString(),
+      })
     }
   } catch (e) {
     console.error('Error syncing Stripe data:', e)
