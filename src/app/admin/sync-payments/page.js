@@ -7,7 +7,9 @@ export default function SyncPaymentsPage() {
   const [stats, setStats] = useState(null)
   const [loading, setLoading] = useState(true)
   const [syncing, setSyncing] = useState(false)
+  const [cleaning, setCleaning] = useState(false)
   const [syncResult, setSyncResult] = useState(null)
+  const [cleanupResult, setCleanupResult] = useState(null)
   const [error, setError] = useState(null)
 
   useEffect(() => {
@@ -48,6 +50,34 @@ export default function SyncPaymentsPage() {
     }
 
     setSyncing(false)
+  }
+
+  const handleCleanup = async () => {
+    if (!confirm('This will remove duplicate payments (same member, same amount, within 5 minutes). Continue?')) {
+      return
+    }
+
+    setCleaning(true)
+    setCleanupResult(null)
+    setError(null)
+
+    try {
+      const res = await fetch('/api/admin/sync-payments', {
+        method: 'DELETE',
+      })
+      if (!res.ok) {
+        const data = await res.json()
+        throw new Error(data.error || 'Cleanup failed')
+      }
+      const data = await res.json()
+      setCleanupResult(data)
+      // Reload stats after cleanup
+      await loadStats()
+    } catch (err) {
+      setError(err.message)
+    }
+
+    setCleaning(false)
   }
 
   return (
@@ -101,14 +131,34 @@ export default function SyncPaymentsPage() {
           This will fetch all charges from Stripe and match them to members by email.
           New payments will be added to the database.
         </p>
-        <button
-          onClick={handleSync}
-          disabled={syncing}
-          className="btn-primary"
-        >
-          {syncing ? 'Syncing...' : 'Sync All Payments'}
-        </button>
+        <div className="flex gap-3">
+          <button
+            onClick={handleSync}
+            disabled={syncing || cleaning}
+            className="btn-primary"
+          >
+            {syncing ? 'Syncing...' : 'Sync All Payments'}
+          </button>
+          <button
+            onClick={handleCleanup}
+            disabled={syncing || cleaning}
+            className="btn-secondary"
+          >
+            {cleaning ? 'Cleaning...' : 'Remove Duplicates'}
+          </button>
+        </div>
       </div>
+
+      {/* Cleanup Results */}
+      {cleanupResult && (
+        <div className="card mb-6 bg-yellow-50">
+          <h2 className="text-xl font-bold mb-4">Cleanup Results</h2>
+          <p className="text-gray-700">
+            Found {cleanupResult.duplicatesFound} duplicate payments.
+            Deleted {cleanupResult.deleted} records.
+          </p>
+        </div>
+      )}
 
       {/* Sync Results */}
       {syncResult && (

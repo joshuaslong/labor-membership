@@ -172,78 +172,10 @@ export async function POST(request) {
       }
     }
 
-    // Also sync checkout sessions that might have been missed
-    let sessionHasMore = true
-    let sessionStartingAfter = null
-
-    while (sessionHasMore) {
-      const params = {
-        limit: 100,
-        expand: ['data.line_items'],
-      }
-      if (sessionStartingAfter) {
-        params.starting_after = sessionStartingAfter
-      }
-
-      const sessions = await stripe.checkout.sessions.list(params)
-
-      for (const session of sessions.data) {
-        if (session.payment_status !== 'paid') continue
-        if (!session.metadata?.member_id) continue
-
-        // Check if we already have this checkout session
-        const { data: existing } = await adminClient
-          .from('payments')
-          .select('id')
-          .eq('stripe_checkout_session_id', session.id)
-          .maybeSingle()
-
-        if (existing) continue
-
-        // Also check by payment intent
-        if (session.payment_intent) {
-          const { data: existingByPI } = await adminClient
-            .from('payments')
-            .select('id')
-            .eq('stripe_payment_intent_id', session.payment_intent)
-            .maybeSingle()
-
-          if (existingByPI) continue
-        }
-
-        // Verify member exists
-        const { data: member } = await adminClient
-          .from('members')
-          .select('id')
-          .eq('id', session.metadata.member_id)
-          .maybeSingle()
-
-        if (!member) {
-          results.unmatchedPayments++
-          continue
-        }
-
-        // Insert payment
-        const { error } = await adminClient.from('payments').insert({
-          member_id: session.metadata.member_id,
-          stripe_checkout_session_id: session.id,
-          stripe_payment_intent_id: session.payment_intent,
-          amount_cents: session.amount_total,
-          status: 'succeeded',
-          payment_type: session.mode === 'subscription' ? 'recurring' : 'one_time',
-          created_at: new Date(session.created * 1000).toISOString(),
-        })
-
-        if (!error) {
-          results.newPayments++
-        }
-      }
-
-      sessionHasMore = sessions.has_more
-      if (sessions.data.length > 0) {
-        sessionStartingAfter = sessions.data[sessions.data.length - 1].id
-      }
-    }
+    // NOTE: We only sync charges, not checkout sessions
+    // Checkout sessions for subscriptions create invoices which create charges
+    // Syncing both would create duplicates
+    // The charges loop above is the source of truth for all payments
 
     return NextResponse.json({
       success: true,
@@ -252,6 +184,99 @@ export async function POST(request) {
 
   } catch (error) {
     console.error('Payment sync error:', error)
+    return NextResponse.json({ error: error.message }, { status: 500 })
+  }
+}
+
+// DELETE - Clean up duplicate payments
+export async function DELETE(request) {
+  try {
+    const supabase = await createClient()
+    const { data: { user } } = await supabase.auth.getUser()
+
+    if (!user) {
+      return NextResponse.json({ error: 'Unauthorized' }, { status: 401 })
+    }
+
+    const adminClient = createAdminClient()
+
+    // Check if user is super_admin
+    const { data: adminUser } = await adminClient
+      .from('admin_users')
+      .select('role')
+      .eq('user_id', user.id)
+      .single()
+
+    if (!adminUser || adminUser.role !== 'super_admin') {
+      return NextResponse.json({ error: 'Super admin access required' }, { status: 403 })
+    }
+
+    // Find duplicate payments (same member, same amount, within 5 minutes of each other)
+    const { data: allPayments } = await adminClient
+      .from('payments')
+      .select('id, member_id, amount_cents, created_at, stripe_payment_intent_id, stripe_checkout_session_id')
+      .eq('status', 'succeeded')
+      .order('created_at', { ascending: true })
+
+    const duplicatesToDelete = []
+    const seenPayments = new Map() // key: member_id-amount -> { id, created_at }
+
+    for (const payment of allPayments || []) {
+      const key = `${payment.member_id}-${payment.amount_cents}`
+      const existing = seenPayments.get(key)
+
+      if (existing) {
+        const existingDate = new Date(existing.created_at)
+        const currentDate = new Date(payment.created_at)
+        const diffMs = Math.abs(currentDate - existingDate)
+
+        // If within 5 minutes, it's likely a duplicate
+        if (diffMs < 5 * 60 * 1000) {
+          // Keep the one with more Stripe identifiers, delete the other
+          const existingHasPI = !!existing.stripe_payment_intent_id
+          const currentHasPI = !!payment.stripe_payment_intent_id
+          const existingHasCS = !!existing.stripe_checkout_session_id
+          const currentHasCS = !!payment.stripe_checkout_session_id
+
+          const existingScore = (existingHasPI ? 1 : 0) + (existingHasCS ? 1 : 0)
+          const currentScore = (currentHasPI ? 1 : 0) + (currentHasCS ? 1 : 0)
+
+          if (currentScore > existingScore) {
+            // Current is better, delete existing
+            duplicatesToDelete.push(existing.id)
+            seenPayments.set(key, payment)
+          } else {
+            // Existing is better or same, delete current
+            duplicatesToDelete.push(payment.id)
+          }
+        } else {
+          // Not within time window, update the seen payment
+          seenPayments.set(key, payment)
+        }
+      } else {
+        seenPayments.set(key, payment)
+      }
+    }
+
+    // Delete duplicates
+    let deleted = 0
+    for (const id of duplicatesToDelete) {
+      const { error } = await adminClient
+        .from('payments')
+        .delete()
+        .eq('id', id)
+
+      if (!error) deleted++
+    }
+
+    return NextResponse.json({
+      success: true,
+      duplicatesFound: duplicatesToDelete.length,
+      deleted
+    })
+
+  } catch (error) {
+    console.error('Cleanup error:', error)
     return NextResponse.json({ error: error.message }, { status: 500 })
   }
 }
