@@ -8,8 +8,10 @@ export default function SyncPaymentsPage() {
   const [loading, setLoading] = useState(true)
   const [syncing, setSyncing] = useState(false)
   const [cleaning, setCleaning] = useState(false)
+  const [fixing, setFixing] = useState(false)
   const [syncResult, setSyncResult] = useState(null)
   const [cleanupResult, setCleanupResult] = useState(null)
+  const [fixResult, setFixResult] = useState(null)
   const [error, setError] = useState(null)
 
   useEffect(() => {
@@ -80,6 +82,30 @@ export default function SyncPaymentsPage() {
     setCleaning(false)
   }
 
+  const handleFixTypes = async () => {
+    setFixing(true)
+    setFixResult(null)
+    setError(null)
+
+    try {
+      const res = await fetch('/api/admin/sync-payments', {
+        method: 'PATCH',
+      })
+      if (!res.ok) {
+        const data = await res.json()
+        throw new Error(data.error || 'Fix failed')
+      }
+      const data = await res.json()
+      setFixResult(data)
+      // Reload stats after fixing
+      await loadStats()
+    } catch (err) {
+      setError(err.message)
+    }
+
+    setFixing(false)
+  }
+
   return (
     <div className="max-w-4xl mx-auto px-4 py-8">
       <Link href="/admin" className="text-gray-500 hover:text-gray-700 text-sm mb-4 inline-block">
@@ -131,22 +157,32 @@ export default function SyncPaymentsPage() {
           This will fetch all charges from Stripe and match them to members by email.
           New payments will be added to the database.
         </p>
-        <div className="flex gap-3">
+        <div className="flex flex-wrap gap-3">
           <button
             onClick={handleSync}
-            disabled={syncing || cleaning}
+            disabled={syncing || cleaning || fixing}
             className="btn-primary"
           >
             {syncing ? 'Syncing...' : 'Sync All Payments'}
           </button>
           <button
             onClick={handleCleanup}
-            disabled={syncing || cleaning}
+            disabled={syncing || cleaning || fixing}
             className="btn-secondary"
           >
             {cleaning ? 'Cleaning...' : 'Remove Duplicates'}
           </button>
+          <button
+            onClick={handleFixTypes}
+            disabled={syncing || cleaning || fixing}
+            className="btn-secondary"
+          >
+            {fixing ? 'Fixing...' : 'Fix Payment Types'}
+          </button>
         </div>
+        <p className="text-sm text-gray-500 mt-2">
+          "Fix Payment Types" re-checks each payment against Stripe to correct one-time vs recurring labels.
+        </p>
       </div>
 
       {/* Cleanup Results */}
@@ -156,6 +192,17 @@ export default function SyncPaymentsPage() {
           <p className="text-gray-700">
             Found {cleanupResult.duplicatesFound} duplicate payments.
             Deleted {cleanupResult.deleted} records.
+          </p>
+        </div>
+      )}
+
+      {/* Fix Types Results */}
+      {fixResult && (
+        <div className="card mb-6 bg-blue-50">
+          <h2 className="text-xl font-bold mb-4">Fix Payment Types Results</h2>
+          <p className="text-gray-700">
+            Checked {fixResult.paymentsChecked} payments.
+            Fixed {fixResult.fixed} payment type labels.
           </p>
         </div>
       )}

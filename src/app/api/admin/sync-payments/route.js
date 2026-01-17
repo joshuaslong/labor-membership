@@ -146,7 +146,8 @@ export async function POST(request) {
         }
 
         // Insert new payment
-        const isRecurring = charge.invoice !== null
+        // Check for invoice OR subscription metadata to determine if recurring
+        const isRecurring = !!charge.invoice || !!charge.metadata?.subscription_id
         const { error } = await adminClient.from('payments').insert({
           member_id: memberId,
           stripe_payment_intent_id: charge.payment_intent,
@@ -277,6 +278,89 @@ export async function DELETE(request) {
 
   } catch (error) {
     console.error('Cleanup error:', error)
+    return NextResponse.json({ error: error.message }, { status: 500 })
+  }
+}
+
+// PATCH - Fix payment types by re-checking against Stripe
+export async function PATCH(request) {
+  try {
+    const supabase = await createClient()
+    const { data: { user } } = await supabase.auth.getUser()
+
+    if (!user) {
+      return NextResponse.json({ error: 'Unauthorized' }, { status: 401 })
+    }
+
+    const adminClient = createAdminClient()
+
+    // Check if user is super_admin or national_admin
+    const { data: adminUser } = await adminClient
+      .from('admin_users')
+      .select('role')
+      .eq('user_id', user.id)
+      .single()
+
+    if (!adminUser || !['super_admin', 'national_admin'].includes(adminUser.role)) {
+      return NextResponse.json({ error: 'Admin access required' }, { status: 403 })
+    }
+
+    // Get all payments with their stripe_payment_intent_id
+    const { data: payments } = await adminClient
+      .from('payments')
+      .select('id, stripe_payment_intent_id, payment_type')
+      .eq('status', 'succeeded')
+
+    let fixed = 0
+    const errors = []
+
+    for (const payment of payments || []) {
+      if (!payment.stripe_payment_intent_id) continue
+
+      try {
+        // Get the payment intent from Stripe
+        const paymentIntent = await stripe.paymentIntents.retrieve(payment.stripe_payment_intent_id)
+
+        // Get charges for this payment intent
+        const charges = await stripe.charges.list({
+          payment_intent: payment.stripe_payment_intent_id,
+          limit: 1,
+        })
+
+        if (charges.data.length === 0) continue
+
+        const charge = charges.data[0]
+        const shouldBeRecurring = !!charge.invoice || !!charge.metadata?.subscription_id
+
+        if (shouldBeRecurring && payment.payment_type === 'one_time') {
+          // Update to recurring
+          await adminClient
+            .from('payments')
+            .update({ payment_type: 'recurring' })
+            .eq('id', payment.id)
+          fixed++
+        } else if (!shouldBeRecurring && payment.payment_type === 'recurring') {
+          // Update to one_time
+          await adminClient
+            .from('payments')
+            .update({ payment_type: 'one_time' })
+            .eq('id', payment.id)
+          fixed++
+        }
+      } catch (e) {
+        errors.push({ payment_id: payment.id, error: e.message })
+      }
+    }
+
+    return NextResponse.json({
+      success: true,
+      paymentsChecked: payments?.length || 0,
+      fixed,
+      errors: errors.length > 0 ? errors : undefined
+    })
+
+  } catch (error) {
+    console.error('Fix payment types error:', error)
     return NextResponse.json({ error: error.message }, { status: 500 })
   }
 }
