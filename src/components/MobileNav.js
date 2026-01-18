@@ -87,6 +87,12 @@ export default function MobileNav({ isLoggedIn, isAdmin, memberName }) {
             Chapters
           </Link>
           <Link
+            href="/initiatives"
+            className="block px-4 py-3 text-white/90 hover:text-white hover:bg-white/10 rounded-lg transition-colors"
+          >
+            Initiatives
+          </Link>
+          <Link
             href="/contribute"
             className="block px-4 py-3 text-white/90 hover:text-white hover:bg-white/10 rounded-lg transition-colors"
           >
