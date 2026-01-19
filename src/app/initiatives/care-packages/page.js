@@ -84,10 +84,10 @@ export default function CarePackagesPage() {
       <section className="relative overflow-hidden bg-gradient-to-b from-gray-50 to-white">
         <div className="absolute inset-0 bg-[radial-gradient(circle_at_top_right,_rgba(226,85,85,0.06)_0%,_transparent_50%)]" />
 
-        <div className="relative max-w-5xl mx-auto px-6 py-16 text-center">
+        <div className="relative max-w-5xl mx-auto px-6 py-16">
           <Link
             href="/initiatives"
-            className="inline-flex items-center gap-2 text-gray-500 hover:text-gray-700 text-sm mb-6 transition-colors"
+            className="inline-flex items-center gap-2 text-gray-500 hover:text-gray-700 text-sm mb-8 transition-colors"
           >
             <svg className="w-4 h-4" fill="none" viewBox="0 0 24 24" stroke="currentColor">
               <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M15 19l-7-7 7-7" />
@@ -95,7 +95,8 @@ export default function CarePackagesPage() {
             All Initiatives
           </Link>
 
-          <div className="inline-flex items-center gap-2 px-3 py-1 rounded-full bg-labor-red-50 text-labor-red-600 text-sm font-medium mb-8">
+          <div className="text-center">
+            <div className="inline-flex items-center gap-2 px-3 py-1 rounded-full bg-labor-red-50 text-labor-red-600 text-sm font-medium mb-8">
             <span className="w-2 h-2 rounded-full bg-labor-red animate-pulse" />
             Active Campaign
           </div>
@@ -109,6 +110,7 @@ export default function CarePackagesPage() {
             Support the brave people standing up against ICE raids in our communities.
             Your donation provides water, food, first aid supplies, and other essentials.
           </p>
+          </div>
         </div>
       </section>
 
