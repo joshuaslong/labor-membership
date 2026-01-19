@@ -18,8 +18,7 @@ function InitiativeCard({ initiative }) {
       <div className="p-6">
         <div className="mb-4">
           {initiative.status === 'active' && (
-            <span className="inline-flex items-center gap-1.5 px-2.5 py-1 rounded-full bg-labor-red-50 text-labor-red text-xs font-medium">
-              <span className="w-1.5 h-1.5 rounded-full bg-labor-red animate-pulse" />
+            <span className="inline-flex items-center px-2.5 py-1 rounded-full bg-labor-red-50 text-labor-red text-xs font-medium">
               Active Campaign
             </span>
           )}
@@ -111,10 +110,7 @@ export default function InitiativesPage() {
         <div className="max-w-5xl mx-auto px-6">
           {activeInitiatives.length > 0 ? (
             <>
-              <div className="flex items-center gap-3 mb-8">
-                <div className="w-2 h-2 rounded-full bg-labor-red animate-pulse" />
-                <h2 className="text-lg font-semibold text-gray-900 tracking-tight">Active Campaigns</h2>
-              </div>
+              <h2 className="text-lg font-semibold text-gray-900 tracking-tight mb-8">Active Campaigns</h2>
 
               <div className="grid md:grid-cols-2 gap-6">
                 {activeInitiatives.map((initiative) => (

@@ -75,13 +75,31 @@ export async function POST(request) {
       },
     }
 
-    if (isRecurring) {
-      // Create a product and price for the subscription
-      const product = await stripe.products.create({
-        name: `Labor Party Monthly Contribution - $${amount}`,
-        metadata: { member_id: member.id },
-      })
+    // Get or create dedicated Stripe Products for party donations
+    // This separates party donations from initiative donations in Stripe reporting
+    const getOrCreateProduct = async (id, name, description, type) => {
+      try {
+        return await stripe.products.retrieve(id)
+      } catch (e) {
+        return await stripe.products.create({
+          id,
+          name,
+          description,
+          metadata: { type, category: 'party_donation' },
+        })
+      }
+    }
 
+    if (isRecurring) {
+      // Use a single product for all monthly contributions
+      const product = await getOrCreateProduct(
+        'prod_party_monthly_contribution',
+        'Labor Party Monthly Contribution',
+        'Recurring monthly contribution to the Labor Party',
+        'recurring'
+      )
+
+      // Create a price for this specific amount
       const price = await stripe.prices.create({
         product: product.id,
         unit_amount: amountCents,
@@ -94,19 +112,24 @@ export async function POST(request) {
       sessionConfig.subscription_data = {
         metadata: {
           member_id: member.id,
+          type: 'party_donation',
         },
       }
     } else {
-      // One-time payment
+      // Use a single product for all one-time contributions
+      const product = await getOrCreateProduct(
+        'prod_party_onetime_contribution',
+        'Labor Party Contribution',
+        'One-time contribution to the Labor Party',
+        'one_time'
+      )
+
       sessionConfig.mode = 'payment'
       sessionConfig.line_items = [
         {
           price_data: {
             currency: 'usd',
-            product_data: {
-              name: 'Labor Party Contribution',
-              description: 'One-time contribution',
-            },
+            product: product.id,
             unit_amount: amountCents,
           },
           quantity: 1,
@@ -115,6 +138,7 @@ export async function POST(request) {
       sessionConfig.payment_intent_data = {
         metadata: {
           member_id: member.id,
+          type: 'party_donation',
         },
       }
     }

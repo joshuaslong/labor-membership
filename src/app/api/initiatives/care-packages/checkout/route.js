@@ -78,6 +78,25 @@ export async function POST(request) {
     // Create the checkout session
     const baseUrl = process.env.NEXT_PUBLIC_BASE_URL || 'https://members.votelabor.org'
 
+    // Get or create a dedicated Stripe Product for this initiative
+    // This makes it easy to filter/report on initiative donations in Stripe Dashboard
+    const productId = 'prod_care_packages_initiative'
+    let product
+    try {
+      product = await stripe.products.retrieve(productId)
+    } catch (e) {
+      // Product doesn't exist, create it
+      product = await stripe.products.create({
+        id: productId,
+        name: 'ICE Protestor Care Package Fund',
+        description: 'Donations to provide care packages for ICE protestors',
+        metadata: {
+          type: 'initiative',
+          initiative_slug: 'care-packages',
+        },
+      })
+    }
+
     const session = await stripe.checkout.sessions.create({
       customer: stripeCustomerId,
       mode: 'payment',
@@ -87,11 +106,7 @@ export async function POST(request) {
         {
           price_data: {
             currency: 'usd',
-            product_data: {
-              name: 'ICE Protestor Care Package Fund',
-              description: 'Donation to provide care packages for ICE protestors',
-              images: [], // Could add an image URL here
-            },
+            product: product.id,
             unit_amount: amountCents,
           },
           quantity: 1,
