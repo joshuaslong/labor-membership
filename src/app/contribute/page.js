@@ -2,6 +2,11 @@ import { redirect } from 'next/navigation'
 import Link from 'next/link'
 import { createClient } from '@/lib/supabase/server'
 
+export const metadata = {
+  title: 'Contribute | Labor Party',
+  description: 'Support the Labor Party. We refuse corporate money - your contribution powers a movement that fights for working families.',
+}
+
 export const dynamic = 'force-dynamic'
 
 const PRESET_AMOUNTS = [5, 10, 25, 50, 100, 250]

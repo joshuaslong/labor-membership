@@ -1,5 +1,10 @@
 import Link from 'next/link'
 
+export const metadata = {
+  title: 'Initiatives | Labor Party',
+  description: 'Support Labor Party direct action campaigns. 100% of donations go directly to the cause.',
+}
+
 const INITIATIVES = [
   {
     slug: 'care-packages',
