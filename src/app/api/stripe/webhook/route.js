@@ -1,6 +1,7 @@
 import { NextResponse } from 'next/server'
 import { stripe } from '@/lib/stripe'
 import { createAdminClient } from '@/lib/supabase/server'
+import { syncMailingListSignup } from '@/lib/mailerlite'
 
 // Disable body parsing - we need raw body for webhook signature verification
 export const config = {
@@ -40,6 +41,44 @@ export async function POST(request) {
         console.log('Amount:', session.amount_total / 100)
         console.log('Mode:', session.mode)
         console.log('Metadata:', session.metadata)
+
+        // Check if this is an initiative donation (has initiative field in metadata)
+        if (session.metadata?.initiative) {
+          console.log('Initiative donation detected:', session.metadata.initiative)
+
+          // Handle mailing list signup if opted in
+          if (session.metadata.join_mailing_list === 'true' && process.env.MAILERLITE_API_KEY) {
+            const initiativeNames = {
+              'care-packages': 'ICE Protestor Care Packages',
+            }
+
+            syncMailingListSignup({
+              email: session.metadata.email,
+              firstName: session.metadata.first_name,
+              lastName: session.metadata.last_name,
+              source: `initiative-${session.metadata.initiative}`,
+              initiativeSlug: session.metadata.initiative,
+              initiativeName: initiativeNames[session.metadata.initiative] || session.metadata.initiative,
+            }).catch((err) => {
+              console.error('MailerLite sync error:', err)
+            })
+
+            // Also save to mailing_list table
+            await supabase.from('mailing_list').upsert({
+              email: session.metadata.email?.toLowerCase(),
+              first_name: session.metadata.first_name || null,
+              last_name: session.metadata.last_name || null,
+              source: `initiative-${session.metadata.initiative}`,
+              subscribed: true,
+            }, {
+              onConflict: 'email',
+            })
+          }
+
+          // Store initiative donation (optional - could create initiative_donations table)
+          // For now, we can track via Stripe metadata
+          break
+        }
 
         const memberId = session.metadata?.member_id
 
