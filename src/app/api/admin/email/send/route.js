@@ -30,7 +30,7 @@ export async function POST(request) {
   }
 
   const body = await request.json()
-  const { subject, content, recipientType, chapterId, replyTo } = body
+  const { subject, content, recipientType, chapterId, replyTo, senderName } = body
 
   if (!subject || !content) {
     return NextResponse.json({ error: 'Subject and content are required' }, { status: 400 })
@@ -161,16 +161,8 @@ export async function POST(request) {
 </html>
 `
 
-    // Get admin's name for from field
-    const { data: adminMember } = await supabase
-      .from('members')
-      .select('first_name, last_name')
-      .eq('user_id', user.id)
-      .single()
-
-    const fromName = adminMember
-      ? `${adminMember.first_name} ${adminMember.last_name} - Labor Party`
-      : 'Labor Party'
+    // Use provided sender name or default to "Labor Party"
+    const fromName = senderName || 'Labor Party'
 
     // Format recipients for Resend
     const formattedRecipients = recipients.map(r => ({

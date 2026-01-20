@@ -89,6 +89,7 @@ export default function EmailComposePage() {
   const [selectedTemplate, setSelectedTemplate] = useState('announcement')
   const [testEmail, setTestEmail] = useState('')
   const [testLoading, setTestLoading] = useState(false)
+  const [senderName, setSenderName] = useState('Labor Party')
 
   useEffect(() => {
     const loadData = async () => {
@@ -171,6 +172,7 @@ export default function EmailComposePage() {
           content,
           testEmail,
           replyTo: replyTo || undefined,
+          senderName: senderName || undefined,
         }),
       })
 
@@ -204,6 +206,7 @@ export default function EmailComposePage() {
           recipientType,
           chapterId: selectedChapterId || undefined,
           replyTo: replyTo || undefined,
+          senderName: senderName || undefined,
         }),
       })
 
@@ -364,6 +367,21 @@ export default function EmailComposePage() {
               </option>
             ))}
           </select>
+        </div>
+
+        {/* Sender Name */}
+        <div className="card">
+          <h2 className="text-lg font-semibold text-gray-900 mb-4">Sender Name</h2>
+          <input
+            type="text"
+            value={senderName}
+            onChange={(e) => setSenderName(e.target.value)}
+            placeholder="e.g., Labor Party, Texas Labor Party, Austin Chapter"
+            className="input-field"
+          />
+          <p className="text-xs text-gray-500 mt-2">
+            This appears as the "From" name in the recipient's inbox. Examples: "Labor Party", "Texas Labor Party", "Austin Chapter"
+          </p>
         </div>
 
         {/* Reply-To */}
