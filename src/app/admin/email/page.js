@@ -3,6 +3,7 @@
 import { useState, useEffect } from 'react'
 import Link from 'next/link'
 import { createClient } from '@/lib/supabase/client'
+import EmailEditor from '@/components/EmailEditor'
 
 const EMAIL_TEMPLATES = [
   {
@@ -404,23 +405,14 @@ export default function EmailComposePage() {
             <div>
               <label className="block text-sm font-medium text-gray-700 mb-2">
                 Message
-                <span className="text-gray-500 font-normal ml-2">(HTML supported)</span>
               </label>
-              <textarea
+              <EmailEditor
                 value={content}
-                onChange={(e) => setContent(e.target.value)}
-                rows={12}
+                onChange={setContent}
                 placeholder="Enter your message..."
-                className="input-field font-mono text-sm"
-                required
               />
               <p className="text-xs text-gray-500 mt-2">
-                Use <code className="bg-gray-100 px-1 py-0.5 rounded">{'{$name}'}</code> to insert the recipient's first name.
-                Basic HTML tags like <code className="bg-gray-100 px-1 py-0.5 rounded">&lt;p&gt;</code>,{' '}
-                <code className="bg-gray-100 px-1 py-0.5 rounded">&lt;strong&gt;</code>,{' '}
-                <code className="bg-gray-100 px-1 py-0.5 rounded">&lt;a&gt;</code>,{' '}
-                <code className="bg-gray-100 px-1 py-0.5 rounded">&lt;ul&gt;</code>,{' '}
-                <code className="bg-gray-100 px-1 py-0.5 rounded">&lt;li&gt;</code> are supported.
+                Use the <code className="bg-gray-100 px-1 py-0.5 rounded">{'{$}'}</code> button in the toolbar to insert <code className="bg-gray-100 px-1 py-0.5 rounded">{'{$name}'}</code> for the recipient's first name.
               </p>
             </div>
           </div>

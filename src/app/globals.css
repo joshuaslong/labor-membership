@@ -148,6 +148,77 @@
     @apply card;
   }
 
+  /* Email Editor - React Quill Custom Styling */
+  .email-editor-wrapper {
+    @apply border border-gray-200 rounded-lg overflow-hidden bg-white;
+  }
+
+  .email-editor-wrapper .ql-toolbar {
+    @apply border-0 border-b border-gray-200 bg-gray-50 p-2;
+  }
+
+  .email-editor-wrapper .ql-container {
+    @apply border-0;
+  }
+
+  .email-editor-wrapper .ql-editor {
+    @apply min-h-64 p-4 text-base;
+    font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, 'Helvetica Neue', Arial, sans-serif;
+  }
+
+  .email-editor-wrapper .ql-editor.ql-blank::before {
+    @apply italic text-gray-400;
+  }
+
+  /* Toolbar button styling */
+  .email-editor-wrapper .ql-toolbar button {
+    @apply w-8 h-8 p-1 rounded hover:bg-gray-200 transition-colors;
+  }
+
+  .email-editor-wrapper .ql-toolbar button.ql-active {
+    @apply bg-labor-red-100 text-labor-red-700;
+  }
+
+  .email-editor-wrapper .ql-toolbar .ql-stroke {
+    @apply stroke-gray-600;
+  }
+
+  .email-editor-wrapper .ql-toolbar button.ql-active .ql-stroke {
+    @apply stroke-labor-red-700;
+  }
+
+  .email-editor-wrapper .ql-toolbar .ql-fill {
+    @apply fill-gray-600;
+  }
+
+  .email-editor-wrapper .ql-toolbar button.ql-active .ql-fill {
+    @apply fill-labor-red-700;
+  }
+
+  /* Dropdown styling */
+  .email-editor-wrapper .ql-toolbar select {
+    @apply border border-gray-200 rounded px-2 py-1 text-sm bg-white;
+  }
+
+  .email-editor-wrapper .ql-toolbar .ql-picker-label {
+    @apply border border-gray-200 rounded px-2 py-1 hover:bg-gray-100;
+  }
+
+  .email-editor-wrapper .ql-toolbar .ql-picker-label.ql-active {
+    @apply bg-labor-red-100 border-labor-red-300;
+  }
+
+  /* Focus state */
+  .email-editor-wrapper:focus-within {
+    @apply ring-2 ring-labor-red-100 border-labor-red-300;
+  }
+
+  /* Custom insert variable button */
+  .email-editor-wrapper .ql-insert-variable::after {
+    content: '{$}';
+    @apply font-mono font-bold;
+  }
+
   .stat-value {
     @apply text-3xl font-semibold text-gray-900 tracking-tight tabular-nums;
   }
