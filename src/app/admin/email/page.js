@@ -88,7 +88,6 @@ export default function EmailComposePage() {
   const [adminEmail, setAdminEmail] = useState('')
   const [selectedTemplate, setSelectedTemplate] = useState('announcement')
   const [testEmail, setTestEmail] = useState('')
-  const [showTestModal, setShowTestModal] = useState(false)
   const [testLoading, setTestLoading] = useState(false)
 
   useEffect(() => {
@@ -158,8 +157,7 @@ export default function EmailComposePage() {
     }
   }
 
-  const handleTestEmail = async (e) => {
-    e.preventDefault()
+  const handleTestEmail = async () => {
     setTestLoading(true)
     setError(null)
     setSuccess(null)
@@ -183,7 +181,6 @@ export default function EmailComposePage() {
       }
 
       setSuccess(`Test email sent to ${testEmail}!`)
-      setShowTestModal(false)
     } catch (err) {
       setError(err.message)
     } finally {
@@ -436,19 +433,33 @@ export default function EmailComposePage() {
           </div>
         </div>
 
+        {/* Test Email */}
+        <div className="card">
+          <h2 className="text-lg font-semibold text-gray-900 mb-4">Test Email</h2>
+          <p className="text-sm text-gray-600 mb-4">
+            Send a test version to verify formatting before sending to members.
+          </p>
+          <div className="flex gap-3">
+            <input
+              type="email"
+              value={testEmail}
+              onChange={(e) => setTestEmail(e.target.value)}
+              placeholder="Enter test email address..."
+              className="input-field flex-1"
+            />
+            <button
+              type="button"
+              onClick={handleTestEmail}
+              disabled={testLoading || !subject || !content || !testEmail}
+              className="btn-secondary px-6"
+            >
+              {testLoading ? 'Sending...' : 'Send Test'}
+            </button>
+          </div>
+        </div>
+
         {/* Submit */}
         <div className="flex gap-4">
-          <button
-            type="button"
-            onClick={() => {
-              setTestEmail(adminEmail)
-              setShowTestModal(true)
-            }}
-            disabled={!subject || !content}
-            className="btn-secondary py-3 px-8"
-          >
-            Send Test Email
-          </button>
           <button
             type="submit"
             disabled={loading || (recipientType === 'chapter' && !selectedChapterId)}
@@ -461,50 +472,6 @@ export default function EmailComposePage() {
           </Link>
         </div>
       </form>
-
-      {/* Test Email Modal */}
-      {showTestModal && (
-        <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center p-4 z-50">
-          <div className="bg-white rounded-lg max-w-md w-full p-6">
-            <h3 className="text-xl font-bold mb-4">Send Test Email</h3>
-            <p className="text-gray-600 mb-4">
-              Send a test version of this email to verify formatting and content before sending to members.
-            </p>
-            <form onSubmit={handleTestEmail}>
-              <div className="mb-4">
-                <label className="block text-sm font-medium text-gray-700 mb-2">
-                  Test Email Address
-                </label>
-                <input
-                  type="email"
-                  value={testEmail}
-                  onChange={(e) => setTestEmail(e.target.value)}
-                  placeholder="your@email.com"
-                  required
-                  className="input-field w-full"
-                />
-              </div>
-              <div className="flex gap-3">
-                <button
-                  type="submit"
-                  disabled={testLoading}
-                  className="btn-primary flex-1"
-                >
-                  {testLoading ? 'Sending...' : 'Send Test'}
-                </button>
-                <button
-                  type="button"
-                  onClick={() => setShowTestModal(false)}
-                  disabled={testLoading}
-                  className="btn-secondary flex-1"
-                >
-                  Cancel
-                </button>
-              </div>
-            </form>
-          </div>
-        </div>
-      )}
     </div>
   )
 }
