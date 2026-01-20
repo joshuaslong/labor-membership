@@ -298,20 +298,26 @@ export async function sendCampaignToGroups({
   subject,
   htmlContent,
   fromName,
+  replyTo,
 }) {
+  const emailConfig = {
+    subject,
+    from_name: fromName || 'Labor Party',
+    from: process.env.MAILERLITE_FROM_EMAIL || 'noreply@votelabor.org',
+    content: htmlContent,
+  }
+
+  // Add reply_to if provided
+  if (replyTo) {
+    emailConfig.reply_to = replyTo
+  }
+
   const campaign = await apiRequest('/campaigns', {
     method: 'POST',
     body: JSON.stringify({
       name: `Campaign: ${subject}`,
       type: 'regular',
-      emails: [
-        {
-          subject,
-          from_name: fromName || 'Labor Party',
-          from: process.env.MAILERLITE_FROM_EMAIL || 'noreply@votelabor.org',
-          content: htmlContent,
-        },
-      ],
+      emails: [emailConfig],
       groups: groupIds,
     }),
   })

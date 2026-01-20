@@ -25,7 +25,7 @@ export async function POST(request) {
   }
 
   const body = await request.json()
-  const { subject, content, recipientType, chapterId } = body
+  const { subject, content, recipientType, chapterId, replyTo } = body
 
   if (!subject || !content) {
     return NextResponse.json({ error: 'Subject and content are required' }, { status: 400 })
@@ -152,6 +152,7 @@ export async function POST(request) {
       subject,
       htmlContent,
       fromName,
+      replyTo: replyTo || undefined,
     })
 
     if (!result.success) {

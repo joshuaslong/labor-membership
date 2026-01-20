@@ -78,11 +78,13 @@ export default function EmailComposePage() {
   const [content, setContent] = useState(EMAIL_TEMPLATES[0].content)
   const [recipientType, setRecipientType] = useState('my_chapter')
   const [selectedChapterId, setSelectedChapterId] = useState('')
+  const [replyTo, setReplyTo] = useState('')
   const [loading, setLoading] = useState(false)
   const [success, setSuccess] = useState(null)
   const [error, setError] = useState(null)
   const [chapters, setChapters] = useState([])
   const [adminInfo, setAdminInfo] = useState(null)
+  const [adminEmail, setAdminEmail] = useState('')
   const [selectedTemplate, setSelectedTemplate] = useState('announcement')
 
   useEffect(() => {
@@ -99,6 +101,18 @@ export default function EmailComposePage() {
           .single()
 
         setAdminInfo(admin)
+
+        // Get admin's email from members table for default reply-to
+        const { data: adminMember } = await supabase
+          .from('members')
+          .select('email')
+          .eq('user_id', user.id)
+          .single()
+
+        if (adminMember?.email) {
+          setAdminEmail(adminMember.email)
+          setReplyTo(adminMember.email)
+        }
 
         // Load chapters based on admin role
         if (['super_admin', 'national_admin'].includes(admin?.role)) {
@@ -155,6 +169,7 @@ export default function EmailComposePage() {
           content,
           recipientType,
           chapterId: selectedChapterId || undefined,
+          replyTo: replyTo || undefined,
         }),
       })
 
@@ -169,6 +184,7 @@ export default function EmailComposePage() {
       setSubject('')
       setContent(EMAIL_TEMPLATES[0].content)
       setSelectedTemplate('announcement')
+      setReplyTo(adminEmail)
     } catch (err) {
       setError(err.message)
     } finally {
@@ -320,6 +336,22 @@ export default function EmailComposePage() {
               </option>
             ))}
           </select>
+        </div>
+
+        {/* Reply-To */}
+        <div className="card">
+          <h2 className="text-lg font-semibold text-gray-900 mb-4">Reply-To Address</h2>
+          <input
+            type="email"
+            value={replyTo}
+            onChange={(e) => setReplyTo(e.target.value)}
+            placeholder="Enter reply-to email address..."
+            className="input-field"
+          />
+          <p className="text-xs text-gray-500 mt-2">
+            When recipients reply to this email, their response will be sent to this address.
+            {adminEmail && ` Defaults to your email (${adminEmail}).`}
+          </p>
         </div>
 
         {/* Email Content */}
