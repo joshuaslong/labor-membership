@@ -127,9 +127,12 @@ export async function POST(request) {
     }
     .header {
       text-align: center;
-      padding-bottom: 20px;
-      border-bottom: 2px solid #E25555;
+      padding: 20px 0;
       margin-bottom: 24px;
+    }
+    .header img {
+      max-width: 280px;
+      height: auto;
     }
     .content {
       padding: 0 0 24px;
@@ -148,7 +151,7 @@ export async function POST(request) {
 </head>
 <body>
   <div class="header">
-    <strong style="color: #E25555; font-size: 24px;">Labor Party</strong>
+    <img src="${process.env.NEXT_PUBLIC_APP_URL || 'https://members.votelabor.org'}/logo.png" alt="Labor Party" />
   </div>
   <div class="content">
     ${content}
