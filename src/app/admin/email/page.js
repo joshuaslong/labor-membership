@@ -205,12 +205,6 @@ export default function EmailComposePage() {
         Compose and send emails to members via MailerLite.
       </p>
 
-      {!process.env.NEXT_PUBLIC_MAILERLITE_ENABLED && (
-        <div className="bg-yellow-50 border border-yellow-200 text-yellow-800 p-4 rounded-lg mb-6">
-          <strong>Note:</strong> MailerLite integration requires the MAILERLITE_API_KEY environment variable to be set.
-        </div>
-      )}
-
       {success && (
         <div className="bg-green-50 text-green-700 p-4 rounded-lg mb-6 flex justify-between items-center">
           <span>{success}</span>
