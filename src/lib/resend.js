@@ -2,7 +2,10 @@ import { Resend } from 'resend'
 
 const resend = new Resend(process.env.RESEND_API_KEY)
 
-const FROM_EMAIL = process.env.RESEND_FROM_EMAIL || 'Labor Party <noreply@votelabor.org>'
+// Default to Resend's test domain if RESEND_FROM_EMAIL is not set
+// Set RESEND_FROM_EMAIL=noreply@votelabor.org once domain is verified
+const FROM_DOMAIN = process.env.RESEND_FROM_EMAIL || 'onboarding@resend.dev'
+const FROM_EMAIL = `Labor Party <${FROM_DOMAIN}>`
 
 /**
  * Send an email to a single recipient
@@ -14,7 +17,7 @@ export async function sendEmail({
   fromName,
   replyTo,
 }) {
-  const from = fromName ? `${fromName} <noreply@votelabor.org>` : FROM_EMAIL
+  const from = fromName ? `${fromName} <${FROM_DOMAIN}>` : FROM_EMAIL
 
   const { data, error } = await resend.emails.send({
     from,
@@ -43,7 +46,7 @@ export async function sendBatchEmails({
   fromName,
   replyTo,
 }) {
-  const from = fromName ? `${fromName} <noreply@votelabor.org>` : FROM_EMAIL
+  const from = fromName ? `${fromName} <${FROM_DOMAIN}>` : FROM_EMAIL
 
   // Process recipients in batches of 100
   const batchSize = 100
