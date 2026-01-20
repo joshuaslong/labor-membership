@@ -84,46 +84,48 @@ export default async function ChapterDetailPage({ params }) {
     .eq('parent_id', id)
     .order('name')
 
-  // Get total member count using member_chapters junction table
-  // This includes all members in this chapter AND all descendant chapters
+  // Only fetch member counts and member list if admin
   let totalMemberCount = 0
-  const { data: allChapterIds } = await supabase
-    .rpc('get_chapter_descendants', { chapter_uuid: id })
-
-  if (allChapterIds) {
-    const descendantIds = allChapterIds.map(c => c.id)
-    // Count unique members in member_chapters for this chapter and all descendants
-    const { count } = await supabase
-      .from('member_chapters')
-      .select('member_id', { count: 'exact', head: true })
-      .eq('chapter_id', id) // Members directly in THIS chapter (includes inherited)
-    totalMemberCount = count || 0
-  }
-
-  // Also count members who may only have chapter_id set but not member_chapters
-  // (legacy data from before junction table was added)
-  if (allChapterIds) {
-    const descendantIds = allChapterIds.map(c => c.id)
-    const { data: membersWithoutMC } = await supabase
-      .from('members')
-      .select('id')
-      .in('chapter_id', descendantIds)
-      .eq('status', 'active')
-
-    // Get member IDs already counted in member_chapters for this chapter
-    const { data: memberChapterIds } = await supabase
-      .from('member_chapters')
-      .select('member_id')
-      .eq('chapter_id', id)
-
-    const mcMemberIds = new Set(memberChapterIds?.map(mc => mc.member_id) || [])
-    const additionalMembers = membersWithoutMC?.filter(m => !mcMemberIds.has(m.id)).length || 0
-    totalMemberCount += additionalMembers
-  }
-
-  // Only fetch direct members list if admin
   let directMembers = []
+
   if (isAdmin) {
+    // Get total member count using member_chapters junction table
+    // This includes all members in this chapter AND all descendant chapters
+    const { data: allChapterIds } = await supabase
+      .rpc('get_chapter_descendants', { chapter_uuid: id })
+
+    if (allChapterIds) {
+      const descendantIds = allChapterIds.map(c => c.id)
+      // Count unique members in member_chapters for this chapter and all descendants
+      const { count } = await supabase
+        .from('member_chapters')
+        .select('member_id', { count: 'exact', head: true })
+        .eq('chapter_id', id) // Members directly in THIS chapter (includes inherited)
+      totalMemberCount = count || 0
+    }
+
+    // Also count members who may only have chapter_id set but not member_chapters
+    // (legacy data from before junction table was added)
+    if (allChapterIds) {
+      const descendantIds = allChapterIds.map(c => c.id)
+      const { data: membersWithoutMC } = await supabase
+        .from('members')
+        .select('id')
+        .in('chapter_id', descendantIds)
+        .eq('status', 'active')
+
+      // Get member IDs already counted in member_chapters for this chapter
+      const { data: memberChapterIds } = await supabase
+        .from('member_chapters')
+        .select('member_id')
+        .eq('chapter_id', id)
+
+      const mcMemberIds = new Set(memberChapterIds?.map(mc => mc.member_id) || [])
+      const additionalMembers = membersWithoutMC?.filter(m => !mcMemberIds.has(m.id)).length || 0
+      totalMemberCount += additionalMembers
+    }
+
+    // Fetch direct members list
     const { data: members } = await supabase
       .from('members')
       .select('*')
@@ -169,22 +171,22 @@ export default async function ChapterDetailPage({ params }) {
         )}
       </div>
 
-      <div className={`grid gap-6 mb-8 ${isAdmin ? 'md:grid-cols-3' : 'md:grid-cols-2'}`}>
-        {isAdmin && (
+      {isAdmin && (
+        <div className="grid gap-6 mb-8 md:grid-cols-3">
           <div className="card text-center">
             <div className="text-3xl font-bold text-labor-red">{directMembers?.length || 0}</div>
             <div className="text-gray-600">Direct Members</div>
           </div>
-        )}
-        <div className="card text-center">
-          <div className="text-3xl font-bold text-gray-900">{totalMemberCount}</div>
-          <div className="text-gray-600">Total Members</div>
+          <div className="card text-center">
+            <div className="text-3xl font-bold text-gray-900">{totalMemberCount}</div>
+            <div className="text-gray-600">Total Members</div>
+          </div>
+          <div className="card text-center">
+            <div className="text-3xl font-bold text-gray-900">{children?.length || 0}</div>
+            <div className="text-gray-600">Sub-Chapters</div>
+          </div>
         </div>
-        <div className="card text-center">
-          <div className="text-3xl font-bold text-gray-900">{children?.length || 0}</div>
-          <div className="text-gray-600">Sub-Chapters</div>
-        </div>
-      </div>
+      )}
 
       {children && children.length > 0 && (
         <div className="card mb-8">

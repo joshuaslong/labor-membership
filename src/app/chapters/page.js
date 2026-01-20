@@ -124,16 +124,6 @@ export default function ChaptersPage() {
         {LEVEL_LABELS[chapter.level] || chapter.level}
       </span>
       <span className="font-medium text-gray-900 flex-1">{chapter.name}</span>
-      {isAdmin && (
-        <span className="text-gray-500 text-sm">
-          {chapter.memberCount} member{chapter.memberCount !== 1 ? 's' : ''}
-          {chapter.primaryCount > 0 && chapter.primaryCount !== chapter.memberCount && (
-            <span className="text-gray-400 ml-1">
-              ({chapter.primaryCount} direct)
-            </span>
-          )}
-        </span>
-      )}
     </Link>
   )
 
