@@ -329,3 +329,46 @@ export async function sendCampaignToGroups({
 
   return { success: true, campaign: scheduled.data }
 }
+
+/**
+ * Send a test campaign to a single email address
+ */
+export async function sendCampaignToEmail({
+  email,
+  subject,
+  htmlContent,
+  fromName,
+  replyTo,
+}) {
+  const emailConfig = {
+    subject,
+    from_name: fromName || 'Labor Party',
+    from: process.env.MAILERLITE_FROM_EMAIL || 'noreply@votelabor.org',
+    content: htmlContent,
+  }
+
+  // Add reply_to if provided
+  if (replyTo) {
+    emailConfig.reply_to = replyTo
+  }
+
+  // Create campaign
+  const campaign = await apiRequest('/campaigns', {
+    method: 'POST',
+    body: JSON.stringify({
+      name: `Test Email: ${subject}`,
+      type: 'regular',
+      emails: [emailConfig],
+    }),
+  })
+
+  // Send as a test email instead of scheduling
+  const testSend = await apiRequest(`/campaigns/${campaign.data.id}/actions/test`, {
+    method: 'POST',
+    body: JSON.stringify({
+      emails: [email],
+    }),
+  })
+
+  return { success: true, campaign: testSend.data }
+}

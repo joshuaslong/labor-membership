@@ -86,6 +86,9 @@ export default function EmailComposePage() {
   const [adminInfo, setAdminInfo] = useState(null)
   const [adminEmail, setAdminEmail] = useState('')
   const [selectedTemplate, setSelectedTemplate] = useState('announcement')
+  const [testEmail, setTestEmail] = useState('')
+  const [showTestModal, setShowTestModal] = useState(false)
+  const [testLoading, setTestLoading] = useState(false)
 
   useEffect(() => {
     const loadData = async () => {
@@ -151,6 +154,39 @@ export default function EmailComposePage() {
     if (template) {
       setSubject(template.subject)
       setContent(template.content)
+    }
+  }
+
+  const handleTestEmail = async (e) => {
+    e.preventDefault()
+    setTestLoading(true)
+    setError(null)
+    setSuccess(null)
+
+    try {
+      const res = await fetch('/api/admin/email/test', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          subject,
+          content,
+          testEmail,
+          replyTo: replyTo || undefined,
+        }),
+      })
+
+      const data = await res.json()
+
+      if (!res.ok) {
+        throw new Error(data.error || 'Failed to send test email')
+      }
+
+      setSuccess(`Test email sent to ${testEmail}!`)
+      setShowTestModal(false)
+    } catch (err) {
+      setError(err.message)
+    } finally {
+      setTestLoading(false)
     }
   }
 
@@ -411,6 +447,17 @@ export default function EmailComposePage() {
         {/* Submit */}
         <div className="flex gap-4">
           <button
+            type="button"
+            onClick={() => {
+              setTestEmail(adminEmail)
+              setShowTestModal(true)
+            }}
+            disabled={!subject || !content}
+            className="btn-secondary py-3 px-8"
+          >
+            Send Test Email
+          </button>
+          <button
             type="submit"
             disabled={loading || (recipientType === 'chapter' && !selectedChapterId)}
             className="btn-primary py-3 px-8"
@@ -422,6 +469,50 @@ export default function EmailComposePage() {
           </Link>
         </div>
       </form>
+
+      {/* Test Email Modal */}
+      {showTestModal && (
+        <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center p-4 z-50">
+          <div className="bg-white rounded-lg max-w-md w-full p-6">
+            <h3 className="text-xl font-bold mb-4">Send Test Email</h3>
+            <p className="text-gray-600 mb-4">
+              Send a test version of this email to verify formatting and content before sending to members.
+            </p>
+            <form onSubmit={handleTestEmail}>
+              <div className="mb-4">
+                <label className="block text-sm font-medium text-gray-700 mb-2">
+                  Test Email Address
+                </label>
+                <input
+                  type="email"
+                  value={testEmail}
+                  onChange={(e) => setTestEmail(e.target.value)}
+                  placeholder="your@email.com"
+                  required
+                  className="input-field w-full"
+                />
+              </div>
+              <div className="flex gap-3">
+                <button
+                  type="submit"
+                  disabled={testLoading}
+                  className="btn-primary flex-1"
+                >
+                  {testLoading ? 'Sending...' : 'Send Test'}
+                </button>
+                <button
+                  type="button"
+                  onClick={() => setShowTestModal(false)}
+                  disabled={testLoading}
+                  className="btn-secondary flex-1"
+                >
+                  Cancel
+                </button>
+              </div>
+            </form>
+          </div>
+        </div>
+      )}
     </div>
   )
 }
