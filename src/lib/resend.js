@@ -2,9 +2,8 @@ import { Resend } from 'resend'
 
 const resend = new Resend(process.env.RESEND_API_KEY)
 
-// Default to Resend's test domain if RESEND_FROM_EMAIL is not set
-// Set RESEND_FROM_EMAIL=noreply@votelabor.org once domain is verified
-const FROM_DOMAIN = process.env.RESEND_FROM_EMAIL || 'onboarding@resend.dev'
+// Use mail.votelabor.org subdomain (verified in Resend)
+const FROM_DOMAIN = process.env.RESEND_FROM_EMAIL || 'noreply@mail.votelabor.org'
 const FROM_EMAIL = `Labor Party <${FROM_DOMAIN}>`
 
 /**
