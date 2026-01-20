@@ -1,8 +1,13 @@
 import { NextResponse } from 'next/server'
 import { createClient, createAdminClient } from '@/lib/supabase/server'
-import { sendCampaignToGroups, getOrCreateChapterGroup, getOrCreateGroup } from '@/lib/mailerlite'
+import { sendBatchEmails, isResendConfigured } from '@/lib/resend'
 
 export async function POST(request) {
+  // Check if Resend is configured
+  if (!isResendConfigured()) {
+    return NextResponse.json({ error: 'RESEND_API_KEY is not configured' }, { status: 500 })
+  }
+
   // Verify admin access
   const authClient = await createClient()
   const { data: { user } } = await authClient.auth.getUser()
@@ -31,20 +36,25 @@ export async function POST(request) {
     return NextResponse.json({ error: 'Subject and content are required' }, { status: 400 })
   }
 
-  // Determine which groups to send to based on admin's permissions
-  const groupIds = []
   const isSuperAdmin = ['super_admin', 'national_admin'].includes(currentAdmin.role)
 
   try {
+    // Get recipients from Supabase based on selection
+    let recipients = []
+
     if (recipientType === 'all_members' && isSuperAdmin) {
-      // Send to all members
-      const allMembersGroupId = await getOrCreateGroup('All Members')
-      if (allMembersGroupId) groupIds.push(allMembersGroupId)
+      // Get all active members
+      const { data: members, error } = await supabase
+        .from('members')
+        .select('email, first_name, last_name')
+        .eq('status', 'active')
+
+      if (error) throw new Error('Failed to fetch members')
+      recipients = members || []
+
     } else if (recipientType === 'chapter') {
-      // Send to specific chapter
       // Verify admin has access to this chapter
       if (!isSuperAdmin) {
-        // Get allowed chapters
         const { data: descendants } = await supabase
           .rpc('get_chapter_descendants', { chapter_uuid: currentAdmin.chapter_id })
         const allowedChapterIds = descendants?.map(d => d.id) || []
@@ -54,34 +64,52 @@ export async function POST(request) {
         }
       }
 
-      // Get chapter name
-      const { data: chapter } = await supabase
-        .from('chapters')
-        .select('name')
-        .eq('id', chapterId)
-        .single()
+      // Get all chapter IDs including descendants
+      const { data: allChapterIds } = await supabase
+        .rpc('get_chapter_descendants', { chapter_uuid: chapterId })
+      const chapterIds = allChapterIds?.map(c => c.id) || [chapterId]
 
-      if (chapter) {
-        const chapterGroupId = await getOrCreateChapterGroup(chapter.name)
-        if (chapterGroupId) groupIds.push(chapterGroupId)
-      }
+      // Get members in these chapters
+      const { data: members, error } = await supabase
+        .from('members')
+        .select('email, first_name, last_name')
+        .in('chapter_id', chapterIds)
+        .eq('status', 'active')
+
+      if (error) throw new Error('Failed to fetch chapter members')
+      recipients = members || []
+
     } else if (recipientType === 'my_chapter') {
-      // Send to admin's own chapter
-      if (currentAdmin.chapters?.name) {
-        const chapterGroupId = await getOrCreateChapterGroup(currentAdmin.chapters.name)
-        if (chapterGroupId) groupIds.push(chapterGroupId)
-      }
-    } else if (recipientType === 'mailing_list') {
-      // Send to mailing list only (non-members who signed up)
-      const mailingListGroupId = await getOrCreateGroup('Mailing List')
-      if (mailingListGroupId) groupIds.push(mailingListGroupId)
+      // Get admin's chapter and descendants
+      const { data: allChapterIds } = await supabase
+        .rpc('get_chapter_descendants', { chapter_uuid: currentAdmin.chapter_id })
+      const chapterIds = allChapterIds?.map(c => c.id) || [currentAdmin.chapter_id]
+
+      const { data: members, error } = await supabase
+        .from('members')
+        .select('email, first_name, last_name')
+        .in('chapter_id', chapterIds)
+        .eq('status', 'active')
+
+      if (error) throw new Error('Failed to fetch chapter members')
+      recipients = members || []
+
+    } else if (recipientType === 'mailing_list' && isSuperAdmin) {
+      // Get mailing list subscribers (non-members)
+      const { data: subscribers, error } = await supabase
+        .from('mailing_list')
+        .select('email, first_name, last_name')
+        .eq('subscribed', true)
+
+      if (error) throw new Error('Failed to fetch mailing list')
+      recipients = subscribers || []
     }
 
-    if (groupIds.length === 0) {
+    if (recipients.length === 0) {
       return NextResponse.json({ error: 'No recipients found for the selected criteria' }, { status: 400 })
     }
 
-    // Wrap content in basic HTML template
+    // Wrap content in HTML email template
     const htmlContent = `
 <!DOCTYPE html>
 <html>
@@ -102,9 +130,6 @@ export async function POST(request) {
       padding-bottom: 20px;
       border-bottom: 2px solid #E25555;
       margin-bottom: 24px;
-    }
-    .header img {
-      max-width: 150px;
     }
     .content {
       padding: 0 0 24px;
@@ -130,7 +155,7 @@ export async function POST(request) {
   </div>
   <div class="footer">
     <p>Labor Party</p>
-    <p><a href="{$unsubscribe}">Unsubscribe</a></p>
+    <p><a href="${process.env.NEXT_PUBLIC_APP_URL}/unsubscribe">Unsubscribe</a></p>
   </div>
 </body>
 </html>
@@ -147,17 +172,21 @@ export async function POST(request) {
       ? `${adminMember.first_name} ${adminMember.last_name} - Labor Party`
       : 'Labor Party'
 
-    const result = await sendCampaignToGroups({
-      groupIds,
+    // Format recipients for Resend
+    const formattedRecipients = recipients.map(r => ({
+      email: r.email,
+      firstName: r.first_name,
+      lastName: r.last_name,
+    }))
+
+    // Send emails via Resend
+    const result = await sendBatchEmails({
+      recipients: formattedRecipients,
       subject,
       htmlContent,
       fromName,
       replyTo: replyTo || undefined,
     })
-
-    if (!result.success) {
-      return NextResponse.json({ error: 'Failed to send email' }, { status: 500 })
-    }
 
     // Log the email send
     await supabase.from('email_logs').insert({
@@ -166,15 +195,15 @@ export async function POST(request) {
       recipient_type: recipientType,
       chapter_id: chapterId || currentAdmin.chapter_id,
       status: 'sent',
-      mailerlite_campaign_id: result.campaign?.id,
+      recipient_count: recipients.length,
     }).catch(() => {
       // Table might not exist yet, that's ok
     })
 
     return NextResponse.json({
       success: true,
-      message: 'Email sent successfully',
-      campaignId: result.campaign?.id,
+      message: `Email sent to ${recipients.length} recipient${recipients.length !== 1 ? 's' : ''}`,
+      count: recipients.length,
     })
   } catch (error) {
     console.error('Email send error:', error)

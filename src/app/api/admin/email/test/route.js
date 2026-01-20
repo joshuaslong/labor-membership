@@ -1,8 +1,13 @@
 import { NextResponse } from 'next/server'
 import { createClient, createAdminClient } from '@/lib/supabase/server'
-import { sendCampaignToEmail } from '@/lib/mailerlite'
+import { sendTestEmail, isResendConfigured } from '@/lib/resend'
 
 export async function POST(request) {
+  // Check if Resend is configured
+  if (!isResendConfigured()) {
+    return NextResponse.json({ error: 'RESEND_API_KEY is not configured' }, { status: 500 })
+  }
+
   // Verify admin access
   const authClient = await createClient()
   const { data: { user } } = await authClient.auth.getUser()
@@ -38,7 +43,7 @@ export async function POST(request) {
   }
 
   try {
-    // Wrap content in basic HTML template (same as production)
+    // Wrap content in HTML email template (same as production)
     const htmlContent = `
 <!DOCTYPE html>
 <html>
@@ -60,9 +65,6 @@ export async function POST(request) {
       border-bottom: 2px solid #E25555;
       margin-bottom: 24px;
     }
-    .header img {
-      max-width: 150px;
-    }
     .content {
       padding: 0 0 24px;
     }
@@ -76,27 +78,14 @@ export async function POST(request) {
     a {
       color: #E25555;
     }
-    .test-banner {
-      background-color: #FEF3C7;
-      border: 2px solid #F59E0B;
-      padding: 12px;
-      margin-bottom: 20px;
-      border-radius: 4px;
-      text-align: center;
-      color: #92400E;
-      font-weight: bold;
-    }
   </style>
 </head>
 <body>
-  <div class="test-banner">
-    ⚠️ TEST EMAIL - This is a preview of how your email will appear
-  </div>
   <div class="header">
     <strong style="color: #E25555; font-size: 24px;">Labor Party</strong>
   </div>
   <div class="content">
-    ${content}
+    ${content.replace(/\{\$name\}/g, 'Test User')}
   </div>
   <div class="footer">
     <p>Labor Party</p>
@@ -117,22 +106,18 @@ export async function POST(request) {
       ? `${adminMember.first_name} ${adminMember.last_name} - Labor Party`
       : 'Labor Party'
 
-    const result = await sendCampaignToEmail({
-      email: testEmail,
-      subject: `[TEST] ${subject}`,
+    const result = await sendTestEmail({
+      to: testEmail,
+      subject,
       htmlContent,
       fromName,
       replyTo: replyTo || undefined,
     })
 
-    if (!result.success) {
-      return NextResponse.json({ error: 'Failed to send test email' }, { status: 500 })
-    }
-
     return NextResponse.json({
       success: true,
       message: `Test email sent to ${testEmail}`,
-      campaignId: result.campaign?.id,
+      id: result.id,
     })
   } catch (error) {
     console.error('Test email send error:', error)

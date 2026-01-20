@@ -236,7 +236,7 @@ export default function EmailComposePage() {
 
       <h1 className="text-2xl sm:text-3xl font-bold text-gray-900 mb-2">Send Email</h1>
       <p className="text-gray-600 mb-8">
-        Compose and send emails to members via MailerLite.
+        Compose and send emails to members.
       </p>
 
       {success && (
