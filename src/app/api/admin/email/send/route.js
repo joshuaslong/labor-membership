@@ -127,11 +127,13 @@ export async function POST(request) {
     }
     .header {
       text-align: center;
-      padding: 20px 0;
+      padding: 24px 20px;
       margin-bottom: 24px;
+      background-color: #1f2937;
+      border-radius: 8px;
     }
     .header img {
-      max-width: 280px;
+      max-width: 240px;
       height: auto;
     }
     .content {

@@ -437,8 +437,8 @@ export default function EmailComposePage() {
         <div className="card">
           <h2 className="text-lg font-semibold text-gray-900 mb-4">Preview</h2>
           <div className="border border-gray-200 rounded-lg p-6 bg-white">
-            <div className="text-center py-5 mb-6">
-              <img src="/logo.png" alt="Labor Party" className="h-12 mx-auto" />
+            <div className="text-center py-6 mb-6 bg-gray-800 rounded-lg">
+              <img src="/logo.png" alt="Labor Party" className="h-10 mx-auto" />
             </div>
             <div
               className="prose prose-sm max-w-none"
