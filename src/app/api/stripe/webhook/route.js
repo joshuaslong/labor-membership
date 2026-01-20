@@ -1,7 +1,6 @@
 import { NextResponse } from 'next/server'
 import { stripe } from '@/lib/stripe'
 import { createAdminClient } from '@/lib/supabase/server'
-import { syncMailingListSignup } from '@/lib/mailerlite'
 
 // Disable body parsing - we need raw body for webhook signature verification
 export const config = {
@@ -47,23 +46,8 @@ export async function POST(request) {
           console.log('Initiative donation detected:', session.metadata.initiative)
 
           // Handle mailing list signup if opted in
-          if (session.metadata.join_mailing_list === 'true' && process.env.MAILERLITE_API_KEY) {
-            const initiativeNames = {
-              'care-packages': 'ICE Protestor Care Packages',
-            }
-
-            syncMailingListSignup({
-              email: session.metadata.email,
-              firstName: session.metadata.first_name,
-              lastName: session.metadata.last_name,
-              source: `initiative-${session.metadata.initiative}`,
-              initiativeSlug: session.metadata.initiative,
-              initiativeName: initiativeNames[session.metadata.initiative] || session.metadata.initiative,
-            }).catch((err) => {
-              console.error('MailerLite sync error:', err)
-            })
-
-            // Also save to mailing_list table
+          if (session.metadata.join_mailing_list === 'true') {
+            // Save to mailing_list table
             await supabase.from('mailing_list').upsert({
               email: session.metadata.email?.toLowerCase(),
               first_name: session.metadata.first_name || null,

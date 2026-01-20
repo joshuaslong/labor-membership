@@ -1,6 +1,5 @@
 import { NextResponse } from 'next/server'
 import { createAdminClient } from '@/lib/supabase/server'
-import { syncMemberToMailerLite } from '@/lib/mailerlite'
 
 export async function POST(request) {
   const data = await request.json()
@@ -108,27 +107,6 @@ export async function POST(request) {
       console.error('Error creating member_chapters:', mcError)
       // Don't fail signup, just log the error
     }
-  }
-
-  // Sync to MailerLite (async, don't block signup)
-  if (process.env.MAILERLITE_API_KEY && data.mailing_list_opted_in !== false) {
-    // Get chapter name for MailerLite group
-    const { data: chapter } = await supabase
-      .from('chapters')
-      .select('name')
-      .eq('id', data.chapter_id)
-      .single()
-
-    syncMemberToMailerLite({
-      id: member.id,
-      email: member.email,
-      first_name: member.first_name,
-      last_name: member.last_name,
-      chapter_name: chapter?.name,
-      status: 'active',
-    }).catch((err) => {
-      console.error('MailerLite sync error:', err)
-    })
   }
 
   return NextResponse.json({ member, user: authData.user }, { status: 201 })
