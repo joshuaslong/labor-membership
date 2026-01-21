@@ -269,6 +269,125 @@
     margin-right: auto !important;
   }
 
+  /* Allow Quill inline styles to show in preview */
+  .prose [style*="font-family"] {
+    font-family: inherit;
+  }
+  .prose .ql-font-monospace,
+  .prose [class*="ql-font-"] {
+    font-family: inherit;
+  }
+
+  /* Email preview - preserve inline styles from editor */
+  .email-preview * {
+    all: revert;
+  }
+  .email-preview {
+    font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, 'Helvetica Neue', Arial, sans-serif;
+    line-height: 1.6;
+    color: #374151;
+  }
+  .email-preview p {
+    margin: 0 0 1em 0;
+  }
+  .email-preview img {
+    max-width: 100%;
+    height: auto;
+  }
+  .email-preview img.align-center {
+    display: block;
+    margin-left: auto;
+    margin-right: auto;
+  }
+  .email-preview img.align-right {
+    display: block;
+    margin-left: auto;
+    margin-right: 0;
+  }
+  .email-preview img.align-left {
+    display: block;
+    margin-left: 0;
+    margin-right: auto;
+  }
+  .email-preview a {
+    color: #E25555;
+  }
+  .email-preview strong {
+    font-weight: 600;
+  }
+  .email-preview em {
+    font-style: italic;
+  }
+  .email-preview u {
+    text-decoration: underline;
+  }
+  .email-preview s {
+    text-decoration: line-through;
+  }
+  .email-preview h1 {
+    font-size: 2em;
+    font-weight: bold;
+    margin: 0.67em 0;
+  }
+  .email-preview h2 {
+    font-size: 1.5em;
+    font-weight: bold;
+    margin: 0.83em 0;
+  }
+  .email-preview h3 {
+    font-size: 1.17em;
+    font-weight: bold;
+    margin: 1em 0;
+  }
+  .email-preview blockquote {
+    border-left: 4px solid #e5e7eb;
+    padding-left: 1em;
+    margin: 1em 0;
+    color: #6b7280;
+  }
+  .email-preview ul, .email-preview ol {
+    padding-left: 1.5em;
+    margin: 1em 0;
+  }
+  .email-preview li {
+    margin: 0.25em 0;
+  }
+  .email-preview pre {
+    background: #f3f4f6;
+    padding: 1em;
+    border-radius: 4px;
+    overflow-x: auto;
+  }
+  .email-preview code {
+    background: #f3f4f6;
+    padding: 0.2em 0.4em;
+    border-radius: 3px;
+    font-family: ui-monospace, monospace;
+  }
+  .email-preview .ql-font-monospace {
+    font-family: ui-monospace, SFMono-Regular, Menlo, Monaco, Consolas, monospace;
+  }
+  .email-preview .ql-font-serif {
+    font-family: Georgia, Cambria, "Times New Roman", Times, serif;
+  }
+  .email-preview .ql-size-small {
+    font-size: 0.75em;
+  }
+  .email-preview .ql-size-large {
+    font-size: 1.5em;
+  }
+  .email-preview .ql-size-huge {
+    font-size: 2.5em;
+  }
+  .email-preview sub {
+    vertical-align: sub;
+    font-size: smaller;
+  }
+  .email-preview sup {
+    vertical-align: super;
+    font-size: smaller;
+  }
+
   .stat-value {
     @apply text-3xl font-semibold text-gray-900 tracking-tight tabular-nums;
   }

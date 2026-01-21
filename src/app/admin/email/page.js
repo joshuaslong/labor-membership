@@ -398,7 +398,7 @@ export default function EmailComposePage() {
           <h2 className="text-lg font-semibold text-gray-900 mb-4">Preview</h2>
           <div className="border border-gray-200 rounded-lg p-6 bg-white">
             <div
-              className="prose prose-sm max-w-none"
+              className="email-preview"
               dangerouslySetInnerHTML={{ __html: content.replace('{$name}', 'Member') }}
             />
             <div className="border-t border-gray-200 pt-4 mt-6 text-center text-xs text-gray-500">
