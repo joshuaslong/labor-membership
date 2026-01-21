@@ -139,7 +139,7 @@ export default async function ChapterDetailPage({ params }) {
 
     if (rsvpCounts) {
       rsvpCounts.forEach(rsvp => {
-        if (rsvp.status === 'going') {
+        if (rsvp.status === 'attending') {
           eventRsvpCounts[rsvp.event_id] = (eventRsvpCounts[rsvp.event_id] || 0) + 1
         }
       })
@@ -236,7 +236,7 @@ export default async function ChapterDetailPage({ params }) {
             <span className={`px-3 py-1 rounded text-white text-sm ${LEVEL_COLORS[chapter.level]}`}>
               {LEVEL_LABELS[chapter.level] || chapter.level}
             </span>
-            <h1 className="text-3xl font-bold text-gray-900">{chapter.name}</h1>
+            <h1 className="text-3xl text-gray-900">{chapter.name}</h1>
           </div>
           {parent && (
             <p className="text-gray-600">
@@ -338,7 +338,7 @@ export default async function ChapterDetailPage({ params }) {
                         <span className="text-sm text-gray-500">
                           {eventRsvpCounts[event.id] || 0} going
                         </span>
-                        {userRsvps[event.id] === 'going' && (
+                        {userRsvps[event.id] === 'attending' && (
                           <span className="px-2 py-0.5 text-xs bg-green-100 text-green-700 rounded-full">
                             You're going
                           </span>

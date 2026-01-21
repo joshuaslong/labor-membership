@@ -100,7 +100,7 @@ export default function EventDetailPage() {
       .from('event_rsvps')
       .select('*', { count: 'exact', head: true })
       .eq('event_id', params.id)
-      .eq('status', 'going')
+      .eq('status', 'attending')
 
     setRsvpCount(count || 0)
 
@@ -204,7 +204,7 @@ export default function EventDetailPage() {
     )
   }
 
-  const isPastEvent = new Date(event.event_date) < new Date(new Date().toDateString())
+  const isPastEvent = new Date(event.start_date) < new Date(new Date().toDateString())
 
   return (
     <div className="max-w-4xl mx-auto px-4 py-8">
@@ -243,7 +243,7 @@ export default function EventDetailPage() {
                 </div>
                 <div>
                   <div className="font-semibold text-gray-900">
-                    {formatEventDate(event.event_date)}
+                    {formatEventDate(event.start_date)}
                   </div>
                   {event.start_time && (
                     <div className="text-gray-600">
@@ -254,7 +254,7 @@ export default function EventDetailPage() {
                 </div>
               </div>
 
-              {event.location && (
+              {event.location_name && (
                 <div className="flex items-start gap-4 p-4 bg-gray-50 rounded-lg">
                   <div className="w-10 h-10 bg-labor-red-100 rounded-lg flex items-center justify-center flex-shrink-0">
                     <svg className="w-5 h-5 text-labor-red" fill="none" stroke="currentColor" viewBox="0 0 24 24">
@@ -264,7 +264,7 @@ export default function EventDetailPage() {
                   </div>
                   <div>
                     <div className="font-semibold text-gray-900">Location</div>
-                    <div className="text-gray-600">{event.location}</div>
+                    <div className="text-gray-600">{event.location_name}</div>
                   </div>
                 </div>
               )}
@@ -296,7 +296,7 @@ export default function EventDetailPage() {
             ) : user && member ? (
               // Logged in member RSVP
               <div className="space-y-3">
-                {rsvpStatus === 'going' ? (
+                {rsvpStatus === 'attending' ? (
                   <div className="p-4 bg-green-50 border border-green-200 rounded-lg text-center">
                     <div className="flex items-center justify-center gap-2 text-green-700 font-medium mb-2">
                       <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
@@ -305,7 +305,7 @@ export default function EventDetailPage() {
                       You're going!
                     </div>
                     <button
-                      onClick={() => handleRsvp('not_going')}
+                      onClick={() => handleRsvp('declined')}
                       disabled={submitting}
                       className="text-sm text-gray-500 hover:text-gray-700"
                     >
@@ -314,7 +314,7 @@ export default function EventDetailPage() {
                   </div>
                 ) : (
                   <button
-                    onClick={() => handleRsvp('going')}
+                    onClick={() => handleRsvp('attending')}
                     disabled={submitting}
                     className="w-full btn-primary"
                   >
@@ -339,10 +339,10 @@ export default function EventDetailPage() {
                     Maybe
                   </button>
                   <button
-                    onClick={() => handleRsvp('not_going')}
-                    disabled={submitting || rsvpStatus === 'not_going'}
+                    onClick={() => handleRsvp('declined')}
+                    disabled={submitting || rsvpStatus === 'declined'}
                     className={`flex-1 py-2 px-3 text-sm rounded-lg border transition-colors ${
-                      rsvpStatus === 'not_going'
+                      rsvpStatus === 'declined'
                         ? 'bg-gray-100 border-gray-300 text-gray-700'
                         : 'border-gray-200 text-gray-600 hover:bg-gray-50'
                     }`}

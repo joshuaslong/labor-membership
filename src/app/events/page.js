@@ -92,7 +92,7 @@ function EventsContent() {
         .from('event_rsvps')
         .select('event_id, status')
         .in('event_id', eventIds)
-        .eq('status', 'going')
+        .eq('status', 'attending')
 
       const countMap = {}
       rsvpCounts?.forEach(rsvp => {
