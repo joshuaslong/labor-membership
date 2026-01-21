@@ -27,7 +27,7 @@ export async function POST(request, { params }) {
     // Verify event exists and is published
     const { data: event, error: eventError } = await supabase
       .from('events')
-      .select('id, title, event_date, status')
+      .select('id, title, start_date, status')
       .eq('id', id)
       .eq('status', 'published')
       .single()
@@ -40,7 +40,7 @@ export async function POST(request, { params }) {
     }
 
     // Check if event is in the future
-    const eventDate = new Date(event.event_date)
+    const eventDate = new Date(event.start_date)
     const today = new Date()
     today.setHours(0, 0, 0, 0)
 
@@ -73,7 +73,7 @@ export async function POST(request, { params }) {
         event_id: id,
         name: name.trim(),
         email: email.toLowerCase().trim(),
-        status: 'going'
+        status: 'attending'
       })
       .select()
       .single()

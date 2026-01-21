@@ -289,7 +289,7 @@ export default async function ChapterDetailPage({ params }) {
           {/* Upcoming Events */}
           <div className="card">
             <div className="flex items-center justify-between mb-4">
-              <h2 className="text-xl font-bold">Upcoming Events</h2>
+              <h2 className="text-xl">Upcoming Events</h2>
               {hasEvents && (
                 <Link href={`/events?chapter=${id}`} className="text-sm text-labor-red hover:underline">
                   View all
