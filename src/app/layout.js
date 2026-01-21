@@ -2,9 +2,9 @@ import './globals.css'
 import { Geist, Geist_Mono } from 'next/font/google'
 import Navigation from '@/components/Navigation'
 
-const geist = Geist({
+const geistSans = Geist({
   subsets: ['latin'],
-  variable: '--font-geist',
+  variable: '--font-geist-sans',
 })
 
 const geistMono = Geist_Mono({
@@ -22,8 +22,8 @@ export const metadata = {
 
 export default function RootLayout({ children }) {
   return (
-    <html lang="en" className={`${geist.variable} ${geistMono.variable}`}>
-      <body className="min-h-screen bg-gray-50 font-sans">
+    <html lang="en" className={`${geistSans.variable} ${geistMono.variable}`}>
+      <body className="min-h-screen bg-gray-50 font-sans antialiased">
         <Navigation />
         <main>{children}</main>
       </body>
