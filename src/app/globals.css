@@ -219,6 +219,18 @@
     @apply font-mono font-bold;
   }
 
+  /* Image handling in editor */
+  .email-editor-wrapper .ql-editor img {
+    max-width: 100%;
+    height: auto;
+    cursor: pointer;
+  }
+
+  .email-editor-wrapper .ql-editor img:hover {
+    outline: 2px solid #E25555;
+    outline-offset: 2px;
+  }
+
   .stat-value {
     @apply text-3xl font-semibold text-gray-900 tracking-tight tabular-nums;
   }

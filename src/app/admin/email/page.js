@@ -5,7 +5,7 @@ import Link from 'next/link'
 import { createClient } from '@/lib/supabase/client'
 import EmailEditor from '@/components/EmailEditor'
 
-const LOGO_HEADER = `<p style="text-align: center; margin-bottom: 24px;"><img src="https://members.votelabor.org/logo-dark.png" alt="Labor Party" style="max-width: 240px; height: auto;" /></p>`
+const LOGO_HEADER = `<p style="text-align: center; margin-bottom: 24px;"><img src="https://members.votelabor.org/logo-dark.png" alt="Labor Party" width="200" style="max-width: 200px; height: auto;" /></p>`
 
 const EMAIL_TEMPLATES = [
   {
@@ -387,7 +387,7 @@ export default function EmailComposePage() {
                 placeholder="Enter your message..."
               />
               <p className="text-xs text-gray-500 mt-2">
-                Use the <code className="bg-gray-100 px-1 py-0.5 rounded">{'{$}'}</code> button in the toolbar to insert <code className="bg-gray-100 px-1 py-0.5 rounded">{'{$name}'}</code> for the recipient's first name.
+                Use the <code className="bg-gray-100 px-1 py-0.5 rounded">{'{$}'}</code> button to insert <code className="bg-gray-100 px-1 py-0.5 rounded">{'{$name}'}</code> for the recipient's first name. To resize images, click on the image and delete it, then re-add with your preferred dimensions, or edit the HTML directly in the template.
               </p>
             </div>
           </div>
