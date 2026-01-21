@@ -23,7 +23,7 @@ export async function sendEmail({
     to,
     subject,
     html: htmlContent,
-    reply_to: replyTo,
+    replyTo,
   })
 
   if (error) {
@@ -66,7 +66,7 @@ export async function sendBatchEmails({
         to: recipient.email,
         subject,
         html: personalizedContent,
-        reply_to: replyTo,
+        replyTo,
       }
     })
 

@@ -57,11 +57,11 @@ export default function EmailEditor({ value, onChange, placeholder = 'Enter your
             { label: 'Full', width: null },
           ]
 
-          sizes.forEach(({ label, width }) => {
+          // Helper to create styled button
+          const createButton = (label, isActive, onClick) => {
             const btn = document.createElement('button')
-            btn.textContent = label
+            btn.innerHTML = label
             btn.type = 'button'
-            const isActive = (width && img.width === width) || (width === null && img.style.width === '100%')
             btn.style.cssText = `
               padding: 6px 12px;
               font-size: 13px;
@@ -85,7 +85,25 @@ export default function EmailEditor({ value, onChange, placeholder = 'Enter your
                 btn.style.borderColor = '#e5e7eb'
               }
             }
-            btn.onclick = (e) => {
+            btn.onclick = onClick
+            return btn
+          }
+
+          // Get current alignment from parent paragraph or image style
+          const getAlignment = () => {
+            const parent = img.parentElement
+            if (img.style.display === 'block' && img.style.marginLeft === 'auto' && img.style.marginRight === 'auto') return 'center'
+            if (img.style.float === 'right' || (parent && parent.style.textAlign === 'right')) return 'right'
+            if (img.style.float === 'left' || (parent && parent.style.textAlign === 'left')) return 'left'
+            if (parent && parent.style.textAlign === 'center') return 'center'
+            return 'left'
+          }
+          const currentAlign = getAlignment()
+
+          // Size buttons
+          sizes.forEach(({ label, width }) => {
+            const isActive = (width && img.width === width) || (width === null && img.style.width === '100%')
+            const btn = createButton(label, isActive, (e) => {
               e.preventDefault()
               e.stopPropagation()
               if (width) {
@@ -99,11 +117,57 @@ export default function EmailEditor({ value, onChange, placeholder = 'Enter your
               }
               img.style.height = 'auto'
               wrapper.remove()
-              // Trigger change event
               const event = new Event('input', { bubbles: true })
               editorElement.dispatchEvent(event)
               onChange(editorElement.innerHTML)
-            }
+            })
+            wrapper.appendChild(btn)
+          })
+
+          // Separator
+          const sep = document.createElement('div')
+          sep.style.cssText = 'width: 1px; background: #e5e7eb; margin: 0 4px;'
+          wrapper.appendChild(sep)
+
+          // Alignment buttons
+          const alignments = [
+            { label: '⬅', align: 'left', title: 'Align left' },
+            { label: '⬌', align: 'center', title: 'Center' },
+            { label: '➡', align: 'right', title: 'Align right' },
+          ]
+
+          alignments.forEach(({ label, align, title }) => {
+            const isActive = currentAlign === align
+            const btn = createButton(label, isActive, (e) => {
+              e.preventDefault()
+              e.stopPropagation()
+
+              // Reset float and margins
+              img.style.float = 'none'
+              img.style.marginLeft = ''
+              img.style.marginRight = ''
+              img.style.display = ''
+
+              if (align === 'center') {
+                img.style.display = 'block'
+                img.style.marginLeft = 'auto'
+                img.style.marginRight = 'auto'
+              } else if (align === 'right') {
+                img.style.display = 'block'
+                img.style.marginLeft = 'auto'
+                img.style.marginRight = '0'
+              } else {
+                img.style.display = 'block'
+                img.style.marginLeft = '0'
+                img.style.marginRight = 'auto'
+              }
+
+              wrapper.remove()
+              const event = new Event('input', { bubbles: true })
+              editorElement.dispatchEvent(event)
+              onChange(editorElement.innerHTML)
+            })
+            btn.title = title
             wrapper.appendChild(btn)
           })
 
