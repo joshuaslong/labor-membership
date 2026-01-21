@@ -145,7 +145,7 @@ export default function EditEventPage({ params }) {
         ← Back to Events
       </Link>
 
-      <h1 className="text-2xl sm:text-3xl font-bold text-gray-900 mb-2">Edit Event</h1>
+      <h1 className="text-2xl sm:text-3xl text-gray-900 mb-2">Edit Event</h1>
       <p className="text-gray-600 mb-8">Update event details.</p>
 
       {error && (

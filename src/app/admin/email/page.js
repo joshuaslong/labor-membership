@@ -197,7 +197,7 @@ export default function EmailComposePage() {
         ← Back to Admin
       </Link>
 
-      <h1 className="text-2xl sm:text-3xl font-bold text-gray-900 mb-2 px-4 sm:px-0">Send Email</h1>
+      <h1 className="text-2xl sm:text-3xl text-gray-900 mb-2 px-4 sm:px-0">Send Email</h1>
       <p className="text-gray-600 mb-6 sm:mb-8 px-4 sm:px-0">
         Compose and send emails to members.
       </p>

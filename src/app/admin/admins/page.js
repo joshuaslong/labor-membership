@@ -130,7 +130,7 @@ export default function ManageAdminsPage() {
 
       <div className="flex justify-between items-center mb-8">
         <div>
-          <h1 className="text-3xl text-gray-900">Manage Administrators</h1>
+          <h1 className="text-2xl sm:text-3xl text-gray-900">Manage Administrators</h1>
           <p className="text-gray-600 mt-1">Add or remove admin access for members.</p>
         </div>
         <button

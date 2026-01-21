@@ -85,7 +85,7 @@ export async function GET(request) {
         email: member?.email || authUser?.email || 'Unknown',
         first_name: member?.first_name || '',
         last_name: member?.last_name || '',
-        can_manage
+        can_manage: canManage
       }
     })
 
