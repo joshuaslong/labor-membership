@@ -444,7 +444,7 @@ export default function MemberDetailPage() {
 
       {/* Chapter Assignment */}
       <div className="card mb-6">
-        <h2 className="text-lg font-bold text-gray-900 mb-4">Chapter Assignment</h2>
+        <h2 className="text-lg font-medium text-gray-900 mb-4">Chapter Assignment</h2>
 
         <div className="mb-4">
           <label className="block text-sm font-medium text-gray-700 mb-2">Primary Chapter</label>
@@ -503,7 +503,7 @@ export default function MemberDetailPage() {
 
       {/* Status Management */}
       <div className="card mb-6">
-        <h2 className="text-lg font-bold text-gray-900 mb-4">Status Management</h2>
+        <h2 className="text-lg font-medium text-gray-900 mb-4">Status Management</h2>
         <div className="flex flex-wrap gap-2">
           {['pending', 'active', 'lapsed', 'cancelled'].map(status => (
             <button
@@ -524,7 +524,7 @@ export default function MemberDetailPage() {
 
       {/* Admin Access Management */}
       <div className="card mb-6">
-        <h2 className="text-lg font-bold text-gray-900 mb-4">Admin Access</h2>
+        <h2 className="text-lg font-medium text-gray-900 mb-4">Admin Access</h2>
 
         {memberAdminRecord ? (
           <div>
@@ -672,7 +672,7 @@ export default function MemberDetailPage() {
       {/* Danger Zone - Super Admin Only */}
       {currentUserRole === 'super_admin' && (
         <div className="card border-red-200 bg-red-50">
-          <h2 className="text-lg font-bold text-red-900 mb-4">Danger Zone</h2>
+          <h2 className="text-lg font-medium text-red-900 mb-4">Danger Zone</h2>
           <p className="text-sm text-red-700 mb-4">
             Deleting a member is permanent and cannot be undone. This will remove all their data including chapter memberships, admin access, and their authentication account.
           </p>
