@@ -46,20 +46,27 @@ export default function MemberDetailPage() {
         return
       }
 
-      // Check if current user is admin
-      const { data: adminUser } = await supabase
+      // Check if current user is admin - get all records and use highest privilege
+      const { data: adminUsers } = await supabase
         .from('admin_users')
         .select('role, chapter_id')
         .eq('user_id', user.id)
-        .single()
 
-      if (!adminUser) {
+      if (!adminUsers || adminUsers.length === 0) {
         router.push('/dashboard')
         return
       }
 
+      // Determine highest privilege role
+      const roleHierarchy = ['super_admin', 'national_admin', 'state_admin', 'county_admin', 'city_admin']
+      const highestRole = adminUsers.reduce((highest, current) => {
+        const currentIndex = roleHierarchy.indexOf(current.role)
+        const highestIndex = roleHierarchy.indexOf(highest.role)
+        return currentIndex < highestIndex ? current : highest
+      }, adminUsers[0])
+
       setIsAdmin(true)
-      setCurrentUserRole(adminUser.role)
+      setCurrentUserRole(highestRole.role)
 
       // Load member details
       const { data: memberData, error: memberError } = await supabase

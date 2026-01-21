@@ -124,8 +124,8 @@ export default function ManageAdminsPage() {
 
   return (
     <div className="max-w-4xl mx-auto px-4 py-12">
-      <Link href="/admin" className="text-red-700 hover:underline mb-4 inline-block">
-        &larr; Back to Admin
+      <Link href="/admin" className="text-gray-500 hover:text-gray-900 text-sm mb-4 inline-block">
+        ← Back to Admin Dashboard
       </Link>
 
       <div className="flex justify-between items-center mb-8">
