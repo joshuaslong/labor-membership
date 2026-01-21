@@ -1,18 +1,9 @@
 'use client'
 
-import { useState, useEffect } from 'react'
+import { useState, useEffect, Suspense } from 'react'
 import Link from 'next/link'
 import { useSearchParams } from 'next/navigation'
 import { createClient } from '@/lib/supabase/client'
-
-function formatEventDate(dateStr) {
-  const date = new Date(dateStr)
-  return date.toLocaleDateString('en-US', {
-    weekday: 'short',
-    month: 'short',
-    day: 'numeric'
-  })
-}
 
 function formatEventTime(timeStr) {
   if (!timeStr) return null
@@ -26,7 +17,7 @@ function formatEventTime(timeStr) {
   })
 }
 
-export default function EventsPage() {
+function EventsContent() {
   const searchParams = useSearchParams()
   const chapterFilter = searchParams.get('chapter')
 
@@ -304,5 +295,36 @@ export default function EventsPage() {
         </div>
       </div>
     </div>
+  )
+}
+
+function EventsLoading() {
+  return (
+    <div className="max-w-6xl mx-auto px-4 py-8">
+      <div className="mb-8">
+        <div className="h-9 bg-gray-200 rounded w-1/3 mb-2 animate-pulse"></div>
+        <div className="h-5 bg-gray-200 rounded w-1/4 animate-pulse"></div>
+      </div>
+      <div className="card mb-8 animate-pulse">
+        <div className="h-10 bg-gray-200 rounded"></div>
+      </div>
+      <div className="space-y-4">
+        {[1, 2, 3].map(i => (
+          <div key={i} className="card animate-pulse">
+            <div className="h-6 bg-gray-200 rounded w-1/3 mb-3"></div>
+            <div className="h-4 bg-gray-200 rounded w-1/2 mb-2"></div>
+            <div className="h-4 bg-gray-200 rounded w-1/4"></div>
+          </div>
+        ))}
+      </div>
+    </div>
+  )
+}
+
+export default function EventsPage() {
+  return (
+    <Suspense fallback={<EventsLoading />}>
+      <EventsContent />
+    </Suspense>
   )
 }
