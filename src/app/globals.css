@@ -279,9 +279,6 @@
   }
 
   /* Email preview - preserve inline styles from editor */
-  .email-preview * {
-    all: revert;
-  }
   .email-preview {
     font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, 'Helvetica Neue', Arial, sans-serif;
     line-height: 1.6;
@@ -290,10 +287,19 @@
   .email-preview p {
     margin: 0 0 1em 0;
   }
-  .email-preview img {
-    max-width: 100%;
-    height: auto;
+  /* Centered paragraphs (for images) */
+  .email-preview p[style*="text-align: center"] {
+    text-align: center;
   }
+  .email-preview img {
+    height: auto !important;
+    /* Don't override inline width styles */
+  }
+  /* Images with width attribute should respect it */
+  .email-preview img[width="100"] { width: 100px; max-width: 100%; }
+  .email-preview img[width="200"] { width: 200px; max-width: 100%; }
+  .email-preview img[width="300"] { width: 300px; max-width: 100%; }
+  .email-preview img[width="400"] { width: 400px; max-width: 100%; }
   .email-preview img.align-center {
     display: block;
     margin-left: auto;
