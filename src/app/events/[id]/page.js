@@ -316,7 +316,7 @@ export default function EventDetailPage() {
         {/* Sidebar */}
         <div className="space-y-6">
           {/* RSVP Card */}
-          <div className="card min-w-[280px]">
+          <div className="card min-w-[320px]">
             <div className="flex items-center justify-between mb-4">
               <h3 className="font-semibold">Attendance</h3>
               <span className="text-sm text-gray-500">{rsvpCount} going</span>
