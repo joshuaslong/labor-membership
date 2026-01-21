@@ -5,12 +5,15 @@ import Link from 'next/link'
 import { createClient } from '@/lib/supabase/client'
 import EmailEditor from '@/components/EmailEditor'
 
+const LOGO_HEADER = `<p style="text-align: center; margin-bottom: 24px;"><img src="https://members.votelabor.org/logo-dark.png" alt="Labor Party" style="max-width: 240px; height: auto;" /></p>`
+
 const EMAIL_TEMPLATES = [
   {
     id: 'announcement',
     name: 'General Announcement',
     subject: '',
-    content: `<p>Dear {$name},</p>
+    content: `${LOGO_HEADER}
+<p>Dear {$name},</p>
 
 <p>[Your announcement here]</p>
 
@@ -21,7 +24,8 @@ Labor Party</p>`,
     id: 'event',
     name: 'Event Invitation',
     subject: "You're Invited: ",
-    content: `<p>Dear {$name},</p>
+    content: `${LOGO_HEADER}
+<p>Dear {$name},</p>
 
 <p>You&apos;re invited to join us for an upcoming event!</p>
 
@@ -41,7 +45,8 @@ Labor Party</p>`,
     id: 'action',
     name: 'Call to Action',
     subject: 'Action Needed: ',
-    content: `<p>Dear {$name},</p>
+    content: `${LOGO_HEADER}
+<p>Dear {$name},</p>
 
 <p>We need your help with an urgent action.</p>
 
@@ -65,7 +70,8 @@ Labor Party</p>`,
     id: 'blank',
     name: 'Blank Template',
     subject: '',
-    content: `<p>Dear {$name},</p>
+    content: `${LOGO_HEADER}
+<p>Dear {$name},</p>
 
 <p></p>
 
@@ -437,9 +443,6 @@ export default function EmailComposePage() {
         <div className="card">
           <h2 className="text-lg font-semibold text-gray-900 mb-4">Preview</h2>
           <div className="border border-gray-200 rounded-lg p-6 bg-white">
-            <div className="text-center py-6 mb-6 bg-gray-800 rounded-lg">
-              <img src="/logo.png" alt="Labor Party" className="h-10 mx-auto" />
-            </div>
             <div
               className="prose prose-sm max-w-none"
               dangerouslySetInnerHTML={{ __html: content.replace('{$name}', 'Member') }}
