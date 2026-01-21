@@ -300,20 +300,15 @@
   .email-preview img[width="200"] { width: 200px; max-width: 100%; }
   .email-preview img[width="300"] { width: 300px; max-width: 100%; }
   .email-preview img[width="400"] { width: 400px; max-width: 100%; }
-  .email-preview img.align-center {
+  /* Image alignment - inline styles from editor are respected automatically */
+  .email-preview img[style*="margin-left: auto"][style*="margin-right: auto"] {
     display: block;
-    margin-left: auto;
-    margin-right: auto;
   }
-  .email-preview img.align-right {
+  .email-preview img[style*="margin-left: auto"][style*="margin-right: 0"] {
     display: block;
-    margin-left: auto;
-    margin-right: 0;
   }
-  .email-preview img.align-left {
+  .email-preview img[style*="margin-left: 0"][style*="margin-right: auto"] {
     display: block;
-    margin-left: 0;
-    margin-right: auto;
   }
   .email-preview a {
     color: #E25555;

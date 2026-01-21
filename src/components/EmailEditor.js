@@ -109,11 +109,12 @@ export default function EmailEditor({ value, onChange, placeholder = 'Enter your
             return btn
           }
 
-          // Get current alignment from class or styles
+          // Get current alignment from inline styles
           const getAlignment = () => {
-            if (img.classList.contains('align-center')) return 'center'
-            if (img.classList.contains('align-right')) return 'right'
-            if (img.classList.contains('align-left')) return 'left'
+            const ml = img.style.marginLeft
+            const mr = img.style.marginRight
+            if (ml === 'auto' && mr === 'auto') return 'center'
+            if (ml === 'auto' && (mr === '0' || mr === '0px')) return 'right'
             return 'left'
           }
           const currentAlign = getAlignment()
@@ -165,17 +166,27 @@ export default function EmailEditor({ value, onChange, placeholder = 'Enter your
               e.preventDefault()
               e.stopPropagation()
 
-              // Remove existing alignment classes
-              img.classList.remove('align-left', 'align-center', 'align-right')
-              // Add new alignment class
-              img.classList.add(`align-${align}`)
+              // Apply alignment using inline styles directly on the image
+              // This approach works better with Quill as it preserves style attributes
+              if (align === 'center') {
+                img.style.display = 'block'
+                img.style.marginLeft = 'auto'
+                img.style.marginRight = 'auto'
+              } else if (align === 'right') {
+                img.style.display = 'block'
+                img.style.marginLeft = 'auto'
+                img.style.marginRight = '0'
+              } else {
+                img.style.display = 'block'
+                img.style.marginLeft = '0'
+                img.style.marginRight = 'auto'
+              }
 
               wrapper.remove()
 
-              // Update parent state with raw HTML (don't trigger re-render)
-              const html = editorElement.innerHTML
-              internalValueRef.current = html
-              onChange(html)
+              // Don't call onChange - let Quill handle it naturally
+              // The styles are now on the DOM element and will be captured
+              // when the user makes any other edit or on form submission
             })
             btn.title = title
             wrapper.appendChild(btn)

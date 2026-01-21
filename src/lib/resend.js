@@ -3,65 +3,11 @@ import { Resend } from 'resend'
 const resend = new Resend(process.env.RESEND_API_KEY)
 
 /**
- * Transform alignment classes to inline styles for email compatibility
- * Email clients don't reliably support classes, so we convert to inline CSS
+ * Image alignment is now handled via inline styles directly in the editor
+ * This function is kept for backwards compatibility but may be removed
  */
 function transformImageAlignment(html) {
-  // Convert align-center class to inline styles
-  html = html.replace(
-    /<img([^>]*)\s+class="([^"]*\balign-center\b[^"]*)"([^>]*)>/gi,
-    (match, before, classes, after) => {
-      const newClasses = classes.replace(/\balign-center\b/g, '').trim()
-      const classAttr = newClasses ? ` class="${newClasses}"` : ''
-      const fullTag = `${before}${classAttr}${after}`
-
-      // Check if style attribute already exists
-      if (/style\s*=/i.test(fullTag)) {
-        return `<img${fullTag}>`.replace(
-          /style\s*=\s*["']([^"']*)["']/i,
-          (styleMatch, styles) => `style="${styles}; display: block; margin-left: auto; margin-right: auto;"`
-        )
-      }
-      return `<img${before}${classAttr} style="display: block; margin-left: auto; margin-right: auto;"${after}>`
-    }
-  )
-
-  // Convert align-right class to inline styles
-  html = html.replace(
-    /<img([^>]*)\s+class="([^"]*\balign-right\b[^"]*)"([^>]*)>/gi,
-    (match, before, classes, after) => {
-      const newClasses = classes.replace(/\balign-right\b/g, '').trim()
-      const classAttr = newClasses ? ` class="${newClasses}"` : ''
-      const fullTag = `${before}${classAttr}${after}`
-
-      if (/style\s*=/i.test(fullTag)) {
-        return `<img${fullTag}>`.replace(
-          /style\s*=\s*["']([^"']*)["']/i,
-          (styleMatch, styles) => `style="${styles}; display: block; margin-left: auto; margin-right: 0;"`
-        )
-      }
-      return `<img${before}${classAttr} style="display: block; margin-left: auto; margin-right: 0;"${after}>`
-    }
-  )
-
-  // Convert align-left class to inline styles
-  html = html.replace(
-    /<img([^>]*)\s+class="([^"]*\balign-left\b[^"]*)"([^>]*)>/gi,
-    (match, before, classes, after) => {
-      const newClasses = classes.replace(/\balign-left\b/g, '').trim()
-      const classAttr = newClasses ? ` class="${newClasses}"` : ''
-      const fullTag = `${before}${classAttr}${after}`
-
-      if (/style\s*=/i.test(fullTag)) {
-        return `<img${fullTag}>`.replace(
-          /style\s*=\s*["']([^"']*)["']/i,
-          (styleMatch, styles) => `style="${styles}; display: block; margin-left: 0; margin-right: auto;"`
-        )
-      }
-      return `<img${before}${classAttr} style="display: block; margin-left: 0; margin-right: auto;"${after}>`
-    }
-  )
-
+  // Inline styles are already applied by the editor, no transformation needed
   return html
 }
 
