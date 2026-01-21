@@ -95,14 +95,20 @@ export default function EventDetailPage() {
 
     setChapter(chapterData)
 
-    // Get RSVP count
-    const { count } = await supabase
+    // Get RSVP count (members + guests)
+    const { count: memberCount } = await supabase
       .from('event_rsvps')
       .select('*', { count: 'exact', head: true })
       .eq('event_id', params.id)
       .eq('status', 'attending')
 
-    setRsvpCount(count || 0)
+    const { count: guestCount } = await supabase
+      .from('event_guest_rsvps')
+      .select('*', { count: 'exact', head: true })
+      .eq('event_id', params.id)
+      .eq('status', 'attending')
+
+    setRsvpCount((memberCount || 0) + (guestCount || 0))
 
     // Get user's RSVP if logged in
     if (memberId) {
@@ -139,6 +145,33 @@ export default function EventDetailPage() {
       }
 
       setRsvpStatus(status)
+      // Reload to get updated count
+      loadEventData()
+    } catch (err) {
+      setError(err.message)
+    } finally {
+      setSubmitting(false)
+    }
+  }
+
+  async function handleCancelRsvp() {
+    if (!member) return
+
+    setSubmitting(true)
+    setError(null)
+
+    try {
+      const res = await fetch(`/api/events/${params.id}/rsvp`, {
+        method: 'DELETE'
+      })
+
+      const data = await res.json()
+
+      if (!res.ok) {
+        throw new Error(data.error || 'Failed to cancel RSVP')
+      }
+
+      setRsvpStatus(null)
       // Reload to get updated count
       loadEventData()
     } catch (err) {
@@ -331,6 +364,15 @@ export default function EventDetailPage() {
                     {rsvpStatus === 'declined' ? '✓ Can\'t Go' : 'Can\'t Go'}
                   </button>
                 </div>
+                {rsvpStatus && (
+                  <button
+                    onClick={handleCancelRsvp}
+                    disabled={submitting}
+                    className="w-full py-2 text-sm text-gray-500 hover:text-red-600 transition-colors"
+                  >
+                    {submitting ? 'Canceling...' : 'Cancel RSVP'}
+                  </button>
+                )}
               </div>
             ) : guestSuccess ? (
               // Guest RSVP success
