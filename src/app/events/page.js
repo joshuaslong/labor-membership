@@ -28,6 +28,7 @@ function EventsContent() {
   const [filterChapter, setFilterChapter] = useState(null)
   const [chapterSearch, setChapterSearch] = useState('')
   const [showChapterDropdown, setShowChapterDropdown] = useState(false)
+  const [user, setUser] = useState(null)
   const dropdownRef = useRef(null)
 
   // Close dropdown when clicking outside
@@ -53,6 +54,10 @@ function EventsContent() {
 
   async function loadData() {
     const supabase = createClient()
+
+    // Check if user is logged in
+    const { data: { user: currentUser } } = await supabase.auth.getUser()
+    setUser(currentUser)
 
     // Load chapters for filter
     const { data: chaptersData } = await supabase
@@ -344,21 +349,23 @@ function EventsContent() {
         </div>
       )}
 
-      {/* Join CTA */}
-      <div className="mt-12 card bg-labor-red-50 border-labor-red-200">
-        <div className="text-center">
-          <h2 className="text-xl font-bold text-labor-red-900 mb-2">Want to host your own events?</h2>
-          <p className="text-labor-red-800 mb-4">
-            Join the Labor Party to create and host events in your community.
-          </p>
-          <Link
-            href="/join"
-            className="inline-block px-6 py-3 bg-labor-red text-white rounded-lg hover:bg-labor-red-600 transition-colors font-medium"
-          >
-            Become a Member
-          </Link>
+      {/* Join CTA - only show to signed out visitors */}
+      {!user && (
+        <div className="mt-12 card bg-labor-red-50 border-labor-red-200">
+          <div className="text-center">
+            <h2 className="text-xl font-bold text-labor-red-900 mb-2">Want to host your own events?</h2>
+            <p className="text-labor-red-800 mb-4">
+              Join the Labor Party to create and host events in your community.
+            </p>
+            <Link
+              href="/join"
+              className="inline-block px-6 py-3 bg-labor-red text-white rounded-lg hover:bg-labor-red-600 transition-colors font-medium"
+            >
+              Become a Member
+            </Link>
+          </div>
         </div>
-      </div>
+      )}
     </div>
   )
 }
