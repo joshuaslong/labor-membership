@@ -26,7 +26,7 @@ export default function MemberDetailPage() {
   const [chapters, setChapters] = useState([])
   const [memberChapters, setMemberChapters] = useState([])
   const [isAdmin, setIsAdmin] = useState(false)
-  const [currentUserRole, setCurrentUserRole] = useState(null)
+  const [currentUserRoles, setCurrentUserRoles] = useState([])
   const [memberAdminRecords, setMemberAdminRecords] = useState([])
   const [loading, setLoading] = useState(true)
   const [saving, setSaving] = useState(false)
@@ -57,16 +57,9 @@ export default function MemberDetailPage() {
         return
       }
 
-      // Determine highest privilege role
-      const roleHierarchy = ['super_admin', 'national_admin', 'state_admin', 'county_admin', 'city_admin']
-      const highestRole = adminUsers.reduce((highest, current) => {
-        const currentIndex = roleHierarchy.indexOf(current.role)
-        const highestIndex = roleHierarchy.indexOf(highest.role)
-        return currentIndex < highestIndex ? current : highest
-      }, adminUsers[0])
-
+      // Store all user's admin roles for permission checking
       setIsAdmin(true)
-      setCurrentUserRole(highestRole.role)
+      setCurrentUserRoles(adminUsers.map(a => a.role))
 
       // Load member details
       const { data: memberData, error: memberError } = await supabase
@@ -291,25 +284,31 @@ export default function MemberDetailPage() {
   }
 
   // Determine if current user can manage a given admin role
+  // Checks ALL of user's roles, not just highest - so National + State Admin can still manage state admins
   const canManageAdminRole = (targetRole) => {
-    if (!currentUserRole) return false
+    if (!currentUserRoles || currentUserRoles.length === 0) return false
 
     // Super admin can manage all roles
-    if (currentUserRole === 'super_admin') return true
-
-    // National admin cannot manage any admins
-    if (currentUserRole === 'national_admin') return false
+    if (currentUserRoles.includes('super_admin')) return true
 
     // Can't manage super_admin or national_admin unless you're super_admin
     if (['super_admin', 'national_admin'].includes(targetRole)) return false
 
-    // State/county/city admins can manage roles at their level or below
+    // Check if ANY of the user's roles can manage the target role
     const roleHierarchy = ['super_admin', 'national_admin', 'state_admin', 'county_admin', 'city_admin']
-    const currentIndex = roleHierarchy.indexOf(currentUserRole)
     const targetIndex = roleHierarchy.indexOf(targetRole)
 
-    // Can manage if target role is at same level or below
-    return targetIndex >= currentIndex
+    // For each role the user has, check if it can manage the target
+    for (const role of currentUserRoles) {
+      // Skip national_admin as it can't manage admins
+      if (role === 'national_admin') continue
+
+      const roleIndex = roleHierarchy.indexOf(role)
+      // Can manage if target role is at same level or below
+      if (targetIndex >= roleIndex) return true
+    }
+
+    return false
   }
 
   // Group chapters by level for easier selection
@@ -566,7 +565,7 @@ export default function MemberDetailPage() {
                 <option value="city_admin">City Admin</option>
                 <option value="county_admin">County Admin</option>
                 <option value="state_admin">State Admin</option>
-                {currentUserRole === 'super_admin' && (
+                {currentUserRoles.includes('super_admin') && (
                   <>
                     <option value="national_admin">National Admin</option>
                     <option value="super_admin">Super Admin</option>
@@ -615,7 +614,7 @@ export default function MemberDetailPage() {
       </div>
 
       {/* Danger Zone - Super Admin Only */}
-      {currentUserRole === 'super_admin' && (
+      {currentUserRoles.includes('super_admin') && (
         <div className="card border-red-200 bg-red-50">
           <h2 className="text-lg font-medium text-red-900 mb-4">Danger Zone</h2>
           <p className="text-sm text-red-700 mb-4">
