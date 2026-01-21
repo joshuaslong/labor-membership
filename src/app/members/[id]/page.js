@@ -111,6 +111,9 @@ export default function MemberDetailPage() {
 
         if (memberAdmin) {
           setMemberAdminRecord(memberAdmin)
+          // Initialize the form with current values for editing
+          setSelectedAdminRole(memberAdmin.role)
+          setSelectedAdminChapter(memberAdmin.chapter_id || '')
         }
       }
 

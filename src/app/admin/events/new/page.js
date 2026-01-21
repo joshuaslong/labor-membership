@@ -75,7 +75,8 @@ export default function CreateEventPage() {
       const { data: descendants } = await supabase
         .rpc('get_chapter_descendants', { chapter_uuid: admin.chapter_id })
 
-      const chapterIds = descendants?.map(d => d.id) || []
+      // Include admin's own chapter plus all descendants
+      const chapterIds = [admin.chapter_id, ...(descendants?.map(d => d.id) || [])]
 
       const { data: accessibleChapters } = await supabase
         .from('chapters')

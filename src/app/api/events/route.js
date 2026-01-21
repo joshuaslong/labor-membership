@@ -172,12 +172,15 @@ export async function POST(request) {
     const isSuperAdmin = ['super_admin', 'national_admin'].includes(currentAdmin.role)
 
     if (!isSuperAdmin) {
-      // Check if chapter is in admin's jurisdiction
+      // Check if chapter is in admin's jurisdiction (their own chapter or descendants)
       const { data: descendants } = await adminClient
         .rpc('get_chapter_descendants', { chapter_uuid: currentAdmin.chapter_id })
 
-      const descendantIds = new Set(descendants?.map(d => d.id) || [])
-      if (!descendantIds.has(chapter_id)) {
+      const allowedChapterIds = new Set(descendants?.map(d => d.id) || [])
+      // Include the admin's own chapter
+      allowedChapterIds.add(currentAdmin.chapter_id)
+
+      if (!allowedChapterIds.has(chapter_id)) {
         return NextResponse.json({ error: 'Cannot create events for this chapter' }, { status: 403 })
       }
     }

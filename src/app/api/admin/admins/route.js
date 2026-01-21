@@ -136,19 +136,38 @@ export async function POST(request) {
     }
 
     const body = await request.json()
-    const { email, role, chapter_id } = body
+    let { email, role, chapter_id } = body
 
-    if (!email || !role || !chapter_id) {
-      return NextResponse.json({ error: 'Email, role, and chapter are required' }, { status: 400 })
+    if (!email || !role) {
+      return NextResponse.json({ error: 'Email and role are required' }, { status: 400 })
     }
 
-    // Validate role - only super_admin can create national_admin
-    const validRoles = ['national_admin', 'state_admin', 'county_admin', 'city_admin']
+    // Validate role - only super_admin can create national_admin or super_admin
+    const validRoles = ['super_admin', 'national_admin', 'state_admin', 'county_admin', 'city_admin']
     if (!validRoles.includes(role)) {
       return NextResponse.json({ error: 'Invalid role' }, { status: 400 })
     }
-    if (role === 'national_admin' && currentAdmin.role !== 'super_admin') {
-      return NextResponse.json({ error: 'Only super admins can create national admins' }, { status: 403 })
+    if (['national_admin', 'super_admin'].includes(role) && currentAdmin.role !== 'super_admin') {
+      return NextResponse.json({ error: 'Only super admins can create national or super admins' }, { status: 403 })
+    }
+
+    // For national/super admin, auto-assign to national chapter if no chapter provided
+    if (['national_admin', 'super_admin'].includes(role) && !chapter_id) {
+      const { data: nationalChapter } = await adminClient
+        .from('chapters')
+        .select('id')
+        .eq('level', 'national')
+        .single()
+
+      if (nationalChapter) {
+        chapter_id = nationalChapter.id
+      } else {
+        return NextResponse.json({ error: 'No national chapter found. Please create one first.' }, { status: 400 })
+      }
+    }
+
+    if (!chapter_id) {
+      return NextResponse.json({ error: 'Chapter is required for this role' }, { status: 400 })
     }
 
     // Check if current admin can manage the target chapter
@@ -310,7 +329,22 @@ export async function PUT(request) {
     // Build update object
     const updateData = {}
     if (role) updateData.role = role
-    if (chapter_id) updateData.chapter_id = chapter_id
+
+    // Handle chapter assignment
+    if (chapter_id) {
+      updateData.chapter_id = chapter_id
+    } else if (['national_admin', 'super_admin'].includes(role)) {
+      // For national/super admin, auto-assign to national chapter if no chapter provided
+      const { data: nationalChapter } = await adminClient
+        .from('chapters')
+        .select('id')
+        .eq('level', 'national')
+        .single()
+
+      if (nationalChapter) {
+        updateData.chapter_id = nationalChapter.id
+      }
+    }
 
     if (Object.keys(updateData).length === 0) {
       return NextResponse.json({ error: 'No changes provided' }, { status: 400 })

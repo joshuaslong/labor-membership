@@ -155,8 +155,11 @@ export async function PUT(request, { params }) {
       const { data: descendants } = await adminClient
         .rpc('get_chapter_descendants', { chapter_uuid: currentAdmin.chapter_id })
 
-      const descendantIds = new Set(descendants?.map(d => d.id) || [])
-      if (!descendantIds.has(existingEvent.chapter_id)) {
+      const allowedChapterIds = new Set(descendants?.map(d => d.id) || [])
+      // Include the admin's own chapter
+      allowedChapterIds.add(currentAdmin.chapter_id)
+
+      if (!allowedChapterIds.has(existingEvent.chapter_id)) {
         return NextResponse.json({ error: 'Cannot update this event' }, { status: 403 })
       }
     }
@@ -269,8 +272,11 @@ export async function DELETE(request, { params }) {
       const { data: descendants } = await adminClient
         .rpc('get_chapter_descendants', { chapter_uuid: currentAdmin.chapter_id })
 
-      const descendantIds = new Set(descendants?.map(d => d.id) || [])
-      if (!descendantIds.has(existingEvent.chapter_id)) {
+      const allowedChapterIds = new Set(descendants?.map(d => d.id) || [])
+      // Include the admin's own chapter
+      allowedChapterIds.add(currentAdmin.chapter_id)
+
+      if (!allowedChapterIds.has(existingEvent.chapter_id)) {
         return NextResponse.json({ error: 'Cannot delete this event' }, { status: 403 })
       }
     }
