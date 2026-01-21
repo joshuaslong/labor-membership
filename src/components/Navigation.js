@@ -67,6 +67,12 @@ export default async function Navigation() {
           >
             Contribute
           </Link>
+          <Link
+            href="/events"
+            className="px-3 py-2 text-sm font-medium text-white/80 hover:text-white hover:bg-white/10 rounded-md transition-colors"
+          >
+            Events
+          </Link>
 
           {user ? (
             <>
@@ -75,12 +81,6 @@ export default async function Navigation() {
                 className="px-3 py-2 text-sm font-medium text-white/80 hover:text-white hover:bg-white/10 rounded-md transition-colors"
               >
                 Dashboard
-              </Link>
-              <Link
-                href="/dashboard/events"
-                className="px-3 py-2 text-sm font-medium text-white/80 hover:text-white hover:bg-white/10 rounded-md transition-colors"
-              >
-                Events
               </Link>
               {isAdmin && (
                 <Link

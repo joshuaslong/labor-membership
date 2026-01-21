@@ -151,8 +151,24 @@
     @apply border border-gray-200 rounded-lg overflow-hidden bg-white;
   }
 
+  /* Mobile full-width editor */
+  .email-editor-mobile .email-editor-wrapper {
+    @apply rounded-none sm:rounded-lg border-x-0 sm:border-x;
+  }
+
   .email-editor-wrapper .ql-toolbar {
     @apply border-0 border-b border-gray-200 bg-gray-50 p-2;
+  }
+
+  /* Mobile toolbar: allow horizontal scroll and make it sticky */
+  @media (max-width: 640px) {
+    .email-editor-wrapper .ql-toolbar {
+      @apply overflow-x-auto whitespace-nowrap p-1.5;
+      -webkit-overflow-scrolling: touch;
+    }
+    .email-editor-wrapper .ql-toolbar .ql-formats {
+      @apply mr-1;
+    }
   }
 
   .email-editor-wrapper .ql-container {
@@ -162,6 +178,13 @@
   .email-editor-wrapper .ql-editor {
     @apply min-h-64 p-4 text-base;
     font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, 'Helvetica Neue', Arial, sans-serif;
+  }
+
+  /* Taller editor on mobile for more immersive experience */
+  @media (max-width: 640px) {
+    .email-editor-mobile .email-editor-wrapper .ql-editor {
+      min-height: 50vh;
+    }
   }
 
   .email-editor-wrapper .ql-editor.ql-blank::before {

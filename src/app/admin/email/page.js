@@ -192,18 +192,18 @@ export default function EmailComposePage() {
   const isSuperAdmin = ['super_admin', 'national_admin'].includes(adminInfo?.role)
 
   return (
-    <div className="max-w-4xl mx-auto px-4 py-8">
-      <Link href="/admin" className="text-gray-500 hover:text-gray-900 text-sm mb-4 inline-block">
+    <div className="max-w-4xl mx-auto px-0 sm:px-4 py-4 sm:py-8">
+      <Link href="/admin" className="text-gray-500 hover:text-gray-900 text-sm mb-4 inline-block px-4 sm:px-0">
         ← Back to Admin
       </Link>
 
-      <h1 className="text-2xl sm:text-3xl font-bold text-gray-900 mb-2">Send Email</h1>
-      <p className="text-gray-600 mb-8">
+      <h1 className="text-2xl sm:text-3xl font-bold text-gray-900 mb-2 px-4 sm:px-0">Send Email</h1>
+      <p className="text-gray-600 mb-6 sm:mb-8 px-4 sm:px-0">
         Compose and send emails to members.
       </p>
 
       {success && (
-        <div className="bg-green-50 text-green-700 p-4 rounded-lg mb-6 flex justify-between items-center">
+        <div className="bg-green-50 text-green-700 p-4 mx-4 sm:mx-0 rounded-lg mb-6 flex justify-between items-center">
           <span>{success}</span>
           <button onClick={() => setSuccess(null)} className="text-green-600 hover:text-green-800">
             <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
@@ -214,7 +214,7 @@ export default function EmailComposePage() {
       )}
 
       {error && (
-        <div className="bg-red-50 text-red-700 p-4 rounded-lg mb-6 flex justify-between items-center">
+        <div className="bg-red-50 text-red-700 p-4 mx-4 sm:mx-0 rounded-lg mb-6 flex justify-between items-center">
           <span>{error}</span>
           <button onClick={() => setError(null)} className="text-red-600 hover:text-red-800">
             <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
@@ -224,9 +224,9 @@ export default function EmailComposePage() {
         </div>
       )}
 
-      <form onSubmit={handleSubmit} className="space-y-6">
+      <form onSubmit={handleSubmit} className="space-y-4 sm:space-y-6">
         {/* Recipients */}
-        <div className="card">
+        <div className="card rounded-none sm:rounded-lg mx-0">
           <h2 className="text-lg font-semibold text-gray-900 mb-4">Recipients</h2>
 
           <div className="space-y-3">
@@ -314,7 +314,7 @@ export default function EmailComposePage() {
         </div>
 
         {/* Template Selection */}
-        <div className="card">
+        <div className="card rounded-none sm:rounded-lg mx-0">
           <h2 className="text-lg font-semibold text-gray-900 mb-4">Template</h2>
           <select
             value={selectedTemplate}
@@ -330,7 +330,7 @@ export default function EmailComposePage() {
         </div>
 
         {/* Sender Name */}
-        <div className="card">
+        <div className="card rounded-none sm:rounded-lg mx-0">
           <h2 className="text-lg font-semibold text-gray-900 mb-4">Sender Name</h2>
           <input
             type="text"
@@ -345,7 +345,7 @@ export default function EmailComposePage() {
         </div>
 
         {/* Reply-To */}
-        <div className="card">
+        <div className="card rounded-none sm:rounded-lg mx-0">
           <h2 className="text-lg font-semibold text-gray-900 mb-4">Reply-To Address</h2>
           <input
             type="email"
@@ -361,7 +361,7 @@ export default function EmailComposePage() {
         </div>
 
         {/* Email Content */}
-        <div className="card">
+        <div className="card rounded-none sm:rounded-lg mx-0 p-4 sm:p-6">
           <h2 className="text-lg font-semibold text-gray-900 mb-4">Email Content</h2>
 
           <div className="space-y-4">
@@ -377,16 +377,18 @@ export default function EmailComposePage() {
               />
             </div>
 
-            <div>
-              <label className="block text-sm font-medium text-gray-700 mb-2">
+            <div className="-mx-4 sm:mx-0">
+              <label className="block text-sm font-medium text-gray-700 mb-2 px-4 sm:px-0">
                 Message
               </label>
-              <EmailEditor
-                value={content}
-                onChange={setContent}
-                placeholder="Enter your message..."
-              />
-              <p className="text-xs text-gray-500 mt-2">
+              <div className="email-editor-mobile">
+                <EmailEditor
+                  value={content}
+                  onChange={setContent}
+                  placeholder="Enter your message..."
+                />
+              </div>
+              <p className="text-xs text-gray-500 mt-2 px-4 sm:px-0">
                 Use the <code className="bg-gray-100 px-1 py-0.5 rounded">{'{$}'}</code> button to insert <code className="bg-gray-100 px-1 py-0.5 rounded">{'{$name}'}</code> for the recipient's first name. Click on any image to resize it.
               </p>
             </div>
@@ -394,27 +396,29 @@ export default function EmailComposePage() {
         </div>
 
         {/* Preview */}
-        <div className="card">
+        <div className="card rounded-none sm:rounded-lg mx-0 p-4 sm:p-6">
           <h2 className="text-lg font-semibold text-gray-900 mb-4">Preview</h2>
-          <div className="border border-gray-200 rounded-lg p-6 bg-white">
-            <div
-              className="email-preview"
-              dangerouslySetInnerHTML={{ __html: content.replace('{$name}', 'Member') }}
-            />
-            <div className="border-t border-gray-200 pt-4 mt-6 text-center text-xs text-gray-500">
-              <p>Labor Party</p>
-              <p className="text-labor-red">Unsubscribe</p>
+          <div className="-mx-4 sm:mx-0">
+            <div className="border-y sm:border sm:rounded-lg border-gray-200 p-4 sm:p-6 bg-white min-h-[50vh] sm:min-h-0">
+              <div
+                className="email-preview"
+                dangerouslySetInnerHTML={{ __html: content.replace('{$name}', 'Member') }}
+              />
+              <div className="border-t border-gray-200 pt-4 mt-6 text-center text-xs text-gray-500">
+                <p>Labor Party</p>
+                <p className="text-labor-red">Unsubscribe</p>
+              </div>
             </div>
           </div>
         </div>
 
         {/* Test Email */}
-        <div className="card">
+        <div className="card rounded-none sm:rounded-lg mx-0">
           <h2 className="text-lg font-semibold text-gray-900 mb-4">Test Email</h2>
           <p className="text-sm text-gray-600 mb-4">
             Send a test version to verify formatting before sending to members.
           </p>
-          <div className="flex gap-3">
+          <div className="flex flex-col sm:flex-row gap-3">
             <input
               type="email"
               value={testEmail}
@@ -426,7 +430,7 @@ export default function EmailComposePage() {
               type="button"
               onClick={handleTestEmail}
               disabled={testLoading || !subject || !content || !testEmail}
-              className="btn-secondary px-6"
+              className="btn-secondary px-6 whitespace-nowrap"
             >
               {testLoading ? 'Sending...' : 'Send Test'}
             </button>
@@ -434,15 +438,15 @@ export default function EmailComposePage() {
         </div>
 
         {/* Submit */}
-        <div className="flex gap-4">
+        <div className="flex gap-4 px-4 sm:px-0 pb-4 sm:pb-0">
           <button
             type="submit"
             disabled={loading || (recipientType === 'chapter' && !selectedChapterId)}
-            className="btn-primary py-3 px-8"
+            className="btn-primary py-3 px-8 flex-1 sm:flex-none"
           >
             {loading ? 'Sending...' : 'Send Email'}
           </button>
-          <Link href="/admin" className="btn-secondary py-3 px-8">
+          <Link href="/admin" className="btn-secondary py-3 px-8 flex-1 sm:flex-none text-center">
             Cancel
           </Link>
         </div>
