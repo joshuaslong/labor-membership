@@ -89,13 +89,16 @@ export default function EmailEditor({ value, onChange, placeholder = 'Enter your
             return btn
           }
 
-          // Get current alignment from parent paragraph or image style
+          // Get current alignment from data-align attribute or styles
           const getAlignment = () => {
-            const parent = img.parentElement
+            // First check data-align attribute
+            const dataAlign = img.getAttribute('data-align')
+            if (dataAlign) return dataAlign
+
+            // Fall back to checking styles
             if (img.style.display === 'block' && img.style.marginLeft === 'auto' && img.style.marginRight === 'auto') return 'center'
-            if (img.style.float === 'right' || (parent && parent.style.textAlign === 'right')) return 'right'
-            if (img.style.float === 'left' || (parent && parent.style.textAlign === 'left')) return 'left'
-            if (parent && parent.style.textAlign === 'center') return 'center'
+            if (img.style.marginLeft === 'auto' && img.style.marginRight === '0') return 'right'
+            if (img.style.marginLeft === '0' && img.style.marginRight === 'auto') return 'left'
             return 'left'
           }
           const currentAlign = getAlignment()
@@ -145,28 +148,33 @@ export default function EmailEditor({ value, onChange, placeholder = 'Enter your
               e.preventDefault()
               e.stopPropagation()
 
-              // Build style string for email compatibility
-              let styleStr = `height: auto; max-width: 100%;`
+              // Set data-align attribute on the image
+              img.setAttribute('data-align', align)
 
-              // Preserve current width if set
-              if (img.style.width && img.style.width !== '100%') {
-                styleStr += ` width: ${img.style.width}; max-width: ${img.style.width};`
-              } else if (img.getAttribute('width')) {
-                styleStr += ` width: ${img.getAttribute('width')}px; max-width: ${img.getAttribute('width')}px;`
-              }
+              // Also apply inline styles directly for visual feedback
+              // Clear previous alignment styles
+              img.style.float = ''
+              img.style.display = ''
+              img.style.marginLeft = ''
+              img.style.marginRight = ''
 
               if (align === 'center') {
-                styleStr += ' display: block; margin-left: auto; margin-right: auto;'
+                img.style.display = 'block'
+                img.style.marginLeft = 'auto'
+                img.style.marginRight = 'auto'
               } else if (align === 'right') {
-                styleStr += ' display: block; margin-left: auto; margin-right: 0;'
+                img.style.display = 'block'
+                img.style.marginLeft = 'auto'
+                img.style.marginRight = '0'
               } else {
-                styleStr += ' display: block; margin-left: 0; margin-right: auto;'
+                img.style.display = 'block'
+                img.style.marginLeft = '0'
+                img.style.marginRight = 'auto'
               }
 
-              img.setAttribute('style', styleStr)
-
               wrapper.remove()
-              // Force Quill to recognize the change
+
+              // Get the raw HTML without triggering Quill's normalization
               const html = editorElement.innerHTML
               onChange(html)
             })

@@ -231,6 +231,25 @@
     outline-offset: 2px;
   }
 
+  /* Image alignment via data-align attribute */
+  .email-editor-wrapper .ql-editor img[data-align="center"] {
+    display: block !important;
+    margin-left: auto !important;
+    margin-right: auto !important;
+  }
+
+  .email-editor-wrapper .ql-editor img[data-align="right"] {
+    display: block !important;
+    margin-left: auto !important;
+    margin-right: 0 !important;
+  }
+
+  .email-editor-wrapper .ql-editor img[data-align="left"] {
+    display: block !important;
+    margin-left: 0 !important;
+    margin-right: auto !important;
+  }
+
   .stat-value {
     @apply text-3xl font-semibold text-gray-900 tracking-tight tabular-nums;
   }
