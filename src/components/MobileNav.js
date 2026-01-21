@@ -108,6 +108,12 @@ export default function MobileNav({ isLoggedIn, isAdmin, memberName }) {
                 Dashboard
               </Link>
               <Link
+                href="/dashboard/events"
+                className="block px-4 py-3 text-white/90 hover:text-white hover:bg-white/10 rounded-lg transition-colors"
+              >
+                Events
+              </Link>
+              <Link
                 href="/dashboard/profile"
                 className="block px-4 py-3 text-white/90 hover:text-white hover:bg-white/10 rounded-lg transition-colors"
               >

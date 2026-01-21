@@ -206,6 +206,9 @@ export default async function AdminPage() {
             <Link href="/members?status=pending" className="block w-full btn-secondary text-center">
               Review Pending Members
             </Link>
+            <Link href="/admin/events" className="block w-full btn-secondary text-center">
+              Manage Events
+            </Link>
             <Link href="/admin/email" className="block w-full btn-secondary text-center">
               Send Email to Members
             </Link>
