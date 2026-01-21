@@ -112,7 +112,7 @@ export default function SyncPaymentsPage() {
         &larr; Back to Admin Dashboard
       </Link>
 
-      <h1 className="text-3xl font-bold text-gray-900 mb-2">Sync Stripe Payments</h1>
+      <h1 className="text-3xl text-gray-900 mb-2">Sync Stripe Payments</h1>
       <p className="text-gray-600 mb-8">
         Pull historical payments from Stripe that may have been missed by webhooks.
       </p>
@@ -125,7 +125,7 @@ export default function SyncPaymentsPage() {
 
       {/* Current Stats */}
       <div className="card mb-6">
-        <h2 className="text-xl font-bold mb-4">Current Payment Stats</h2>
+        <h2 className="text-xl mb-4">Current Payment Stats</h2>
         {loading ? (
           <p className="text-gray-500">Loading...</p>
         ) : stats ? (
@@ -152,7 +152,7 @@ export default function SyncPaymentsPage() {
 
       {/* Sync Button */}
       <div className="card mb-6">
-        <h2 className="text-xl font-bold mb-4">Sync from Stripe</h2>
+        <h2 className="text-xl mb-4">Sync from Stripe</h2>
         <p className="text-gray-600 mb-4">
           This will fetch all charges from Stripe and match them to members by email.
           New payments will be added to the database.
@@ -188,7 +188,7 @@ export default function SyncPaymentsPage() {
       {/* Cleanup Results */}
       {cleanupResult && (
         <div className="card mb-6 bg-yellow-50">
-          <h2 className="text-xl font-bold mb-4">Cleanup Results</h2>
+          <h2 className="text-xl mb-4">Cleanup Results</h2>
           <p className="text-gray-700">
             Found {cleanupResult.duplicatesFound} duplicate payments.
             Deleted {cleanupResult.deleted} records.
@@ -199,7 +199,7 @@ export default function SyncPaymentsPage() {
       {/* Fix Types Results */}
       {fixResult && (
         <div className="card mb-6 bg-blue-50">
-          <h2 className="text-xl font-bold mb-4">Fix Payment Types Results</h2>
+          <h2 className="text-xl mb-4">Fix Payment Types Results</h2>
           <p className="text-gray-700">
             Checked {fixResult.paymentsChecked} payments.
             Fixed {fixResult.fixed} payment type labels.
@@ -210,7 +210,7 @@ export default function SyncPaymentsPage() {
       {/* Sync Results */}
       {syncResult && (
         <div className="card mb-6">
-          <h2 className="text-xl font-bold mb-4">Sync Results</h2>
+          <h2 className="text-xl mb-4">Sync Results</h2>
           <div className="grid grid-cols-2 md:grid-cols-4 gap-4 mb-4">
             <div>
               <div className="text-sm text-gray-500">Total Charges Found</div>
@@ -252,7 +252,7 @@ export default function SyncPaymentsPage() {
       {/* Recent Payments */}
       {stats?.payments?.length > 0 && (
         <div className="card">
-          <h2 className="text-xl font-bold mb-4">Recent Payments in Database</h2>
+          <h2 className="text-xl mb-4">Recent Payments in Database</h2>
           <div className="overflow-x-auto">
             <table className="w-full text-sm">
               <thead>

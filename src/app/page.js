@@ -27,7 +27,7 @@ export default function HomePage() {
             Zero corporate donors. We answer to you.
           </div>
 
-          <h1 className="text-4xl md:text-5xl font-bold text-gray-900 tracking-tight leading-tight">
+          <h1 className="text-4xl md:text-5xl text-gray-900 tracking-tight leading-tight">
             The game is rigged.
             <span className="block text-labor-red">We're changing the rules.</span>
           </h1>
@@ -117,7 +117,7 @@ export default function HomePage() {
             <p className="text-labor-red font-semibold text-sm tracking-wide uppercase mb-3">
               People-Powered
             </p>
-            <h2 className="text-3xl md:text-4xl font-bold tracking-tight">
+            <h2 className="text-3xl md:text-4xl tracking-tight">
               <span className="text-gray-400">They have billionaires.</span><br />
               <span className="text-white">We have each other.</span>
             </h2>
@@ -218,7 +218,7 @@ export default function HomePage() {
                 </svg>
                 Sustaining Member
               </div>
-              <h3 className="text-2xl font-bold text-gray-900 tracking-tight">
+              <h3 className="text-2xl text-gray-900 tracking-tight">
                 $10/month changes everything
               </h3>
               <p className="mt-3 text-gray-600">
@@ -272,7 +272,7 @@ export default function HomePage() {
       {/* Final CTA Section */}
       <section className="py-20 bg-white">
         <div className="max-w-3xl mx-auto px-6 text-center">
-          <h2 className="text-3xl font-bold text-gray-900 tracking-tight">
+          <h2 className="text-3xl text-gray-900 tracking-tight">
             Stop waiting. Start fighting.
           </h2>
           <p className="mt-4 text-lg text-gray-600">

@@ -99,7 +99,7 @@ export default function InitiativesPage() {
             Direct Action Campaigns
           </div>
 
-          <h1 className="text-4xl md:text-5xl font-bold text-gray-900 tracking-tight leading-tight">
+          <h1 className="text-4xl md:text-5xl text-gray-900 tracking-tight leading-tight">
             Initiatives
           </h1>
 
@@ -162,7 +162,7 @@ export default function InitiativesPage() {
           <p className="text-labor-red font-semibold text-sm tracking-wide uppercase mb-3">
             Get Involved
           </p>
-          <h2 className="text-3xl md:text-4xl font-bold tracking-tight mb-4">
+          <h2 className="text-3xl md:text-4xl tracking-tight mb-4">
             <span className="text-gray-400">Have an idea?</span><br />
             <span className="text-white">Propose an initiative.</span>
           </h2>

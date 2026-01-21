@@ -10,7 +10,7 @@ export default function ContributeSuccessPage() {
           </svg>
         </div>
 
-        <h1 className="text-2xl font-bold text-gray-900 mb-2">Thank you!</h1>
+        <h1 className="text-2xl text-gray-900 mb-2">Thank you!</h1>
         <p className="text-gray-600 mb-6">
           Your contribution has been received. Together, we're building a party that answers to working people—not corporate donors.
         </p>

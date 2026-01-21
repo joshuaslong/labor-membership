@@ -123,7 +123,7 @@ export default async function AdminPage() {
   return (
     <div className="max-w-6xl mx-auto px-4 py-8">
       <div className="mb-6 sm:mb-8">
-        <h1 className="text-2xl sm:text-3xl font-bold text-gray-900">Admin Dashboard</h1>
+        <h1 className="text-2xl sm:text-3xl text-gray-900">Admin Dashboard</h1>
         {!hasFullDataAccess && currentAdmin.chapters && (
           <p className="text-gray-600 mt-1">
             Managing: {currentAdmin.chapters.name} and sub-chapters
@@ -161,7 +161,7 @@ export default async function AdminPage() {
         {/* Recent Members */}
         <div className="card">
           <div className="flex justify-between items-center mb-4">
-            <h2 className="text-xl font-bold">Recent Members</h2>
+            <h2 className="text-xl">Recent Members</h2>
             <Link href="/members" className="text-labor-red text-sm hover:underline">View All</Link>
           </div>
           {recentMembers?.length > 0 ? (
@@ -187,7 +187,7 @@ export default async function AdminPage() {
 
         {/* Quick Actions */}
         <div className="card">
-          <h2 className="text-xl font-bold mb-4">Quick Actions</h2>
+          <h2 className="text-xl mb-4">Quick Actions</h2>
           <div className="space-y-3">
             <Link href="/admin/import" className="block w-full btn-primary text-center">
               Import Members

@@ -362,7 +362,7 @@ export default async function ChapterDetailPage({ params }) {
           {/* Sub-Chapters */}
           {hasChildren && (
             <div className="card">
-              <h2 className="text-xl font-bold mb-4">
+              <h2 className="text-xl mb-4">
                 Sub-Chapters ({children.length})
               </h2>
 
@@ -414,7 +414,7 @@ export default async function ChapterDetailPage({ params }) {
           {/* Direct Members (Admin Only) */}
           {isAdmin && (
             <div className="card">
-              <h2 className="text-xl font-bold mb-4">Direct Members ({directMembers?.length || 0})</h2>
+              <h2 className="text-xl mb-4">Direct Members ({directMembers?.length || 0})</h2>
               {directMembers && directMembers.length > 0 ? (
                 <div className="divide-y">
                   {directMembers.map(member => (

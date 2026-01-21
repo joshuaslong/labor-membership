@@ -46,7 +46,7 @@ export default function ImportMembersPage() {
         &larr; Back to Admin
       </Link>
 
-      <h1 className="text-3xl font-bold text-gray-900 mb-2">Import Members</h1>
+      <h1 className="text-3xl text-gray-900 mb-2">Import Members</h1>
       <p className="text-gray-600 mb-8">
         Import members from Memberstack CSV export. Existing members (by email) will be updated with new fields.
       </p>

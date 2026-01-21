@@ -130,7 +130,7 @@ export default function ManageAdminsPage() {
 
       <div className="flex justify-between items-center mb-8">
         <div>
-          <h1 className="text-3xl font-bold text-gray-900">Manage Administrators</h1>
+          <h1 className="text-3xl text-gray-900">Manage Administrators</h1>
           <p className="text-gray-600 mt-1">Add or remove admin access for members.</p>
         </div>
         <button
@@ -150,7 +150,7 @@ export default function ManageAdminsPage() {
 
       {showAddForm && (
         <div className="card mb-8">
-          <h2 className="text-xl font-bold mb-4">Add New Admin</h2>
+          <h2 className="text-xl mb-4">Add New Admin</h2>
           <form onSubmit={handleAddAdmin} className="space-y-4">
             <div>
               <label className="block text-sm font-medium text-gray-700 mb-1">
@@ -219,7 +219,7 @@ export default function ManageAdminsPage() {
       )}
 
       <div className="card">
-        <h2 className="text-xl font-bold mb-4">Current Administrators</h2>
+        <h2 className="text-xl mb-4">Current Administrators</h2>
 
         {admins.length === 0 ? (
           <p className="text-gray-500">No administrators found.</p>

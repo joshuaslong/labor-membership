@@ -1,6 +1,6 @@
 'use client'
 
-import { useState, useEffect, Suspense } from 'react'
+import { useState, useEffect, Suspense, useRef } from 'react'
 import Link from 'next/link'
 import { useSearchParams } from 'next/navigation'
 import { createClient } from '@/lib/supabase/client'
@@ -26,6 +26,20 @@ function EventsContent() {
   const [loading, setLoading] = useState(true)
   const [selectedChapter, setSelectedChapter] = useState(chapterFilter || '')
   const [filterChapter, setFilterChapter] = useState(null)
+  const [chapterSearch, setChapterSearch] = useState('')
+  const [showChapterDropdown, setShowChapterDropdown] = useState(false)
+  const dropdownRef = useRef(null)
+
+  // Close dropdown when clicking outside
+  useEffect(() => {
+    function handleClickOutside(event) {
+      if (dropdownRef.current && !dropdownRef.current.contains(event.target)) {
+        setShowChapterDropdown(false)
+      }
+    }
+    document.addEventListener('mousedown', handleClickOutside)
+    return () => document.removeEventListener('mousedown', handleClickOutside)
+  }, [])
 
   useEffect(() => {
     loadData()
@@ -141,25 +155,76 @@ function EventsContent() {
       {/* Filters */}
       <div className="card mb-8">
         <div className="flex flex-col sm:flex-row gap-4">
-          <div className="flex-1">
-            <label className="label">Filter by Chapter</label>
-            <select
-              value={selectedChapter}
-              onChange={(e) => setSelectedChapter(e.target.value)}
-              className="input-field"
-            >
-              <option value="">All Chapters</option>
-              {chapters.map(chapter => (
-                <option key={chapter.id} value={chapter.id}>
-                  {chapter.name} ({chapter.level})
-                </option>
-              ))}
-            </select>
+          <div className="flex-1 relative" ref={dropdownRef}>
+            <label className="block text-sm font-medium text-gray-700 mb-1.5">Filter by Chapter</label>
+            <div className="relative">
+              <input
+                type="text"
+                value={chapterSearch}
+                onChange={(e) => {
+                  setChapterSearch(e.target.value)
+                  setShowChapterDropdown(true)
+                }}
+                onFocus={() => setShowChapterDropdown(true)}
+                placeholder={selectedChapter ? chapters.find(c => c.id === selectedChapter)?.name || 'Select chapter...' : 'Search chapters...'}
+                className="input-field pr-8"
+              />
+              <button
+                type="button"
+                onClick={() => setShowChapterDropdown(!showChapterDropdown)}
+                className="absolute right-2 top-1/2 -translate-y-1/2 text-gray-400 hover:text-gray-600"
+              >
+                <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M19 9l-7 7-7-7" />
+                </svg>
+              </button>
+            </div>
+            {showChapterDropdown && (
+              <div className="absolute z-20 w-full mt-1 bg-white border border-gray-200 rounded-lg shadow-lg max-h-60 overflow-auto">
+                <button
+                  onClick={() => {
+                    setSelectedChapter('')
+                    setChapterSearch('')
+                    setShowChapterDropdown(false)
+                  }}
+                  className={`w-full px-4 py-2 text-left text-sm hover:bg-gray-50 ${!selectedChapter ? 'bg-labor-red-50 text-labor-red' : 'text-gray-700'}`}
+                >
+                  All Chapters
+                </button>
+                {chapters
+                  .filter(chapter =>
+                    chapter.name.toLowerCase().includes(chapterSearch.toLowerCase()) ||
+                    chapter.level.toLowerCase().includes(chapterSearch.toLowerCase())
+                  )
+                  .map(chapter => (
+                    <button
+                      key={chapter.id}
+                      onClick={() => {
+                        setSelectedChapter(chapter.id)
+                        setChapterSearch('')
+                        setShowChapterDropdown(false)
+                      }}
+                      className={`w-full px-4 py-2 text-left text-sm hover:bg-gray-50 ${selectedChapter === chapter.id ? 'bg-labor-red-50 text-labor-red' : 'text-gray-700'}`}
+                    >
+                      {chapter.name} <span className="text-gray-400">({chapter.level})</span>
+                    </button>
+                  ))}
+                {chapters.filter(chapter =>
+                  chapter.name.toLowerCase().includes(chapterSearch.toLowerCase()) ||
+                  chapter.level.toLowerCase().includes(chapterSearch.toLowerCase())
+                ).length === 0 && (
+                  <div className="px-4 py-2 text-sm text-gray-500">No chapters found</div>
+                )}
+              </div>
+            )}
           </div>
           {selectedChapter && (
             <div className="flex items-end">
               <button
-                onClick={() => setSelectedChapter('')}
+                onClick={() => {
+                  setSelectedChapter('')
+                  setChapterSearch('')
+                }}
                 className="px-4 py-2 text-sm text-gray-600 hover:text-gray-900 border border-gray-200 rounded-lg hover:bg-gray-50"
               >
                 Clear Filter

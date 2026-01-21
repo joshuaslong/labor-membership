@@ -25,7 +25,7 @@ export default async function ContributePage() {
       {/* Hero */}
       <section className="bg-gradient-to-b from-labor-red-50 to-white py-16">
         <div className="max-w-3xl mx-auto px-6 text-center">
-          <h1 className="text-3xl md:text-4xl font-bold text-gray-900 tracking-tight">
+          <h1 className="text-3xl md:text-4xl text-gray-900 tracking-tight">
             Fund the fight for working people
           </h1>
           <p className="mt-4 text-lg text-gray-600">
@@ -40,7 +40,7 @@ export default async function ContributePage() {
       <section className="py-12">
         <div className="max-w-xl mx-auto px-6">
           <div className="card">
-            <h2 className="text-xl font-bold text-gray-900 mb-2">Choose an amount</h2>
+            <h2 className="text-xl text-gray-900 mb-2">Choose an amount</h2>
             <p className="text-sm text-gray-500 mb-6">
               Every dollar helps us organize, educate, and fight back.
             </p>

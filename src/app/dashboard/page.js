@@ -223,7 +223,7 @@ export default async function DashboardPage() {
     return (
       <div className="max-w-2xl mx-auto px-4 py-12">
         <div className="card text-center">
-          <h1 className="text-2xl font-bold mb-4">Account Setup Required</h1>
+          <h1 className="text-2xl mb-4">Account Setup Required</h1>
           <p className="text-gray-600 mb-6">
             Your account is not linked to a membership. Please contact support.
           </p>
@@ -243,7 +243,7 @@ export default async function DashboardPage() {
     <div className="max-w-4xl mx-auto px-4 py-8">
       <div className="flex flex-col sm:flex-row sm:justify-between sm:items-start gap-4 mb-8">
         <div>
-          <h1 className="text-2xl sm:text-3xl font-bold text-gray-900">
+          <h1 className="text-2xl sm:text-3xl text-gray-900">
             Welcome, {member.first_name}!
           </h1>
           <p className="text-gray-600">Member Dashboard</p>
@@ -257,7 +257,7 @@ export default async function DashboardPage() {
 
       <div className="grid md:grid-cols-2 gap-6">
         <div className="card">
-          <h2 className="text-xl font-bold mb-4">Membership Status</h2>
+          <h2 className="text-xl mb-4">Membership Status</h2>
           <div className="space-y-3">
             <div className="flex justify-between">
               <span className="text-gray-600">Status</span>
@@ -282,7 +282,7 @@ export default async function DashboardPage() {
 
         <div className="card">
           <div className="flex justify-between items-center mb-4">
-            <h2 className="text-xl font-bold">Your Profile</h2>
+            <h2 className="text-xl">Your Profile</h2>
             <Link href="/dashboard/profile" className="text-labor-red text-sm hover:underline">
               Edit
             </Link>
@@ -303,7 +303,7 @@ export default async function DashboardPage() {
         <div className="card">
           <div className="flex flex-col sm:flex-row sm:justify-between sm:items-start gap-4 mb-4">
             <div>
-              <h2 className="text-xl font-bold">Support the Party</h2>
+              <h2 className="text-xl">Support the Party</h2>
               <p className="text-sm text-gray-500">Your contributions power our movement</p>
             </div>
             <Link href="/dashboard/contribute" className="btn-primary w-full sm:w-auto text-center">

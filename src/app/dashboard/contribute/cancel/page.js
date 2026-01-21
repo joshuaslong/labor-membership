@@ -10,7 +10,7 @@ export default function ContributeCancelPage() {
           </svg>
         </div>
 
-        <h1 className="text-2xl font-bold text-gray-900 mb-2">Payment Cancelled</h1>
+        <h1 className="text-2xl text-gray-900 mb-2">Payment Cancelled</h1>
         <p className="text-gray-600 mb-8">
           No worries—your payment was cancelled and you haven't been charged. You can try again whenever you're ready.
         </p>

@@ -124,7 +124,7 @@ function JoinForm() {
 
   return (
     <div className="max-w-xl mx-auto px-4 py-12">
-      <h1 className="text-3xl font-bold text-gray-900 mb-2">Join the Fight</h1>
+      <h1 className="text-3xl text-gray-900 mb-2">Join the Fight</h1>
       <p className="text-gray-600 mb-8">
         We don't take corporate money. We answer to members like you. Pick your chapter and let's get to work.
       </p>

@@ -248,7 +248,7 @@ function ContributePageContent() {
         ← Back to Dashboard
       </Link>
 
-      <h1 className="text-2xl sm:text-3xl font-bold text-gray-900 mb-2">Support the Party</h1>
+      <h1 className="text-2xl sm:text-3xl text-gray-900 mb-2">Support the Party</h1>
       <p className="text-gray-600 mb-8">
         Your contribution helps us fight for working people. We don't take corporate money—we're powered by members like you.
       </p>
@@ -343,7 +343,7 @@ function ContributePageContent() {
       {showUpdateModal && (
         <div className="fixed inset-0 bg-black/50 flex items-center justify-center p-4 z-50">
           <div className="bg-white rounded-xl max-w-md w-full p-6">
-            <h3 className="text-lg font-bold text-gray-900 mb-4">Update Monthly Amount</h3>
+            <h3 className="text-lg text-gray-900 mb-4">Update Monthly Amount</h3>
             <p className="text-sm text-gray-600 mb-4">
               Change your monthly contribution. The new amount will be prorated for the current billing period.
             </p>

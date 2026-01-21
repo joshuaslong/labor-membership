@@ -4,7 +4,7 @@ CREATE TABLE IF NOT EXISTS event_guest_rsvps (
     event_id UUID NOT NULL REFERENCES events(id) ON DELETE CASCADE,
     name TEXT NOT NULL,
     email TEXT NOT NULL,
-    status rsvp_status NOT NULL DEFAULT 'going',
+    status rsvp_status NOT NULL DEFAULT 'attending',
     created_at TIMESTAMPTZ DEFAULT NOW(),
     updated_at TIMESTAMPTZ DEFAULT NOW(),
     UNIQUE(event_id, email)
@@ -56,11 +56,11 @@ DECLARE
 BEGIN
     SELECT COUNT(*) INTO member_count
     FROM event_rsvps
-    WHERE event_id = event_uuid AND status = 'going';
+    WHERE event_id = event_uuid AND status = 'attending';
 
     SELECT COUNT(*) INTO guest_count
     FROM event_guest_rsvps
-    WHERE event_id = event_uuid AND status = 'going';
+    WHERE event_id = event_uuid AND status = 'attending';
 
     RETURN member_count + guest_count;
 END;

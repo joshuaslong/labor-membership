@@ -5,7 +5,7 @@ export default function WelcomePage() {
     <div className="max-w-xl mx-auto px-4 py-12 text-center">
       <div className="card">
         <div className="text-6xl mb-6">🎉</div>
-        <h1 className="text-3xl font-bold text-gray-900 mb-4">Welcome to the Labor Party!</h1>
+        <h1 className="text-3xl text-gray-900 mb-4">Welcome to the Labor Party!</h1>
         <p className="text-lg text-gray-600 mb-8">
           Your membership is now active. You're part of something bigger.
         </p>

@@ -32,7 +32,7 @@ export default async function WelcomePage() {
           </svg>
         </div>
 
-        <h1 className="text-3xl font-bold text-gray-900 mb-2">
+        <h1 className="text-3xl text-gray-900 mb-2">
           Welcome to the fight, {member.first_name}!
         </h1>
         <p className="text-lg text-gray-600 mb-8">

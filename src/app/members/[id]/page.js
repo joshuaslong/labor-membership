@@ -359,7 +359,7 @@ export default function MemberDetailPage() {
         <div className="flex justify-between items-start mb-6">
           <div>
             <div className="flex items-center gap-3">
-              <h1 className="text-2xl font-bold text-gray-900">
+              <h1 className="text-2xl text-gray-900">
                 {member.first_name} {member.last_name}
               </h1>
               {memberAdminRecord && (

@@ -34,7 +34,7 @@ export default function ForgotPasswordPage() {
     return (
       <div className="max-w-md mx-auto px-4 py-12 text-center">
         <div className="card">
-          <h1 className="text-2xl font-bold text-gray-900 mb-4">Check Your Email</h1>
+          <h1 className="text-2xl text-gray-900 mb-4">Check Your Email</h1>
           <p className="text-gray-600 mb-6">
             We sent a password reset link to <strong>{email}</strong>
           </p>
@@ -46,7 +46,7 @@ export default function ForgotPasswordPage() {
 
   return (
     <div className="max-w-md mx-auto px-4 py-12">
-      <h1 className="text-3xl font-bold text-gray-900 mb-2">Reset Password</h1>
+      <h1 className="text-3xl text-gray-900 mb-2">Reset Password</h1>
       <p className="text-gray-600 mb-8">
         Enter your email and we'll send you a reset link.
       </p>
