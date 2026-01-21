@@ -108,12 +108,18 @@ export default async function ChapterDetailPage({ params }) {
     .eq('parent_id', id)
     .order('name')
 
-  // Fetch upcoming events for this chapter
+  // Get all descendant chapter IDs to include their events too
+  const { data: allChapterIds } = await supabase
+    .rpc('get_chapter_descendants', { chapter_uuid: id })
+
+  const chapterIdsForEvents = [id, ...(allChapterIds?.map(c => c.id) || [])]
+
+  // Fetch upcoming events for this chapter and all descendant chapters
   const now = new Date().toISOString().split('T')[0]
   const { data: events } = await supabase
     .from('events')
-    .select('id, title, event_date, start_time, end_time, location, description')
-    .eq('chapter_id', id)
+    .select('id, title, event_date, start_time, end_time, location, description, chapter_id, chapters(name)')
+    .in('chapter_id', chapterIdsForEvents)
     .eq('status', 'published')
     .gte('event_date', now)
     .order('event_date', { ascending: true })
