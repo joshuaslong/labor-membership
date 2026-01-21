@@ -333,7 +333,7 @@ export default function EventDetailPage() {
                   <button
                     onClick={() => handleRsvp('attending')}
                     disabled={submitting}
-                    className={`py-2.5 px-3 text-sm rounded-lg border transition-colors ${
+                    className={`py-2.5 px-3 text-sm rounded-lg border transition-colors whitespace-nowrap ${
                       rsvpStatus === 'attending'
                         ? 'bg-green-50 border-green-300 text-green-700'
                         : 'border-gray-200 text-gray-600 hover:bg-gray-50'
@@ -344,7 +344,7 @@ export default function EventDetailPage() {
                   <button
                     onClick={() => handleRsvp('maybe')}
                     disabled={submitting}
-                    className={`py-2.5 px-3 text-sm rounded-lg border transition-colors ${
+                    className={`py-2.5 px-3 text-sm rounded-lg border transition-colors whitespace-nowrap ${
                       rsvpStatus === 'maybe'
                         ? 'bg-yellow-50 border-yellow-300 text-yellow-700'
                         : 'border-gray-200 text-gray-600 hover:bg-gray-50'
@@ -355,7 +355,7 @@ export default function EventDetailPage() {
                   <button
                     onClick={() => handleRsvp('declined')}
                     disabled={submitting}
-                    className={`py-2.5 px-3 text-sm rounded-lg border transition-colors ${
+                    className={`py-2.5 px-3 text-sm rounded-lg border transition-colors whitespace-nowrap ${
                       rsvpStatus === 'declined'
                         ? 'bg-gray-100 border-gray-300 text-gray-700'
                         : 'border-gray-200 text-gray-600 hover:bg-gray-50'
