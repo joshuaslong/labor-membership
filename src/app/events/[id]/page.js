@@ -218,7 +218,7 @@ export default function EventDetailPage() {
           <div className="card">
             {/* Event Header */}
             <div className="mb-6">
-              <h1 className="text-3xl font-bold text-gray-900 mb-3">{event.title}</h1>
+              <h1 className="text-3xl text-gray-900 mb-3">{event.title}</h1>
 
               {chapter && (
                 <Link
@@ -296,58 +296,39 @@ export default function EventDetailPage() {
             ) : user && member ? (
               // Logged in member RSVP
               <div className="space-y-3">
-                {rsvpStatus === 'attending' ? (
-                  <div className="p-4 bg-green-50 border border-green-200 rounded-lg text-center">
-                    <div className="flex items-center justify-center gap-2 text-green-700 font-medium mb-2">
-                      <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                        <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M5 13l4 4L19 7" />
-                      </svg>
-                      You're going!
-                    </div>
-                    <button
-                      onClick={() => handleRsvp('declined')}
-                      disabled={submitting}
-                      className="text-sm text-gray-500 hover:text-gray-700"
-                    >
-                      Cancel RSVP
-                    </button>
-                  </div>
-                ) : (
+                <div className="grid grid-cols-3 gap-2">
                   <button
                     onClick={() => handleRsvp('attending')}
                     disabled={submitting}
-                    className="w-full btn-primary"
-                  >
-                    {submitting ? 'Updating...' : 'RSVP - I\'m Going'}
-                  </button>
-                )}
-
-                {rsvpStatus === 'maybe' && (
-                  <p className="text-sm text-gray-500 text-center">You marked as "maybe"</p>
-                )}
-
-                <div className="flex gap-2">
-                  <button
-                    onClick={() => handleRsvp('maybe')}
-                    disabled={submitting || rsvpStatus === 'maybe'}
-                    className={`flex-1 py-2 px-3 text-sm rounded-lg border transition-colors ${
-                      rsvpStatus === 'maybe'
-                        ? 'bg-yellow-50 border-yellow-200 text-yellow-700'
+                    className={`py-2.5 px-3 text-sm rounded-lg border transition-colors ${
+                      rsvpStatus === 'attending'
+                        ? 'bg-green-50 border-green-300 text-green-700'
                         : 'border-gray-200 text-gray-600 hover:bg-gray-50'
                     }`}
                   >
-                    Maybe
+                    {rsvpStatus === 'attending' ? '✓ Going' : 'Going'}
+                  </button>
+                  <button
+                    onClick={() => handleRsvp('maybe')}
+                    disabled={submitting}
+                    className={`py-2.5 px-3 text-sm rounded-lg border transition-colors ${
+                      rsvpStatus === 'maybe'
+                        ? 'bg-yellow-50 border-yellow-300 text-yellow-700'
+                        : 'border-gray-200 text-gray-600 hover:bg-gray-50'
+                    }`}
+                  >
+                    {rsvpStatus === 'maybe' ? '✓ Maybe' : 'Maybe'}
                   </button>
                   <button
                     onClick={() => handleRsvp('declined')}
-                    disabled={submitting || rsvpStatus === 'declined'}
-                    className={`flex-1 py-2 px-3 text-sm rounded-lg border transition-colors ${
+                    disabled={submitting}
+                    className={`py-2.5 px-3 text-sm rounded-lg border transition-colors ${
                       rsvpStatus === 'declined'
                         ? 'bg-gray-100 border-gray-300 text-gray-700'
                         : 'border-gray-200 text-gray-600 hover:bg-gray-50'
                     }`}
                   >
-                    Can't Go
+                    {rsvpStatus === 'declined' ? '✓ Can\'t Go' : 'Can\'t Go'}
                   </button>
                 </div>
               </div>
