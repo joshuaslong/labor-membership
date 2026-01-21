@@ -50,7 +50,7 @@ export async function GET(request) {
     const adminUserIds = admins.map(a => a.user_id)
     const { data: members } = await adminClient
       .from('members')
-      .select('user_id, first_name, last_name, email')
+      .select('id, user_id, first_name, last_name, email')
       .in('user_id', adminUserIds)
 
     // Also get auth emails for admins without member records
@@ -82,6 +82,7 @@ export async function GET(request) {
 
       return {
         ...admin,
+        member_id: member?.id || null,
         email: member?.email || authUser?.email || 'Unknown',
         first_name: member?.first_name || '',
         last_name: member?.last_name || '',

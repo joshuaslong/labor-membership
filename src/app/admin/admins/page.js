@@ -232,9 +232,15 @@ export default function ManageAdminsPage() {
               >
                 <div className="flex-1">
                   <div className="flex items-center gap-3">
-                    <span className="font-medium">
-                      {admin.first_name} {admin.last_name}
-                    </span>
+                    {admin.member_id ? (
+                      <Link href={`/members/${admin.member_id}`} className="font-medium text-labor-red hover:underline">
+                        {admin.first_name} {admin.last_name}
+                      </Link>
+                    ) : (
+                      <span className="font-medium">
+                        {admin.first_name} {admin.last_name}
+                      </span>
+                    )}
                     <span className={`px-2 py-1 rounded text-xs font-medium ${ROLE_COLORS[admin.role]}`}>
                       {ROLE_LABELS[admin.role]}
                     </span>
