@@ -167,7 +167,6 @@ export default function EmailEditor({ value, onChange, placeholder = 'Enter your
               e.stopPropagation()
 
               // Apply alignment using inline styles directly on the image
-              // This approach works better with Quill as it preserves style attributes
               if (align === 'center') {
                 img.style.display = 'block'
                 img.style.marginLeft = 'auto'
@@ -184,9 +183,13 @@ export default function EmailEditor({ value, onChange, placeholder = 'Enter your
 
               wrapper.remove()
 
-              // Don't call onChange - let Quill handle it naturally
-              // The styles are now on the DOM element and will be captured
-              // when the user makes any other edit or on form submission
+              // Get the HTML directly from DOM and update state
+              // Use setTimeout to ensure DOM is updated first
+              setTimeout(() => {
+                const html = editorElement.innerHTML
+                internalValueRef.current = html
+                onChange(html)
+              }, 0)
             })
             btn.title = title
             wrapper.appendChild(btn)
