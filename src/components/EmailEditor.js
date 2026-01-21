@@ -12,14 +12,25 @@ export default function EmailEditor({ value, onChange, placeholder = 'Enter your
 
   // Set up image click handler for resize controls
   useEffect(() => {
-    const setupImageResize = () => {
-      const editor = editorRef.current?.getEditor?.()
-      if (!editor) return
+    // Use a longer delay and interval to ensure editor is ready
+    let attempts = 0
+    const maxAttempts = 10
 
-      const editorElement = editor.root
+    const trySetup = () => {
+      const editorElement = document.querySelector('.email-editor .ql-editor')
+      if (!editorElement) {
+        attempts++
+        if (attempts < maxAttempts) {
+          setTimeout(trySetup, 300)
+        }
+        return
+      }
 
       const handleImageClick = (e) => {
         if (e.target.tagName === 'IMG') {
+          e.preventDefault()
+          e.stopPropagation()
+
           // Remove any existing resize controls
           document.querySelectorAll('.image-resize-controls').forEach(el => el.remove())
 
@@ -27,15 +38,15 @@ export default function EmailEditor({ value, onChange, placeholder = 'Enter your
           const wrapper = document.createElement('div')
           wrapper.className = 'image-resize-controls'
           wrapper.style.cssText = `
-            position: absolute;
+            position: fixed;
             display: flex;
             gap: 4px;
             background: white;
             border: 1px solid #e5e7eb;
             border-radius: 6px;
-            padding: 4px;
-            box-shadow: 0 2px 8px rgba(0,0,0,0.15);
-            z-index: 100;
+            padding: 6px;
+            box-shadow: 0 4px 12px rgba(0,0,0,0.2);
+            z-index: 9999;
           `
 
           const sizes = [
@@ -50,21 +61,29 @@ export default function EmailEditor({ value, onChange, placeholder = 'Enter your
             const btn = document.createElement('button')
             btn.textContent = label
             btn.type = 'button'
+            const isActive = (width && img.width === width) || (width === null && img.style.width === '100%')
             btn.style.cssText = `
-              padding: 4px 8px;
-              font-size: 12px;
+              padding: 6px 12px;
+              font-size: 13px;
               font-weight: 500;
-              border: 1px solid #e5e7eb;
+              border: 1px solid ${isActive ? '#E25555' : '#e5e7eb'};
               border-radius: 4px;
-              background: ${img.width === width || (width === null && !img.style.maxWidth) ? '#E25555' : 'white'};
-              color: ${img.width === width || (width === null && !img.style.maxWidth) ? 'white' : '#374151'};
+              background: ${isActive ? '#E25555' : 'white'};
+              color: ${isActive ? 'white' : '#374151'};
               cursor: pointer;
+              transition: all 0.15s;
             `
-            btn.onmouseover = () => {
-              if (img.width !== width) btn.style.background = '#f3f4f6'
+            btn.onmouseenter = () => {
+              if (!isActive) {
+                btn.style.background = '#f3f4f6'
+                btn.style.borderColor = '#d1d5db'
+              }
             }
-            btn.onmouseout = () => {
-              if (img.width !== width) btn.style.background = 'white'
+            btn.onmouseleave = () => {
+              if (!isActive) {
+                btn.style.background = 'white'
+                btn.style.borderColor = '#e5e7eb'
+              }
             }
             btn.onclick = (e) => {
               e.preventDefault()
@@ -80,38 +99,41 @@ export default function EmailEditor({ value, onChange, placeholder = 'Enter your
               }
               img.style.height = 'auto'
               wrapper.remove()
-              // Trigger change
-              onChange(editor.root.innerHTML)
+              // Trigger change event
+              const event = new Event('input', { bubbles: true })
+              editorElement.dispatchEvent(event)
+              onChange(editorElement.innerHTML)
             }
             wrapper.appendChild(btn)
           })
 
-          // Position the controls above the image
+          // Position the controls above the image using fixed positioning
           const rect = img.getBoundingClientRect()
-          const editorRect = editorElement.getBoundingClientRect()
-          wrapper.style.left = (rect.left - editorRect.left) + 'px'
-          wrapper.style.top = (rect.top - editorRect.top - 40) + 'px'
+          wrapper.style.left = rect.left + 'px'
+          wrapper.style.top = (rect.top - 50) + 'px'
 
-          editorElement.style.position = 'relative'
-          editorElement.appendChild(wrapper)
+          document.body.appendChild(wrapper)
 
           // Remove controls when clicking elsewhere
-          const removeControls = (e) => {
-            if (!wrapper.contains(e.target) && e.target !== img) {
+          const removeControls = (evt) => {
+            if (!wrapper.contains(evt.target) && evt.target !== img) {
               wrapper.remove()
-              document.removeEventListener('click', removeControls)
+              document.removeEventListener('mousedown', removeControls)
             }
           }
-          setTimeout(() => document.addEventListener('click', removeControls), 0)
+          setTimeout(() => document.addEventListener('mousedown', removeControls), 10)
         }
       }
 
       editorElement.addEventListener('click', handleImageClick)
-      return () => editorElement.removeEventListener('click', handleImageClick)
+
+      return () => {
+        editorElement.removeEventListener('click', handleImageClick)
+        document.querySelectorAll('.image-resize-controls').forEach(el => el.remove())
+      }
     }
 
-    // Delay to ensure editor is mounted
-    const timer = setTimeout(setupImageResize, 500)
+    const timer = setTimeout(trySetup, 500)
     return () => clearTimeout(timer)
   }, [onChange])
 
@@ -153,7 +175,8 @@ export default function EmailEditor({ value, onChange, placeholder = 'Enter your
     'list', 'bullet',
     'align',
     'link', 'image', 'video',
-    'code-block'
+    'code-block',
+    'width', 'height', 'style'
   ]
 
   return (
