@@ -61,10 +61,10 @@ function EventsContent() {
       .select(`
         id,
         title,
-        event_date,
+        start_date,
         start_time,
         end_time,
-        location,
+        location_name,
         description,
         chapter_id,
         chapters (
@@ -74,8 +74,8 @@ function EventsContent() {
         )
       `)
       .eq('status', 'published')
-      .gte('event_date', now)
-      .order('event_date', { ascending: true })
+      .gte('start_date', now)
+      .order('start_date', { ascending: true })
       .order('start_time', { ascending: true })
 
     if (chapterFilter) {
@@ -116,7 +116,7 @@ function EventsContent() {
   // Group events by month
   const eventsByMonth = {}
   filteredEvents.forEach(event => {
-    const date = new Date(event.event_date)
+    const date = new Date(event.start_date)
     const monthKey = `${date.getFullYear()}-${String(date.getMonth() + 1).padStart(2, '0')}`
     const monthLabel = date.toLocaleDateString('en-US', { month: 'long', year: 'numeric' })
 
@@ -217,13 +217,13 @@ function EventsContent() {
                       {/* Date badge */}
                       <div className="flex-shrink-0 w-14 text-center">
                         <div className="text-sm font-medium text-labor-red uppercase">
-                          {new Date(event.event_date).toLocaleDateString('en-US', { month: 'short' })}
+                          {new Date(event.start_date).toLocaleDateString('en-US', { month: 'short' })}
                         </div>
                         <div className="text-2xl font-bold text-gray-900">
-                          {new Date(event.event_date).getDate()}
+                          {new Date(event.start_date).getDate()}
                         </div>
                         <div className="text-xs text-gray-500">
-                          {new Date(event.event_date).toLocaleDateString('en-US', { weekday: 'short' })}
+                          {new Date(event.start_date).toLocaleDateString('en-US', { weekday: 'short' })}
                         </div>
                       </div>
 
@@ -241,13 +241,13 @@ function EventsContent() {
                               {event.end_time && ` - ${formatEventTime(event.end_time)}`}
                             </span>
                           )}
-                          {event.location && (
+                          {event.location_name && (
                             <span className="flex items-center gap-1">
                               <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                                 <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M17.657 16.657L13.414 20.9a1.998 1.998 0 01-2.827 0l-4.244-4.243a8 8 0 1111.314 0z" />
                                 <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M15 11a3 3 0 11-6 0 3 3 0 016 0z" />
                               </svg>
-                              <span className="truncate">{event.location}</span>
+                              <span className="truncate">{event.location_name}</span>
                             </span>
                           )}
                         </div>
