@@ -387,7 +387,7 @@ export default function EmailComposePage() {
                 placeholder="Enter your message..."
               />
               <p className="text-xs text-gray-500 mt-2">
-                Use the <code className="bg-gray-100 px-1 py-0.5 rounded">{'{$}'}</code> button to insert <code className="bg-gray-100 px-1 py-0.5 rounded">{'{$name}'}</code> for the recipient's first name. To resize images, click on the image and delete it, then re-add with your preferred dimensions, or edit the HTML directly in the template.
+                Use the <code className="bg-gray-100 px-1 py-0.5 rounded">{'{$}'}</code> button to insert <code className="bg-gray-100 px-1 py-0.5 rounded">{'{$name}'}</code> for the recipient's first name. Click on any image to resize it.
               </p>
             </div>
           </div>
