@@ -1,6 +1,17 @@
 import { createClient, createAdminClient } from '@/lib/supabase/server'
 import { NextResponse } from 'next/server'
 
+// Helper to get highest privilege admin record for a user
+const roleHierarchy = ['super_admin', 'national_admin', 'state_admin', 'county_admin', 'city_admin']
+function getHighestPrivilegeAdmin(adminRecords) {
+  if (!adminRecords || adminRecords.length === 0) return null
+  return adminRecords.reduce((highest, current) => {
+    const currentIndex = roleHierarchy.indexOf(current.role)
+    const highestIndex = roleHierarchy.indexOf(highest.role)
+    return currentIndex < highestIndex ? current : highest
+  }, adminRecords[0])
+}
+
 // GET - List admins the current user can see/manage
 export async function GET(request) {
   try {
@@ -13,13 +24,13 @@ export async function GET(request) {
 
     const adminClient = createAdminClient()
 
-    // Get current user's admin record
-    const { data: currentAdmin } = await adminClient
+    // Get current user's admin records (can have multiple)
+    const { data: adminRecords } = await adminClient
       .from('admin_users')
       .select('id, role, chapter_id')
       .eq('user_id', user.id)
-      .single()
 
+    const currentAdmin = getHighestPrivilegeAdmin(adminRecords)
     if (!currentAdmin) {
       return NextResponse.json({ error: 'Not an admin' }, { status: 403 })
     }
@@ -124,13 +135,13 @@ export async function POST(request) {
 
     const adminClient = createAdminClient()
 
-    // Get current user's admin record
-    const { data: currentAdmin } = await adminClient
+    // Get current user's admin records (can have multiple)
+    const { data: adminRecords } = await adminClient
       .from('admin_users')
       .select('id, role, chapter_id')
       .eq('user_id', user.id)
-      .single()
 
+    const currentAdmin = getHighestPrivilegeAdmin(adminRecords)
     if (!currentAdmin) {
       return NextResponse.json({ error: 'Not an admin' }, { status: 403 })
     }
@@ -212,15 +223,17 @@ export async function POST(request) {
       }, { status: 404 })
     }
 
-    // Check if already an admin
+    // Check if already has this specific role+chapter combo
     const { data: existingAdmin } = await adminClient
       .from('admin_users')
-      .select('id')
+      .select('id, role, chapter_id')
       .eq('user_id', targetUserId)
+      .eq('role', role)
+      .eq('chapter_id', chapter_id)
       .single()
 
     if (existingAdmin) {
-      return NextResponse.json({ error: 'User is already an admin' }, { status: 400 })
+      return NextResponse.json({ error: 'User already has this admin role for this chapter' }, { status: 400 })
     }
 
     // Create the admin record
@@ -256,13 +269,13 @@ export async function PUT(request) {
 
     const adminClient = createAdminClient()
 
-    // Get current user's admin record
-    const { data: currentAdmin } = await adminClient
+    // Get current user's admin records (can have multiple)
+    const { data: adminRecords } = await adminClient
       .from('admin_users')
       .select('id, role, chapter_id')
       .eq('user_id', user.id)
-      .single()
 
+    const currentAdmin = getHighestPrivilegeAdmin(adminRecords)
     if (!currentAdmin) {
       return NextResponse.json({ error: 'Not an admin' }, { status: 403 })
     }
@@ -380,13 +393,13 @@ export async function DELETE(request) {
 
     const adminClient = createAdminClient()
 
-    // Get current user's admin record
-    const { data: currentAdmin } = await adminClient
+    // Get current user's admin records (can have multiple)
+    const { data: adminRecords } = await adminClient
       .from('admin_users')
       .select('id, role, chapter_id')
       .eq('user_id', user.id)
-      .single()
 
+    const currentAdmin = getHighestPrivilegeAdmin(adminRecords)
     if (!currentAdmin) {
       return NextResponse.json({ error: 'Not an admin' }, { status: 403 })
     }
@@ -398,8 +411,9 @@ export async function DELETE(request) {
       return NextResponse.json({ error: 'Admin ID required' }, { status: 400 })
     }
 
-    // Can't delete yourself
-    if (adminId === currentAdmin.id) {
+    // Can't delete yourself (check all user's admin records)
+    const userAdminIds = adminRecords.map(a => a.id)
+    if (userAdminIds.includes(adminId)) {
       return NextResponse.json({ error: 'Cannot remove yourself' }, { status: 400 })
     }
 

@@ -18,16 +18,23 @@ export async function POST(request) {
 
   const supabase = createAdminClient()
 
-  // Get current admin's role and chapter
-  const { data: currentAdmin } = await supabase
+  // Get current admin's role and chapter (user can have multiple admin records)
+  const roleHierarchy = ['super_admin', 'national_admin', 'state_admin', 'county_admin', 'city_admin']
+  const { data: adminRecords } = await supabase
     .from('admin_users')
     .select('id, role, chapter_id, chapters(name)')
     .eq('user_id', user.id)
-    .single()
 
-  if (!currentAdmin) {
+  if (!adminRecords || adminRecords.length === 0) {
     return NextResponse.json({ error: 'Not an admin' }, { status: 403 })
   }
+
+  // Use highest privilege role
+  const currentAdmin = adminRecords.reduce((highest, current) => {
+    const currentIndex = roleHierarchy.indexOf(current.role)
+    const highestIndex = roleHierarchy.indexOf(highest.role)
+    return currentIndex < highestIndex ? current : highest
+  }, adminRecords[0])
 
   const body = await request.json()
   const { subject, content, recipientType, chapterId, replyTo, senderName } = body

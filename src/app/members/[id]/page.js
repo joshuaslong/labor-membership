@@ -27,7 +27,7 @@ export default function MemberDetailPage() {
   const [memberChapters, setMemberChapters] = useState([])
   const [isAdmin, setIsAdmin] = useState(false)
   const [currentUserRole, setCurrentUserRole] = useState(null)
-  const [memberAdminRecord, setMemberAdminRecord] = useState(null)
+  const [memberAdminRecords, setMemberAdminRecords] = useState([])
   const [loading, setLoading] = useState(true)
   const [saving, setSaving] = useState(false)
   const [error, setError] = useState(null)
@@ -101,19 +101,16 @@ export default function MemberDetailPage() {
 
       setMemberChapters(mcData || [])
 
-      // Check if this member is an admin
+      // Check if this member is an admin (can have multiple admin records)
       if (memberData.user_id) {
-        const { data: memberAdmin } = await supabase
+        const { data: memberAdmins } = await supabase
           .from('admin_users')
           .select('id, role, chapter_id, chapters(id, name, level)')
           .eq('user_id', memberData.user_id)
-          .single()
+          .order('created_at', { ascending: false })
 
-        if (memberAdmin) {
-          setMemberAdminRecord(memberAdmin)
-          // Initialize the form with current values for editing
-          setSelectedAdminRole(memberAdmin.role)
-          setSelectedAdminChapter(memberAdmin.chapter_id || '')
+        if (memberAdmins && memberAdmins.length > 0) {
+          setMemberAdminRecords(memberAdmins)
         }
       }
 
@@ -213,15 +210,17 @@ export default function MemberDetailPage() {
         throw new Error(data.error || 'Failed to make admin')
       }
 
-      // Reload admin record
+      // Reload admin records
       const supabase = createClient()
-      const { data: memberAdmin } = await supabase
+      const { data: memberAdmins } = await supabase
         .from('admin_users')
         .select('id, role, chapter_id, chapters(id, name, level)')
         .eq('user_id', member.user_id)
-        .single()
+        .order('created_at', { ascending: false })
 
-      setMemberAdminRecord(memberAdmin)
+      setMemberAdminRecords(memberAdmins || [])
+      setSelectedAdminRole('state_admin')
+      setSelectedAdminChapter('')
       setSuccess('Admin access granted successfully')
     } catch (err) {
       setError(err.message)
@@ -230,68 +229,15 @@ export default function MemberDetailPage() {
     setSaving(false)
   }
 
-  const handleUpdateAdmin = async () => {
-    // For national_admin/super_admin, chapter is not required
-    const needsChapter = !['national_admin', 'super_admin'].includes(selectedAdminRole)
-    if (needsChapter && !selectedAdminChapter) {
-      setError('Please select a chapter for admin access')
-      return
-    }
+  const handleRemoveAdmin = async (adminId) => {
+    if (!adminId) return
 
     setSaving(true)
     setError(null)
     setSuccess(null)
 
     try {
-      // Get national chapter ID for national_admin/super_admin
-      let chapterId = selectedAdminChapter
-      if (!needsChapter) {
-        const nationalChapter = chapters.find(c => c.level === 'national')
-        chapterId = nationalChapter?.id
-      }
-
-      const res = await fetch('/api/admin/admins', {
-        method: 'PUT',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({
-          admin_id: memberAdminRecord.id,
-          role: selectedAdminRole,
-          chapter_id: chapterId,
-        }),
-      })
-
-      const data = await res.json()
-
-      if (!res.ok) {
-        throw new Error(data.error || 'Failed to update admin')
-      }
-
-      // Reload admin record
-      const supabase = createClient()
-      const { data: memberAdmin } = await supabase
-        .from('admin_users')
-        .select('id, role, chapter_id, chapters(id, name, level)')
-        .eq('user_id', member.user_id)
-        .single()
-
-      setMemberAdminRecord(memberAdmin)
-      setSuccess('Admin role updated successfully')
-    } catch (err) {
-      setError(err.message)
-    }
-
-    setSaving(false)
-  }
-
-  const handleRemoveAdmin = async () => {
-    if (!memberAdminRecord) return
-
-    setSaving(true)
-    setError(null)
-    setSuccess(null)
-
-    try {
-      const res = await fetch(`/api/admin/admins?id=${memberAdminRecord.id}`, {
+      const res = await fetch(`/api/admin/admins?id=${adminId}`, {
         method: 'DELETE',
       })
 
@@ -301,7 +247,15 @@ export default function MemberDetailPage() {
         throw new Error(data.error || 'Failed to remove admin')
       }
 
-      setMemberAdminRecord(null)
+      // Reload admin records
+      const supabase = createClient()
+      const { data: memberAdmins } = await supabase
+        .from('admin_users')
+        .select('id, role, chapter_id, chapters(id, name, level)')
+        .eq('user_id', member.user_id)
+        .order('created_at', { ascending: false })
+
+      setMemberAdminRecords(memberAdmins || [])
       setSuccess('Admin access removed successfully')
     } catch (err) {
       setError(err.message)
@@ -372,18 +326,22 @@ export default function MemberDetailPage() {
               <h1 className="text-2xl text-gray-900">
                 {member.first_name} {member.last_name}
               </h1>
-              {memberAdminRecord && (
-                <span className="px-2 py-1 bg-purple-100 text-purple-800 text-xs font-semibold rounded">
-                  {memberAdminRecord.role === 'super_admin' ? 'Super Admin' :
-                   memberAdminRecord.role === 'national_admin' ? 'National Admin' :
-                   memberAdminRecord.role === 'state_admin' ? 'State Admin' :
-                   memberAdminRecord.role === 'county_admin' ? 'County Admin' :
-                   memberAdminRecord.role === 'city_admin' ? 'City Admin' :
-                   'Admin'}
-                  {memberAdminRecord.chapters && !['super_admin', 'national_admin'].includes(memberAdminRecord.role) && (
-                    <span className="ml-1 opacity-75">({memberAdminRecord.chapters.name})</span>
-                  )}
-                </span>
+              {memberAdminRecords.length > 0 && (
+                <div className="flex flex-wrap gap-1">
+                  {memberAdminRecords.map(record => (
+                    <span key={record.id} className="px-2 py-1 bg-purple-100 text-purple-800 text-xs font-semibold rounded">
+                      {record.role === 'super_admin' ? 'Super Admin' :
+                       record.role === 'national_admin' ? 'National Admin' :
+                       record.role === 'state_admin' ? 'State Admin' :
+                       record.role === 'county_admin' ? 'County Admin' :
+                       record.role === 'city_admin' ? 'City Admin' :
+                       'Admin'}
+                      {record.chapters && !['super_admin', 'national_admin'].includes(record.role) && (
+                        <span className="ml-1 opacity-75">({record.chapters.name})</span>
+                      )}
+                    </span>
+                  ))}
+                </div>
               )}
             </div>
             <p className="text-gray-600">{member.email}</p>
@@ -536,147 +494,100 @@ export default function MemberDetailPage() {
       <div className="card mb-6">
         <h2 className="text-lg font-medium text-gray-900 mb-4">Admin Access</h2>
 
-        {memberAdminRecord ? (
-          <div>
-            <div className="flex items-center gap-3 p-4 bg-purple-50 rounded-lg mb-4">
-              <div className="flex-1">
-                <div className="font-medium text-purple-900">
-                  {memberAdminRecord.role === 'super_admin' ? 'Super Admin' :
-                   memberAdminRecord.role === 'national_admin' ? 'National Admin' :
-                   memberAdminRecord.role === 'state_admin' ? 'State Admin' :
-                   memberAdminRecord.role === 'county_admin' ? 'County Admin' :
-                   memberAdminRecord.role === 'city_admin' ? 'City Admin' :
-                   'Chapter Admin'}
-                </div>
-                {memberAdminRecord.chapters && (
-                  <div className="text-sm text-purple-700">
-                    {memberAdminRecord.chapters.name}
+        {/* Display existing admin roles */}
+        {memberAdminRecords.length > 0 && (
+          <div className="space-y-3 mb-6">
+            {memberAdminRecords.map(record => (
+              <div key={record.id} className="flex items-center gap-3 p-4 bg-purple-50 rounded-lg">
+                <div className="flex-1">
+                  <div className="font-medium text-purple-900">
+                    {record.role === 'super_admin' ? 'Super Admin' :
+                     record.role === 'national_admin' ? 'National Admin' :
+                     record.role === 'state_admin' ? 'State Admin' :
+                     record.role === 'county_admin' ? 'County Admin' :
+                     record.role === 'city_admin' ? 'City Admin' :
+                     'Chapter Admin'}
                   </div>
-                )}
-              </div>
-              <button
-                onClick={handleRemoveAdmin}
-                disabled={saving || (currentUserRole !== 'super_admin' && ['super_admin', 'national_admin'].includes(memberAdminRecord.role))}
-                className="px-4 py-2 bg-red-100 text-red-700 rounded-lg text-sm font-medium hover:bg-red-200 disabled:opacity-50"
-              >
-                {saving ? 'Removing...' : 'Remove Admin'}
-              </button>
-            </div>
-
-            {/* Allow super_admin to change role/chapter of existing admins */}
-            {currentUserRole === 'super_admin' && (
-              <div className="border-t pt-4 mt-4 space-y-4">
-                <h3 className="font-medium text-gray-700">Change Admin Role</h3>
-                <div>
-                  <label className="block text-sm font-medium text-gray-700 mb-2">New Role</label>
-                  <select
-                    value={selectedAdminRole}
-                    onChange={(e) => setSelectedAdminRole(e.target.value)}
-                    className="input-field"
-                  >
-                    <option value="city_admin">City Admin</option>
-                    <option value="county_admin">County Admin</option>
-                    <option value="state_admin">State Admin</option>
-                    <option value="national_admin">National Admin</option>
-                    <option value="super_admin">Super Admin</option>
-                  </select>
+                  {record.chapters && (
+                    <div className="text-sm text-purple-700">
+                      {record.chapters.name}
+                    </div>
+                  )}
                 </div>
-                {!['national_admin', 'super_admin'].includes(selectedAdminRole) && (
-                  <div>
-                    <label className="block text-sm font-medium text-gray-700 mb-2">Chapter Access</label>
-                    <select
-                      value={selectedAdminChapter}
-                      onChange={(e) => setSelectedAdminChapter(e.target.value)}
-                      className="input-field"
-                    >
-                      <option value="">Select a chapter...</option>
-                      {['national', 'state', 'county', 'city'].map(level => (
-                        groupedChapters[level]?.length > 0 && (
-                          <optgroup key={level} label={level.charAt(0).toUpperCase() + level.slice(1)}>
-                            {groupedChapters[level].map(c => (
-                              <option key={c.id} value={c.id}>{c.name}</option>
-                            ))}
-                          </optgroup>
-                        )
-                      ))}
-                    </select>
-                  </div>
-                )}
                 <button
-                  onClick={handleUpdateAdmin}
-                  disabled={saving || (!['national_admin', 'super_admin'].includes(selectedAdminRole) && !selectedAdminChapter)}
-                  className="btn-secondary"
+                  onClick={() => handleRemoveAdmin(record.id)}
+                  disabled={saving || (currentUserRole !== 'super_admin' && ['super_admin', 'national_admin'].includes(record.role))}
+                  className="px-4 py-2 bg-red-100 text-red-700 rounded-lg text-sm font-medium hover:bg-red-200 disabled:opacity-50"
                 >
-                  {saving ? 'Updating...' : 'Update Role'}
+                  Remove
                 </button>
               </div>
-            )}
-
-            {currentUserRole !== 'super_admin' && ['super_admin', 'national_admin'].includes(memberAdminRecord.role) && (
-              <p className="text-sm text-gray-500">{memberAdminRecord.role === 'super_admin' ? 'Super' : 'National'} admins can only be managed by super admins.</p>
-            )}
-          </div>
-        ) : (
-          <div>
-            <p className="text-gray-600 mb-4">This member does not have admin access.</p>
-            <div className="space-y-4">
-              <div>
-                <label className="block text-sm font-medium text-gray-700 mb-2">Admin Role</label>
-                <select
-                  value={selectedAdminRole}
-                  onChange={(e) => setSelectedAdminRole(e.target.value)}
-                  className="input-field"
-                >
-                  <option value="city_admin">City Admin</option>
-                  <option value="county_admin">County Admin</option>
-                  <option value="state_admin">State Admin</option>
-                  {currentUserRole === 'super_admin' && (
-                    <>
-                      <option value="national_admin">National Admin</option>
-                      <option value="super_admin">Super Admin</option>
-                    </>
-                  )}
-                </select>
-              </div>
-              {!['national_admin', 'super_admin'].includes(selectedAdminRole) && (
-                <div>
-                  <label className="block text-sm font-medium text-gray-700 mb-2">Chapter Access</label>
-                  <select
-                    value={selectedAdminChapter}
-                    onChange={(e) => setSelectedAdminChapter(e.target.value)}
-                    className="input-field"
-                  >
-                    <option value="">Select a chapter...</option>
-                    {['national', 'state', 'county', 'city'].map(level => (
-                      groupedChapters[level]?.length > 0 && (
-                        <optgroup key={level} label={level.charAt(0).toUpperCase() + level.slice(1)}>
-                          {groupedChapters[level].map(c => (
-                            <option key={c.id} value={c.id}>{c.name}</option>
-                          ))}
-                        </optgroup>
-                      )
-                    ))}
-                  </select>
-                  <p className="text-xs text-gray-500 mt-1">
-                    The admin will have access to this chapter and all its sub-chapters.
-                  </p>
-                </div>
-              )}
-              {['national_admin', 'super_admin'].includes(selectedAdminRole) && (
-                <p className="text-sm text-gray-500">
-                  {selectedAdminRole === 'national_admin' ? 'National' : 'Super'} admins have access to all chapters.
-                </p>
-              )}
-              <button
-                onClick={handleMakeAdmin}
-                disabled={saving || (!['national_admin', 'super_admin'].includes(selectedAdminRole) && !selectedAdminChapter)}
-                className="btn-primary"
-              >
-                {saving ? 'Granting Access...' : 'Grant Admin Access'}
-              </button>
-            </div>
+            ))}
           </div>
         )}
+
+        {/* Add new admin role */}
+        <div className={memberAdminRecords.length > 0 ? 'border-t pt-4' : ''}>
+          <h3 className="font-medium text-gray-700 mb-4">
+            {memberAdminRecords.length > 0 ? 'Add Another Admin Role' : 'Grant Admin Access'}
+          </h3>
+          <div className="space-y-4">
+            <div>
+              <label className="block text-sm font-medium text-gray-700 mb-2">Admin Role</label>
+              <select
+                value={selectedAdminRole}
+                onChange={(e) => setSelectedAdminRole(e.target.value)}
+                className="input-field"
+              >
+                <option value="city_admin">City Admin</option>
+                <option value="county_admin">County Admin</option>
+                <option value="state_admin">State Admin</option>
+                {currentUserRole === 'super_admin' && (
+                  <>
+                    <option value="national_admin">National Admin</option>
+                    <option value="super_admin">Super Admin</option>
+                  </>
+                )}
+              </select>
+            </div>
+            {!['national_admin', 'super_admin'].includes(selectedAdminRole) && (
+              <div>
+                <label className="block text-sm font-medium text-gray-700 mb-2">Chapter Access</label>
+                <select
+                  value={selectedAdminChapter}
+                  onChange={(e) => setSelectedAdminChapter(e.target.value)}
+                  className="input-field"
+                >
+                  <option value="">Select a chapter...</option>
+                  {['national', 'state', 'county', 'city'].map(level => (
+                    groupedChapters[level]?.length > 0 && (
+                      <optgroup key={level} label={level.charAt(0).toUpperCase() + level.slice(1)}>
+                        {groupedChapters[level].map(c => (
+                          <option key={c.id} value={c.id}>{c.name}</option>
+                        ))}
+                      </optgroup>
+                    )
+                  ))}
+                </select>
+                <p className="text-xs text-gray-500 mt-1">
+                  The admin will have access to this chapter and all its sub-chapters.
+                </p>
+              </div>
+            )}
+            {['national_admin', 'super_admin'].includes(selectedAdminRole) && (
+              <p className="text-sm text-gray-500">
+                {selectedAdminRole === 'national_admin' ? 'National' : 'Super'} admins have access to all chapters.
+              </p>
+            )}
+            <button
+              onClick={handleMakeAdmin}
+              disabled={saving || (!['national_admin', 'super_admin'].includes(selectedAdminRole) && !selectedAdminChapter)}
+              className="btn-primary"
+            >
+              {saving ? 'Granting Access...' : memberAdminRecords.length > 0 ? 'Add Admin Role' : 'Grant Admin Access'}
+            </button>
+          </div>
+        </div>
       </div>
 
       {/* Danger Zone - Super Admin Only */}

@@ -54,12 +54,22 @@ export default function CreateEventPage() {
 
     if (!user) return
 
-    // Get admin info
-    const { data: admin } = await supabase
+    // Get admin info (user can have multiple admin records)
+    const { data: adminRecords } = await supabase
       .from('admin_users')
       .select('id, role, chapter_id, chapters(id, name)')
       .eq('user_id', user.id)
-      .single()
+
+    // Use highest privilege role for determining access
+    let admin = null
+    if (adminRecords && adminRecords.length > 0) {
+      const roleHierarchy = ['super_admin', 'national_admin', 'state_admin', 'county_admin', 'city_admin']
+      admin = adminRecords.reduce((highest, current) => {
+        const currentIndex = roleHierarchy.indexOf(current.role)
+        const highestIndex = roleHierarchy.indexOf(highest.role)
+        return currentIndex < highestIndex ? current : highest
+      }, adminRecords[0])
+    }
 
     setAdminInfo(admin)
 

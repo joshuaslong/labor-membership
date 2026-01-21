@@ -144,15 +144,16 @@ export async function POST(request) {
       return NextResponse.json({ error: 'Unauthorized' }, { status: 401 })
     }
 
-    // Check if user is admin
+    // Check if user is admin (user can have multiple admin records)
     const adminClient = createAdminClient()
-    const { data: adminUser } = await adminClient
+    const { data: adminRecords } = await adminClient
       .from('admin_users')
       .select('role')
       .eq('user_id', user.id)
-      .single()
 
-    if (!adminUser || !['admin', 'super_admin', 'national_admin'].includes(adminUser.role)) {
+    // Check if any admin record has sufficient permissions
+    const hasAdminAccess = adminRecords?.some(a => ['admin', 'super_admin', 'national_admin'].includes(a.role))
+    if (!hasAdminAccess) {
       return NextResponse.json({ error: 'Admin access required' }, { status: 403 })
     }
 

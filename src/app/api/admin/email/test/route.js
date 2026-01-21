@@ -18,14 +18,13 @@ export async function POST(request) {
 
   const supabase = createAdminClient()
 
-  // Get current admin
-  const { data: currentAdmin } = await supabase
+  // Get current admin (user can have multiple admin records)
+  const { data: adminRecords } = await supabase
     .from('admin_users')
     .select('id, role, chapter_id')
     .eq('user_id', user.id)
-    .single()
 
-  if (!currentAdmin) {
+  if (!adminRecords || adminRecords.length === 0) {
     return NextResponse.json({ error: 'Not an admin' }, { status: 403 })
   }
 

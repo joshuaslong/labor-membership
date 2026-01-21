@@ -161,13 +161,13 @@ export default async function DashboardPage() {
     .eq('user_id', user.id)
     .single()
 
-  const { data: adminUser } = await supabase
+  // Check for admin access (user can have multiple admin records)
+  const { data: adminRecords } = await supabase
     .from('admin_users')
     .select('role')
     .eq('user_id', user.id)
-    .single()
 
-  const isAdmin = !!adminUser
+  const isAdmin = adminRecords && adminRecords.length > 0
 
   // Get payment data (use admin client since RLS might not allow cross-table access)
   let subscription = null

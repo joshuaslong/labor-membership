@@ -15,16 +15,23 @@ export default async function AdminPage() {
 
   const supabase = createAdminClient()
 
-  // Get current admin's role and chapter
-  const { data: currentAdmin } = await supabase
+  // Get current admin's role and chapter (user can have multiple admin records)
+  const { data: adminRecords } = await supabase
     .from('admin_users')
     .select('id, role, chapter_id, chapters(name)')
     .eq('user_id', user.id)
-    .single()
 
-  if (!currentAdmin) {
+  if (!adminRecords || adminRecords.length === 0) {
     redirect('/dashboard')
   }
+
+  // Use highest privilege role for determining access
+  const roleHierarchy = ['super_admin', 'national_admin', 'state_admin', 'county_admin', 'city_admin']
+  const currentAdmin = adminRecords.reduce((highest, current) => {
+    const currentIndex = roleHierarchy.indexOf(current.role)
+    const highestIndex = roleHierarchy.indexOf(highest.role)
+    return currentIndex < highestIndex ? current : highest
+  }, adminRecords[0])
 
   // Get chapter IDs this admin can access
   // super_admin and national_admin have access to all data

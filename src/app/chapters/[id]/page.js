@@ -52,12 +52,12 @@ export default async function ChapterDetailPage({ params }) {
   let memberId = null
 
   if (user) {
-    const { data: adminUser } = await supabase
+    // Check for any admin record (user can have multiple)
+    const { data: adminRecords } = await supabase
       .from('admin_users')
       .select('role')
       .eq('user_id', user.id)
-      .single()
-    isAdmin = !!adminUser
+    isAdmin = adminRecords && adminRecords.length > 0
 
     // Check if user is a member of this chapter
     const { data: memberRecord } = await supabase

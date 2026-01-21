@@ -30,15 +30,14 @@ export default function ChaptersPage() {
     const loadData = async () => {
       const supabase = createClient()
 
-      // Check if current user is an admin
+      // Check if current user is an admin (user can have multiple admin records)
       const { data: { user } } = await supabase.auth.getUser()
       if (user) {
-        const { data: adminUser } = await supabase
+        const { data: adminRecords } = await supabase
           .from('admin_users')
           .select('role')
           .eq('user_id', user.id)
-          .single()
-        setIsAdmin(!!adminUser)
+        setIsAdmin(adminRecords && adminRecords.length > 0)
       }
 
       // Fetch chapters
