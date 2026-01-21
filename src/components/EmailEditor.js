@@ -129,11 +129,14 @@ export default function EmailEditor({ value, onChange, placeholder = 'Enter your
           sep.style.cssText = 'width: 1px; background: #e5e7eb; margin: 0 4px;'
           wrapper.appendChild(sep)
 
-          // Alignment buttons
+          // Alignment buttons - using inline SVGs
+          const leftSvg = `<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" width="16" height="16" style="vertical-align: middle;"><g fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M4 3V21"/><path d="M9 12L12 15"/><path d="M9 12L12 9"/><path d="M20 12H9"/></g></svg>`
+          const centerSvg = `<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" width="16" height="16" style="vertical-align: middle;"><g fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M15 12L18 15"/><path d="M9 12L6 15"/><path d="M15 12L18 9"/><path d="M9 12L6 9"/><path d="M22 12H15.5"/><path d="M2 12H8.5"/><path d="M12 3V21"/></g></svg>`
+          const rightSvg = `<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" width="16" height="16" style="vertical-align: middle;"><g fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M20 3V21"/><path d="M15 12L12 15"/><path d="M15 12L12 9"/><path d="M4 12H15"/></g></svg>`
           const alignments = [
-            { label: '⬅', align: 'left', title: 'Align left' },
-            { label: '⬌', align: 'center', title: 'Center' },
-            { label: '➡', align: 'right', title: 'Align right' },
+            { label: leftSvg, align: 'left', title: 'Align left' },
+            { label: centerSvg, align: 'center', title: 'Center' },
+            { label: rightSvg, align: 'right', title: 'Align right' },
           ]
 
           alignments.forEach(({ label, align, title }) => {
@@ -142,30 +145,30 @@ export default function EmailEditor({ value, onChange, placeholder = 'Enter your
               e.preventDefault()
               e.stopPropagation()
 
-              // Reset float and margins
-              img.style.float = 'none'
-              img.style.marginLeft = ''
-              img.style.marginRight = ''
-              img.style.display = ''
+              // Build style string for email compatibility
+              let styleStr = `height: auto; max-width: 100%;`
 
-              if (align === 'center') {
-                img.style.display = 'block'
-                img.style.marginLeft = 'auto'
-                img.style.marginRight = 'auto'
-              } else if (align === 'right') {
-                img.style.display = 'block'
-                img.style.marginLeft = 'auto'
-                img.style.marginRight = '0'
-              } else {
-                img.style.display = 'block'
-                img.style.marginLeft = '0'
-                img.style.marginRight = 'auto'
+              // Preserve current width if set
+              if (img.style.width && img.style.width !== '100%') {
+                styleStr += ` width: ${img.style.width}; max-width: ${img.style.width};`
+              } else if (img.getAttribute('width')) {
+                styleStr += ` width: ${img.getAttribute('width')}px; max-width: ${img.getAttribute('width')}px;`
               }
 
+              if (align === 'center') {
+                styleStr += ' display: block; margin-left: auto; margin-right: auto;'
+              } else if (align === 'right') {
+                styleStr += ' display: block; margin-left: auto; margin-right: 0;'
+              } else {
+                styleStr += ' display: block; margin-left: 0; margin-right: auto;'
+              }
+
+              img.setAttribute('style', styleStr)
+
               wrapper.remove()
-              const event = new Event('input', { bubbles: true })
-              editorElement.dispatchEvent(event)
-              onChange(editorElement.innerHTML)
+              // Force Quill to recognize the change
+              const html = editorElement.innerHTML
+              onChange(html)
             })
             btn.title = title
             wrapper.appendChild(btn)
@@ -236,11 +239,10 @@ export default function EmailEditor({ value, onChange, placeholder = 'Enter your
     'color', 'background',
     'script',
     'header', 'blockquote',
-    'list', 'bullet',
+    'list',
     'align',
     'link', 'image', 'video',
-    'code-block',
-    'width', 'height', 'style'
+    'code-block'
   ]
 
   return (
