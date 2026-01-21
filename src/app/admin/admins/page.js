@@ -255,7 +255,7 @@ export default function ManageAdminsPage() {
                   )}
                 </div>
 
-                {admin.can_manage && !['super_admin', 'national_admin'].includes(admin.role) && (
+                {admin.can_manage && admin.role !== 'super_admin' && (
                   <button
                     onClick={() => handleRemoveAdmin(admin.id, `${admin.first_name} ${admin.last_name}`)}
                     className="text-red-600 hover:text-red-800 text-sm"
