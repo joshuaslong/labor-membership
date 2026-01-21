@@ -81,24 +81,6 @@ export default function ManageAdminsPage() {
     }
   }
 
-  const handleRemoveAdmin = async (adminId, adminName) => {
-    if (!confirm(`Are you sure you want to remove ${adminName} as an admin?`)) {
-      return
-    }
-
-    try {
-      const res = await fetch(`/api/admin/admins?id=${adminId}`, {
-        method: 'DELETE',
-      })
-
-      const data = await res.json()
-      if (!res.ok) throw new Error(data.error)
-
-      fetchAdmins()
-    } catch (err) {
-      setError(err.message)
-    }
-  }
 
   // Filter chapters based on selected role
   const getChaptersForRole = (role) => {
@@ -225,44 +207,71 @@ export default function ManageAdminsPage() {
           <p className="text-gray-500">No administrators found.</p>
         ) : (
           <div className="space-y-4">
-            {admins.map(admin => (
+            {/* Group admins by user_id */}
+            {Object.values(
+              admins.reduce((grouped, admin) => {
+                const key = admin.user_id
+                if (!grouped[key]) {
+                  grouped[key] = {
+                    user_id: admin.user_id,
+                    member_id: admin.member_id,
+                    email: admin.email,
+                    first_name: admin.first_name,
+                    last_name: admin.last_name,
+                    roles: []
+                  }
+                }
+                grouped[key].roles.push({
+                  id: admin.id,
+                  role: admin.role,
+                  chapter: admin.chapters,
+                  can_manage: admin.can_manage
+                })
+                return grouped
+              }, {})
+            ).map(adminUser => (
               <div
-                key={admin.id}
-                className="flex items-center justify-between p-4 border rounded-lg"
+                key={adminUser.user_id}
+                className="p-4 border rounded-lg"
               >
-                <div className="flex-1">
-                  <div className="flex items-center gap-3">
-                    {admin.member_id ? (
-                      <Link href={`/members/${admin.member_id}`} className="font-medium text-labor-red hover:underline">
-                        {admin.first_name} {admin.last_name}
-                      </Link>
-                    ) : (
-                      <span className="font-medium">
-                        {admin.first_name} {admin.last_name}
-                      </span>
-                    )}
-                    <span className={`px-2 py-1 rounded text-xs font-medium ${ROLE_COLORS[admin.role]}`}>
-                      {ROLE_LABELS[admin.role]}
-                    </span>
-                  </div>
-                  <div className="text-sm text-gray-500 mt-1">
-                    {admin.email}
-                  </div>
-                  {admin.chapters && (
-                    <div className="text-sm text-gray-500">
-                      {admin.chapters.name}
+                <div className="flex items-start justify-between">
+                  <div className="flex-1">
+                    <div className="flex items-center gap-2 mb-1">
+                      {adminUser.member_id ? (
+                        <Link href={`/members/${adminUser.member_id}`} className="font-medium text-labor-red hover:underline">
+                          {adminUser.first_name} {adminUser.last_name}
+                        </Link>
+                      ) : (
+                        <span className="font-medium">
+                          {adminUser.first_name} {adminUser.last_name}
+                        </span>
+                      )}
                     </div>
+                    <div className="text-sm text-gray-500 mb-3">
+                      {adminUser.email}
+                    </div>
+                    <div className="flex flex-wrap gap-2">
+                      {adminUser.roles.map(roleInfo => (
+                        <div key={roleInfo.id} className="flex items-center gap-1">
+                          <span className={`px-2 py-1 rounded text-xs font-medium ${ROLE_COLORS[roleInfo.role]}`}>
+                            {ROLE_LABELS[roleInfo.role]}
+                            {roleInfo.chapter && !['super_admin', 'national_admin'].includes(roleInfo.role) && (
+                              <span className="ml-1 opacity-75">({roleInfo.chapter.name})</span>
+                            )}
+                          </span>
+                        </div>
+                      ))}
+                    </div>
+                  </div>
+                  {adminUser.member_id && adminUser.roles.some(r => r.can_manage) && (
+                    <Link
+                      href={`/members/${adminUser.member_id}`}
+                      className="text-labor-red hover:text-labor-red-600 text-sm font-medium"
+                    >
+                      Manage
+                    </Link>
                   )}
                 </div>
-
-                {admin.can_manage && admin.role !== 'super_admin' && (
-                  <button
-                    onClick={() => handleRemoveAdmin(admin.id, `${admin.first_name} ${admin.last_name}`)}
-                    className="text-red-600 hover:text-red-800 text-sm"
-                  >
-                    Remove
-                  </button>
-                )}
               </div>
             ))}
           </div>

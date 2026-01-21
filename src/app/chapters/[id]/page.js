@@ -418,15 +418,19 @@ export default async function ChapterDetailPage({ params }) {
               {directMembers && directMembers.length > 0 ? (
                 <div className="divide-y">
                   {directMembers.map(member => (
-                    <div key={member.id} className="py-3 flex justify-between">
+                    <Link
+                      key={member.id}
+                      href={`/members/${member.id}`}
+                      className="py-3 flex justify-between hover:bg-gray-50 -mx-4 px-4 transition-colors"
+                    >
                       <div>
-                        <div className="font-medium">{member.first_name} {member.last_name}</div>
+                        <div className="font-medium text-labor-red hover:underline">{member.first_name} {member.last_name}</div>
                         <div className="text-sm text-gray-500">{member.email}</div>
                       </div>
                       <div className="text-sm text-gray-500">
                         Joined {new Date(member.joined_date).toLocaleDateString()}
                       </div>
-                    </div>
+                    </Link>
                   ))}
                 </div>
               ) : (

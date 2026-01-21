@@ -1,6 +1,6 @@
 'use client'
 
-import { useState, useEffect } from 'react'
+import { useState, useEffect, useRef } from 'react'
 import Link from 'next/link'
 import { createClient } from '@/lib/supabase/client'
 import EmailEditor from '@/components/EmailEditor'
@@ -50,6 +50,23 @@ export default function EmailComposePage() {
   const [testEmail, setTestEmail] = useState('')
   const [testLoading, setTestLoading] = useState(false)
   const [senderName, setSenderName] = useState('Labor Party')
+  const [chapterSearch, setChapterSearch] = useState('')
+  const [showChapterDropdown, setShowChapterDropdown] = useState(false)
+  const chapterDropdownRef = useRef(null)
+  const [showPreferences, setShowPreferences] = useState(false)
+  const [preferences, setPreferences] = useState({ default_reply_to: '', default_signature: '' })
+  const [savingPreferences, setSavingPreferences] = useState(false)
+
+  // Close chapter dropdown when clicking outside
+  useEffect(() => {
+    function handleClickOutside(event) {
+      if (chapterDropdownRef.current && !chapterDropdownRef.current.contains(event.target)) {
+        setShowChapterDropdown(false)
+      }
+    }
+    document.addEventListener('mousedown', handleClickOutside)
+    return () => document.removeEventListener('mousedown', handleClickOutside)
+  }, [])
 
   useEffect(() => {
     const loadData = async () => {
@@ -85,7 +102,25 @@ export default function EmailComposePage() {
 
         if (adminMember?.email) {
           setAdminEmail(adminMember.email)
-          setReplyTo(adminMember.email)
+        }
+
+        // Load admin preferences
+        try {
+          const prefsRes = await fetch('/api/admin/preferences')
+          if (prefsRes.ok) {
+            const prefsData = await prefsRes.json()
+            if (prefsData.preferences) {
+              setPreferences(prefsData.preferences)
+              // Use saved reply-to if available, otherwise default to admin email
+              setReplyTo(prefsData.preferences.default_reply_to || adminMember?.email || '')
+            }
+          }
+        } catch (err) {
+          console.error('Error loading preferences:', err)
+          // Fall back to admin email
+          if (adminMember?.email) {
+            setReplyTo(adminMember.email)
+          }
         }
 
         // Load chapters based on admin role
@@ -124,7 +159,39 @@ export default function EmailComposePage() {
     const template = EMAIL_TEMPLATES.find(t => t.id === templateId)
     if (template) {
       setSubject(template.subject)
-      setContent(template.content)
+      // Append signature if saved
+      let newContent = template.content
+      if (preferences.default_signature) {
+        // Replace the default "In solidarity,<br>Labor Party" with the custom signature
+        newContent = newContent.replace(/<p>In solidarity,<br>Labor Party<\/p>$/, preferences.default_signature)
+      }
+      setContent(newContent)
+    }
+  }
+
+  const handleSavePreferences = async () => {
+    setSavingPreferences(true)
+    setError(null)
+
+    try {
+      const res = await fetch('/api/admin/preferences', {
+        method: 'PUT',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify(preferences),
+      })
+
+      const data = await res.json()
+      if (!res.ok) throw new Error(data.error)
+
+      setSuccess('Preferences saved!')
+      // Apply the new reply-to immediately
+      if (preferences.default_reply_to) {
+        setReplyTo(preferences.default_reply_to)
+      }
+    } catch (err) {
+      setError(err.message)
+    } finally {
+      setSavingPreferences(false)
     }
   }
 
@@ -270,18 +337,59 @@ export default function EmailComposePage() {
                 <div className="flex-1">
                   <span className="text-sm font-medium text-gray-900">Specific Chapter</span>
                   {recipientType === 'chapter' && (
-                    <select
-                      value={selectedChapterId}
-                      onChange={(e) => setSelectedChapterId(e.target.value)}
-                      className="mt-2 input-field"
-                    >
-                      <option value="">Select a chapter...</option>
-                      {chapters.map((chapter) => (
-                        <option key={chapter.id} value={chapter.id}>
-                          {chapter.name} ({chapter.level})
-                        </option>
-                      ))}
-                    </select>
+                    <div className="mt-2 relative" ref={chapterDropdownRef}>
+                      <div className="relative">
+                        <input
+                          type="text"
+                          value={chapterSearch}
+                          onChange={(e) => {
+                            setChapterSearch(e.target.value)
+                            setShowChapterDropdown(true)
+                          }}
+                          onFocus={() => setShowChapterDropdown(true)}
+                          placeholder={selectedChapterId ? chapters.find(c => c.id === selectedChapterId)?.name || 'Select chapter...' : 'Search chapters...'}
+                          className="input-field pr-8"
+                        />
+                        <button
+                          type="button"
+                          onClick={() => setShowChapterDropdown(!showChapterDropdown)}
+                          className="absolute right-2 top-1/2 -translate-y-1/2 text-gray-400 hover:text-gray-600"
+                        >
+                          <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                            <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M19 9l-7 7-7-7" />
+                          </svg>
+                        </button>
+                      </div>
+                      {showChapterDropdown && (
+                        <div className="absolute z-20 w-full mt-1 bg-white border border-gray-200 rounded-lg shadow-lg max-h-60 overflow-auto">
+                          {chapters
+                            .filter(chapter =>
+                              chapter.name.toLowerCase().includes(chapterSearch.toLowerCase()) ||
+                              chapter.level.toLowerCase().includes(chapterSearch.toLowerCase())
+                            )
+                            .map(chapter => (
+                              <button
+                                key={chapter.id}
+                                type="button"
+                                onClick={() => {
+                                  setSelectedChapterId(chapter.id)
+                                  setChapterSearch('')
+                                  setShowChapterDropdown(false)
+                                }}
+                                className={`w-full px-4 py-2 text-left text-sm hover:bg-gray-50 ${selectedChapterId === chapter.id ? 'bg-labor-red-50 text-labor-red' : 'text-gray-700'}`}
+                              >
+                                {chapter.name} <span className="text-gray-400">({chapter.level})</span>
+                              </button>
+                            ))}
+                          {chapters.filter(chapter =>
+                            chapter.name.toLowerCase().includes(chapterSearch.toLowerCase()) ||
+                            chapter.level.toLowerCase().includes(chapterSearch.toLowerCase())
+                          ).length === 0 && (
+                            <div className="px-4 py-2 text-sm text-gray-500">No chapters found</div>
+                          )}
+                        </div>
+                      )}
+                    </div>
                   )}
                 </div>
               </label>
@@ -366,8 +474,78 @@ export default function EmailComposePage() {
           />
           <p className="text-xs text-gray-500 mt-2">
             When recipients reply to this email, their response will be sent to this address.
-            {adminEmail && ` Defaults to your email (${adminEmail}).`}
+            {preferences.default_reply_to && ` Using your saved default.`}
           </p>
+        </div>
+
+        {/* Preferences */}
+        <div className="card rounded-none sm:rounded-lg mx-0">
+          <button
+            type="button"
+            onClick={() => setShowPreferences(!showPreferences)}
+            className="w-full flex items-center justify-between text-left"
+          >
+            <h2 className="text-lg font-semibold text-gray-900">Email Preferences</h2>
+            <svg
+              className={`w-5 h-5 text-gray-500 transition-transform ${showPreferences ? 'rotate-180' : ''}`}
+              fill="none"
+              stroke="currentColor"
+              viewBox="0 0 24 24"
+            >
+              <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M19 9l-7 7-7-7" />
+            </svg>
+          </button>
+          <p className="text-sm text-gray-600 mt-1">
+            Set default reply-to email and signature for all your emails.
+          </p>
+
+          {showPreferences && (
+            <div className="mt-4 pt-4 border-t border-gray-200 space-y-4">
+              <div>
+                <label className="block text-sm font-medium text-gray-700 mb-2">
+                  Default Reply-To Email
+                </label>
+                <input
+                  type="email"
+                  value={preferences.default_reply_to || ''}
+                  onChange={(e) => setPreferences({ ...preferences, default_reply_to: e.target.value })}
+                  placeholder="your-email@example.com"
+                  className="input-field"
+                />
+                <p className="text-xs text-gray-500 mt-1">
+                  This will be pre-filled as your reply-to address each time you compose an email.
+                </p>
+              </div>
+
+              <div>
+                <label className="block text-sm font-medium text-gray-700 mb-2">
+                  Default Signature / Sign-off
+                </label>
+                <textarea
+                  value={preferences.default_signature || ''}
+                  onChange={(e) => setPreferences({ ...preferences, default_signature: e.target.value })}
+                  placeholder="In solidarity,&#10;Your Name&#10;Your Title"
+                  rows={4}
+                  className="input-field"
+                />
+                <p className="text-xs text-gray-500 mt-1">
+                  This signature will replace the default "In solidarity, Labor Party" when you select a template.
+                  Use HTML for formatting (e.g., &lt;br&gt; for line breaks, &lt;strong&gt; for bold).
+                </p>
+              </div>
+
+              <div className="pt-2">
+                <button
+                  type="button"
+                  onClick={handleSavePreferences}
+                  disabled={savingPreferences}
+                  className="btn-primary"
+                >
+                  {savingPreferences ? 'Saving...' : 'Save Preferences'}
+                </button>
+              </div>
+            </div>
+          )}
         </div>
 
         {/* Email Content */}
