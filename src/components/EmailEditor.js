@@ -10,6 +10,7 @@ const ReactQuill = dynamic(() => import('react-quill-new'), { ssr: false })
 export default function EmailEditor({ value, onChange, placeholder = 'Enter your message...' }) {
   const editorRef = useRef(null)
   const internalValueRef = useRef(value)
+  const skipNextUpdateRef = useRef(false)
 
   // Track internal value to prevent re-render loops
   useEffect(() => {
@@ -18,6 +19,12 @@ export default function EmailEditor({ value, onChange, placeholder = 'Enter your
 
   // Custom onChange that preserves image attributes
   const handleChange = useCallback((content, delta, source, editor) => {
+    // Skip if we're in the middle of a custom operation
+    if (skipNextUpdateRef.current) {
+      skipNextUpdateRef.current = false
+      return
+    }
+
     // Get raw HTML from editor DOM to preserve data attributes
     const editorElement = document.querySelector('.email-editor .ql-editor')
     if (editorElement) {
@@ -183,13 +190,13 @@ export default function EmailEditor({ value, onChange, placeholder = 'Enter your
 
               wrapper.remove()
 
-              // Get the HTML directly from DOM and update state
-              // Use setTimeout to ensure DOM is updated first
-              setTimeout(() => {
-                const html = editorElement.innerHTML
-                internalValueRef.current = html
-                onChange(html)
-              }, 0)
+              // Get the HTML and update parent state directly
+              // Skip the next Quill onChange to prevent it from re-parsing
+              const html = editorElement.innerHTML
+              internalValueRef.current = html
+
+              // Directly update parent without going through Quill
+              onChange(html)
             })
             btn.title = title
             wrapper.appendChild(btn)
@@ -266,12 +273,16 @@ export default function EmailEditor({ value, onChange, placeholder = 'Enter your
     'code-block'
   ]
 
+  // Use internal value to prevent Quill from re-parsing on every render
+  // This allows us to maintain inline styles that Quill would otherwise strip
+  const displayValue = internalValueRef.current || value
+
   return (
     <div className="email-editor-wrapper">
       <ReactQuill
         ref={editorRef}
         theme="snow"
-        value={value}
+        defaultValue={value}
         onChange={handleChange}
         modules={modules}
         formats={formats}
