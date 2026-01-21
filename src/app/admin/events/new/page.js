@@ -4,6 +4,7 @@ import { useState, useEffect } from 'react'
 import { useRouter } from 'next/navigation'
 import Link from 'next/link'
 import { createClient } from '@/lib/supabase/client'
+import ChapterSelect from '@/components/ChapterSelect'
 
 const TIMEZONES = [
   { value: 'America/New_York', label: 'Eastern Time (ET)' },
@@ -153,20 +154,12 @@ export default function CreateEventPage() {
         {/* Chapter */}
         <div className="card">
           <h2 className="text-lg font-semibold text-gray-900 mb-4">Chapter</h2>
-          <select
-            name="chapter_id"
+          <ChapterSelect
+            chapters={chapters}
             value={formData.chapter_id}
-            onChange={handleChange}
-            className="input-field"
+            onChange={(value) => setFormData(prev => ({ ...prev, chapter_id: value }))}
             required
-          >
-            <option value="">Select a chapter...</option>
-            {chapters.map((chapter) => (
-              <option key={chapter.id} value={chapter.id}>
-                {chapter.name} ({chapter.level})
-              </option>
-            ))}
-          </select>
+          />
         </div>
 
         {/* Event Details */}
