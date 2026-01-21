@@ -290,6 +290,28 @@ export default function MemberDetailPage() {
     }
   }
 
+  // Determine if current user can manage a given admin role
+  const canManageAdminRole = (targetRole) => {
+    if (!currentUserRole) return false
+
+    // Super admin can manage all roles
+    if (currentUserRole === 'super_admin') return true
+
+    // National admin cannot manage any admins
+    if (currentUserRole === 'national_admin') return false
+
+    // Can't manage super_admin or national_admin unless you're super_admin
+    if (['super_admin', 'national_admin'].includes(targetRole)) return false
+
+    // State/county/city admins can manage roles at their level or below
+    const roleHierarchy = ['super_admin', 'national_admin', 'state_admin', 'county_admin', 'city_admin']
+    const currentIndex = roleHierarchy.indexOf(currentUserRole)
+    const targetIndex = roleHierarchy.indexOf(targetRole)
+
+    // Can manage if target role is at same level or below
+    return targetIndex >= currentIndex
+  }
+
   // Group chapters by level for easier selection
   const groupedChapters = chapters.reduce((acc, c) => {
     if (!acc[c.level]) acc[c.level] = []
@@ -514,13 +536,15 @@ export default function MemberDetailPage() {
                     </div>
                   )}
                 </div>
-                <button
-                  onClick={() => handleRemoveAdmin(record.id)}
-                  disabled={saving || (currentUserRole !== 'super_admin' && ['super_admin', 'national_admin'].includes(record.role))}
-                  className="px-4 py-2 bg-red-100 text-red-700 rounded-lg text-sm font-medium hover:bg-red-200 disabled:opacity-50"
-                >
-                  Remove
-                </button>
+{canManageAdminRole(record.role) && (
+                  <button
+                    onClick={() => handleRemoveAdmin(record.id)}
+                    disabled={saving}
+                    className="px-4 py-2 bg-red-100 text-red-700 rounded-lg text-sm font-medium hover:bg-red-200 disabled:opacity-50"
+                  >
+                    Remove
+                  </button>
+                )}
               </div>
             ))}
           </div>
