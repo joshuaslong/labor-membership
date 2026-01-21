@@ -3,56 +3,64 @@ import { Resend } from 'resend'
 const resend = new Resend(process.env.RESEND_API_KEY)
 
 /**
- * Transform data-align attributes to inline styles for email compatibility
- * Email clients don't support data attributes, so we convert to inline CSS
+ * Transform alignment classes to inline styles for email compatibility
+ * Email clients don't reliably support classes, so we convert to inline CSS
  */
 function transformImageAlignment(html) {
-  // Convert data-align="center" to inline styles
+  // Convert align-center class to inline styles
   html = html.replace(
-    /<img([^>]*)\s+data-align="center"([^>]*)>/gi,
-    (match, before, after) => {
+    /<img([^>]*)\s+class="([^"]*\balign-center\b[^"]*)"([^>]*)>/gi,
+    (match, before, classes, after) => {
+      const newClasses = classes.replace(/\balign-center\b/g, '').trim()
+      const classAttr = newClasses ? ` class="${newClasses}"` : ''
+      const fullTag = `${before}${classAttr}${after}`
+
       // Check if style attribute already exists
-      if (/style\s*=/i.test(before + after)) {
-        // Add to existing style
-        return match.replace(
+      if (/style\s*=/i.test(fullTag)) {
+        return `<img${fullTag}>`.replace(
           /style\s*=\s*["']([^"']*)["']/i,
           (styleMatch, styles) => `style="${styles}; display: block; margin-left: auto; margin-right: auto;"`
         )
       }
-      return `<img${before} style="display: block; margin-left: auto; margin-right: auto;"${after}>`
+      return `<img${before}${classAttr} style="display: block; margin-left: auto; margin-right: auto;"${after}>`
     }
   )
 
-  // Convert data-align="right" to inline styles
+  // Convert align-right class to inline styles
   html = html.replace(
-    /<img([^>]*)\s+data-align="right"([^>]*)>/gi,
-    (match, before, after) => {
-      if (/style\s*=/i.test(before + after)) {
-        return match.replace(
+    /<img([^>]*)\s+class="([^"]*\balign-right\b[^"]*)"([^>]*)>/gi,
+    (match, before, classes, after) => {
+      const newClasses = classes.replace(/\balign-right\b/g, '').trim()
+      const classAttr = newClasses ? ` class="${newClasses}"` : ''
+      const fullTag = `${before}${classAttr}${after}`
+
+      if (/style\s*=/i.test(fullTag)) {
+        return `<img${fullTag}>`.replace(
           /style\s*=\s*["']([^"']*)["']/i,
           (styleMatch, styles) => `style="${styles}; display: block; margin-left: auto; margin-right: 0;"`
         )
       }
-      return `<img${before} style="display: block; margin-left: auto; margin-right: 0;"${after}>`
+      return `<img${before}${classAttr} style="display: block; margin-left: auto; margin-right: 0;"${after}>`
     }
   )
 
-  // Convert data-align="left" to inline styles
+  // Convert align-left class to inline styles
   html = html.replace(
-    /<img([^>]*)\s+data-align="left"([^>]*)>/gi,
-    (match, before, after) => {
-      if (/style\s*=/i.test(before + after)) {
-        return match.replace(
+    /<img([^>]*)\s+class="([^"]*\balign-left\b[^"]*)"([^>]*)>/gi,
+    (match, before, classes, after) => {
+      const newClasses = classes.replace(/\balign-left\b/g, '').trim()
+      const classAttr = newClasses ? ` class="${newClasses}"` : ''
+      const fullTag = `${before}${classAttr}${after}`
+
+      if (/style\s*=/i.test(fullTag)) {
+        return `<img${fullTag}>`.replace(
           /style\s*=\s*["']([^"']*)["']/i,
           (styleMatch, styles) => `style="${styles}; display: block; margin-left: 0; margin-right: auto;"`
         )
       }
-      return `<img${before} style="display: block; margin-left: 0; margin-right: auto;"${after}>`
+      return `<img${before}${classAttr} style="display: block; margin-left: 0; margin-right: auto;"${after}>`
     }
   )
-
-  // Remove data-align attributes (they're now converted to inline styles)
-  html = html.replace(/\s+data-align="[^"]*"/gi, '')
 
   return html
 }

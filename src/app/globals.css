@@ -231,20 +231,39 @@
     outline-offset: 2px;
   }
 
-  /* Image alignment via data-align attribute */
-  .email-editor-wrapper .ql-editor img[data-align="center"] {
+  /* Image alignment via classes */
+  .email-editor-wrapper .ql-editor img.align-center {
     display: block !important;
     margin-left: auto !important;
     margin-right: auto !important;
   }
 
-  .email-editor-wrapper .ql-editor img[data-align="right"] {
+  .email-editor-wrapper .ql-editor img.align-right {
     display: block !important;
     margin-left: auto !important;
     margin-right: 0 !important;
   }
 
-  .email-editor-wrapper .ql-editor img[data-align="left"] {
+  .email-editor-wrapper .ql-editor img.align-left {
+    display: block !important;
+    margin-left: 0 !important;
+    margin-right: auto !important;
+  }
+
+  /* Also support alignment in preview */
+  .prose img.align-center {
+    display: block !important;
+    margin-left: auto !important;
+    margin-right: auto !important;
+  }
+
+  .prose img.align-right {
+    display: block !important;
+    margin-left: auto !important;
+    margin-right: 0 !important;
+  }
+
+  .prose img.align-left {
     display: block !important;
     margin-left: 0 !important;
     margin-right: auto !important;

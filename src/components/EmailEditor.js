@@ -1,6 +1,6 @@
 'use client'
 
-import { useMemo, useEffect, useRef } from 'react'
+import { useMemo, useEffect, useRef, useCallback } from 'react'
 import dynamic from 'next/dynamic'
 import 'react-quill-new/dist/quill.snow.css'
 
@@ -9,6 +9,26 @@ const ReactQuill = dynamic(() => import('react-quill-new'), { ssr: false })
 
 export default function EmailEditor({ value, onChange, placeholder = 'Enter your message...' }) {
   const editorRef = useRef(null)
+  const internalValueRef = useRef(value)
+
+  // Track internal value to prevent re-render loops
+  useEffect(() => {
+    internalValueRef.current = value
+  }, [value])
+
+  // Custom onChange that preserves image attributes
+  const handleChange = useCallback((content, delta, source, editor) => {
+    // Get raw HTML from editor DOM to preserve data attributes
+    const editorElement = document.querySelector('.email-editor .ql-editor')
+    if (editorElement) {
+      const html = editorElement.innerHTML
+      internalValueRef.current = html
+      onChange(html)
+    } else {
+      internalValueRef.current = content
+      onChange(content)
+    }
+  }, [onChange])
 
   // Set up image click handler for resize controls
   useEffect(() => {
@@ -89,16 +109,11 @@ export default function EmailEditor({ value, onChange, placeholder = 'Enter your
             return btn
           }
 
-          // Get current alignment from data-align attribute or styles
+          // Get current alignment from class or styles
           const getAlignment = () => {
-            // First check data-align attribute
-            const dataAlign = img.getAttribute('data-align')
-            if (dataAlign) return dataAlign
-
-            // Fall back to checking styles
-            if (img.style.display === 'block' && img.style.marginLeft === 'auto' && img.style.marginRight === 'auto') return 'center'
-            if (img.style.marginLeft === 'auto' && img.style.marginRight === '0') return 'right'
-            if (img.style.marginLeft === '0' && img.style.marginRight === 'auto') return 'left'
+            if (img.classList.contains('align-center')) return 'center'
+            if (img.classList.contains('align-right')) return 'right'
+            if (img.classList.contains('align-left')) return 'left'
             return 'left'
           }
           const currentAlign = getAlignment()
@@ -120,9 +135,11 @@ export default function EmailEditor({ value, onChange, placeholder = 'Enter your
               }
               img.style.height = 'auto'
               wrapper.remove()
-              const event = new Event('input', { bubbles: true })
-              editorElement.dispatchEvent(event)
-              onChange(editorElement.innerHTML)
+
+              // Update parent state with raw HTML
+              const html = editorElement.innerHTML
+              internalValueRef.current = html
+              onChange(html)
             })
             wrapper.appendChild(btn)
           })
@@ -148,34 +165,16 @@ export default function EmailEditor({ value, onChange, placeholder = 'Enter your
               e.preventDefault()
               e.stopPropagation()
 
-              // Set data-align attribute on the image
-              img.setAttribute('data-align', align)
-
-              // Also apply inline styles directly for visual feedback
-              // Clear previous alignment styles
-              img.style.float = ''
-              img.style.display = ''
-              img.style.marginLeft = ''
-              img.style.marginRight = ''
-
-              if (align === 'center') {
-                img.style.display = 'block'
-                img.style.marginLeft = 'auto'
-                img.style.marginRight = 'auto'
-              } else if (align === 'right') {
-                img.style.display = 'block'
-                img.style.marginLeft = 'auto'
-                img.style.marginRight = '0'
-              } else {
-                img.style.display = 'block'
-                img.style.marginLeft = '0'
-                img.style.marginRight = 'auto'
-              }
+              // Remove existing alignment classes
+              img.classList.remove('align-left', 'align-center', 'align-right')
+              // Add new alignment class
+              img.classList.add(`align-${align}`)
 
               wrapper.remove()
 
-              // Get the raw HTML without triggering Quill's normalization
+              // Update parent state with raw HTML (don't trigger re-render)
               const html = editorElement.innerHTML
+              internalValueRef.current = html
               onChange(html)
             })
             btn.title = title
@@ -259,7 +258,7 @@ export default function EmailEditor({ value, onChange, placeholder = 'Enter your
         ref={editorRef}
         theme="snow"
         value={value}
-        onChange={onChange}
+        onChange={handleChange}
         modules={modules}
         formats={formats}
         placeholder={placeholder}
