@@ -92,7 +92,14 @@ export async function sendBatchEmails({
       throw new Error(error.message)
     }
 
-    results.push(...(data || []))
+    // Resend batch API returns { data: [...] } object, not an array directly
+    const batchResults = data?.data || []
+    if (Array.isArray(batchResults)) {
+      results.push(...batchResults)
+    } else if (data) {
+      // Fallback if response format changes
+      results.push(data)
+    }
   }
 
   return { success: true, count: recipients.length, results }
