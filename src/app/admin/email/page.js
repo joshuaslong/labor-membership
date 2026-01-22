@@ -611,6 +611,12 @@ export default function EmailComposePage() {
                   className="email-preview"
                   dangerouslySetInnerHTML={{ __html: content.replace('{$name}', 'Member') }}
                 />
+                {preferences.default_signature && (
+                  <div
+                    className="email-preview mt-4"
+                    dangerouslySetInnerHTML={{ __html: preferences.default_signature }}
+                  />
+                )}
                 <div className="border-t border-gray-200 pt-4 mt-6 text-center text-xs text-gray-500">
                   <p>Labor Party</p>
                   <p className="text-labor-red">Unsubscribe</p>
