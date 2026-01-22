@@ -34,7 +34,7 @@ export async function POST(request) {
     }
 
     // Validate file type
-    if (!isAllowedFileType(bucketPrefix, contentType)) {
+    if (!isAllowedFileType(bucketPrefix, contentType, filename)) {
       return NextResponse.json({
         error: `File type "${contentType}" not allowed for this bucket`
       }, { status: 400 })

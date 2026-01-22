@@ -141,7 +141,15 @@ export function generateR2Key(prefix, filename, stateCode = null) {
 /**
  * Validate file type against allowed types for a bucket
  */
-export function isAllowedFileType(prefix, mimeType) {
+export function isAllowedFileType(prefix, mimeType, filename = '') {
+  // For document buckets, allow common file extensions when mime type is octet-stream
+  const documentExtensions = ['.pdf', '.doc', '.docx', '.xls', '.xlsx', '.ppt', '.pptx', '.csv', '.txt', '.rtf']
+  const imageExtensions = ['.jpg', '.jpeg', '.png', '.gif', '.webp', '.svg']
+  const videoExtensions = ['.mp4', '.mov', '.webm', '.avi']
+  const audioExtensions = ['.mp3', '.wav', '.aac', '.ogg', '.m4a']
+
+  const ext = filename.toLowerCase().substring(filename.lastIndexOf('.'))
+
   const allowedTypes = {
     [BUCKET_PREFIXES.PUBLIC]: [
       'image/jpeg', 'image/png', 'image/gif', 'image/svg+xml', 'image/webp',
@@ -152,28 +160,53 @@ export function isAllowedFileType(prefix, mimeType) {
       'application/pdf',
       'application/msword', 'application/vnd.openxmlformats-officedocument.wordprocessingml.document',
       'application/vnd.ms-excel', 'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet',
-      'text/csv', 'text/plain',
+      'application/vnd.ms-powerpoint', 'application/vnd.openxmlformats-officedocument.presentationml.presentation',
+      'text/csv', 'text/plain', 'application/rtf',
+      'application/octet-stream', // Allow when browser can't detect type
+      'application/zip', 'application/x-zip-compressed',
     ],
     [BUCKET_PREFIXES.MEDIA_SOCIAL]: [
       'video/mp4', 'video/quicktime', 'video/webm', 'video/x-msvideo',
       'image/jpeg', 'image/png', 'image/gif', 'image/webp',
+      'application/octet-stream', // Allow for video files
     ],
     [BUCKET_PREFIXES.MEDIA_PODCAST]: [
-      'audio/mpeg', 'audio/mp3', 'audio/wav', 'audio/aac', 'audio/ogg', 'audio/x-m4a',
+      'audio/mpeg', 'audio/mp3', 'audio/wav', 'audio/aac', 'audio/ogg', 'audio/x-m4a', 'audio/mp4',
       'video/mp4', 'video/quicktime',
+      'application/octet-stream', // Allow for audio files
     ],
     [BUCKET_PREFIXES.INTERNAL_DOCS]: [
       'application/pdf',
       'application/msword', 'application/vnd.openxmlformats-officedocument.wordprocessingml.document',
       'application/vnd.ms-excel', 'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet',
       'application/vnd.ms-powerpoint', 'application/vnd.openxmlformats-officedocument.presentationml.presentation',
-      'text/plain', 'text/csv',
+      'text/plain', 'text/csv', 'application/rtf',
       'image/jpeg', 'image/png', 'image/gif',
+      'application/octet-stream', // Allow when browser can't detect type
+      'application/zip', 'application/x-zip-compressed',
     ],
   }
 
   const allowed = allowedTypes[prefix] || []
-  return allowed.includes(mimeType)
+
+  // Direct mime type match
+  if (allowed.includes(mimeType)) {
+    // For octet-stream, also validate by extension
+    if (mimeType === 'application/octet-stream' && filename) {
+      if (prefix === BUCKET_PREFIXES.CHAPTERS || prefix === BUCKET_PREFIXES.INTERNAL_DOCS) {
+        return [...documentExtensions, ...imageExtensions].includes(ext)
+      }
+      if (prefix === BUCKET_PREFIXES.MEDIA_SOCIAL) {
+        return [...videoExtensions, ...imageExtensions].includes(ext)
+      }
+      if (prefix === BUCKET_PREFIXES.MEDIA_PODCAST) {
+        return [...audioExtensions, ...videoExtensions].includes(ext)
+      }
+    }
+    return true
+  }
+
+  return false
 }
 
 /**
