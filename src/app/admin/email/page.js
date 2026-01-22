@@ -193,6 +193,15 @@ export default function EmailComposePage() {
       if (preferences.default_reply_to) {
         setReplyTo(preferences.default_reply_to)
       }
+      // Apply the new signature to current content immediately
+      if (preferences.default_signature) {
+        setContent(prevContent => {
+          // Replace either the default signature or any previously set signature
+          const updated = prevContent.replace(/<p>In solidarity,<br\s*\/?>Labor Party<\/p>/i, `<p>${preferences.default_signature}</p>`)
+          // If the default wasn't found, it might already have a custom signature - don't double-replace
+          return updated
+        })
+      }
     } catch (err) {
       setError(err.message)
     } finally {

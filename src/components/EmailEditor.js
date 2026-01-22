@@ -273,16 +273,21 @@ export default function EmailEditor({ value, onChange, placeholder = 'Enter your
     'code-block'
   ]
 
-  // Use internal value to prevent Quill from re-parsing on every render
-  // This allows us to maintain inline styles that Quill would otherwise strip
-  const displayValue = internalValueRef.current || value
+  // Track when value changes externally (e.g., template change or signature update)
+  // and sync it to the editor
+  useEffect(() => {
+    // Only update if the external value is different from our internal tracking
+    if (value !== internalValueRef.current) {
+      internalValueRef.current = value
+    }
+  }, [value])
 
   return (
     <div className="email-editor-wrapper">
       <ReactQuill
         ref={editorRef}
         theme="snow"
-        defaultValue={value}
+        value={value}
         onChange={handleChange}
         modules={modules}
         formats={formats}
