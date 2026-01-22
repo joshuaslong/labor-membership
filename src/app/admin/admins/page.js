@@ -203,13 +203,13 @@ export default function ManageAdminsPage() {
       <div className="card">
         <h2 className="text-xl mb-4">Current Administrators</h2>
 
-        {admins.length === 0 ? (
-          <p className="text-gray-500">No administrators found.</p>
+        {admins.filter(a => a.can_manage).length === 0 ? (
+          <p className="text-gray-500">No administrators found that you can manage.</p>
         ) : (
           <div className="space-y-4">
-            {/* Group admins by user_id */}
+            {/* Group admins by user_id, only include those with manageable roles */}
             {Object.values(
-              admins.reduce((grouped, admin) => {
+              admins.filter(a => a.can_manage).reduce((grouped, admin) => {
                 const key = admin.user_id
                 if (!grouped[key]) {
                   grouped[key] = {

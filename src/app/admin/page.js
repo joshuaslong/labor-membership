@@ -126,6 +126,8 @@ export default async function AdminPage() {
 
   const isSuperAdmin = currentAdmin.role === 'super_admin'
   const hasFullDataAccess = ['super_admin', 'national_admin'].includes(currentAdmin.role)
+  // Admins who can manage other admins (not national_admin or city_admin)
+  const canManageAdmins = ['super_admin', 'state_admin', 'county_admin'].includes(currentAdmin.role)
 
   return (
     <div className="max-w-6xl mx-auto px-4 py-8">
@@ -219,7 +221,7 @@ export default async function AdminPage() {
             <Link href="/admin/email" className="block w-full btn-secondary text-center">
               Send Email to Members
             </Link>
-            {isSuperAdmin && (
+            {canManageAdmins && (
               <Link href="/admin/admins" className="block w-full btn-secondary text-center">
                 Manage Administrators
               </Link>
