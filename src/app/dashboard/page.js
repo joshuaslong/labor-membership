@@ -240,7 +240,7 @@ export default async function DashboardPage() {
   }
 
   // Easter egg for Zeus Mode
-  const zeusEmails = ['joshua.long@votelabor.org'] // Testing - will add erikwolf34@gmail.com
+  const zeusEmails = ['erikwolf34@gmail.com']
   const isZeus = zeusEmails.includes(member.email?.toLowerCase())
 
   return (
