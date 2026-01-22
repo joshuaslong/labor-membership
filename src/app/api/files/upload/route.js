@@ -33,18 +33,37 @@ export async function POST(request) {
       return NextResponse.json({ error: 'Invalid bucket prefix' }, { status: 400 })
     }
 
-    // Validate file type
+    // Validate file type with user-friendly error messages
     if (!isAllowedFileType(bucketPrefix, contentType, filename)) {
+      const friendlyBucketNames = {
+        'public': 'Public Files',
+        'chapters': 'Chapter Documents',
+        'media/social': 'Social Media',
+        'media/podcast': 'Podcast',
+        'internal-docs': 'Internal Documents',
+      }
+      const allowedTypesHint = {
+        'public': 'images (JPG, PNG, GIF, WebP, SVG) and PDFs',
+        'chapters': 'documents (PDF, Word, Excel, PowerPoint, CSV, TXT) and images',
+        'media/social': 'videos (MP4, MOV, WebM) and images',
+        'media/podcast': 'audio files (MP3, WAV, AAC, OGG, M4A) and videos',
+        'internal-docs': 'documents (PDF, Word, Excel, PowerPoint, CSV, TXT) and images',
+      }
+      const bucketName = friendlyBucketNames[bucketPrefix] || bucketPrefix
+      const hint = allowedTypesHint[bucketPrefix] || 'supported file types'
+
       return NextResponse.json({
-        error: `File type "${contentType}" not allowed for this bucket`
+        error: `This file type isn't supported for ${bucketName}. Please upload ${hint}.`
       }, { status: 400 })
     }
 
     // Validate file size
     const maxSize = getMaxFileSize(bucketPrefix)
     if (fileSize && fileSize > maxSize) {
+      const maxMB = Math.round(maxSize / 1024 / 1024)
+      const fileMB = (fileSize / 1024 / 1024).toFixed(1)
       return NextResponse.json({
-        error: `File too large. Maximum size: ${Math.round(maxSize / 1024 / 1024)}MB`
+        error: `File is too large (${fileMB}MB). Maximum allowed size is ${maxMB}MB.`
       }, { status: 400 })
     }
 
@@ -61,7 +80,9 @@ export async function POST(request) {
     }
 
     if (!canUpload) {
-      return NextResponse.json({ error: 'Permission denied for this bucket' }, { status: 403 })
+      return NextResponse.json({
+        error: 'You don\'t have permission to upload to this location. Please select a different upload location or contact an administrator.'
+      }, { status: 403 })
     }
 
     // For chapter files, get state code for path

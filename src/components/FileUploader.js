@@ -91,19 +91,26 @@ export default function FileUploader({
       })
 
       const presignData = await presignRes.json()
-      if (!presignRes.ok) throw new Error(presignData.error)
+      if (!presignRes.ok) {
+        throw new Error(presignData.error || 'Unable to prepare upload. Please try again.')
+      }
 
       setProgress(prev => ({...prev, [id]: 30}))
 
       // Step 2: Upload to R2 using presigned URL
-      const uploadRes = await fetch(presignData.uploadUrl, {
-        method: 'PUT',
-        headers: { 'Content-Type': file.type || 'application/octet-stream' },
-        body: file,
-      })
+      let uploadRes
+      try {
+        uploadRes = await fetch(presignData.uploadUrl, {
+          method: 'PUT',
+          headers: { 'Content-Type': file.type || 'application/octet-stream' },
+          body: file,
+        })
+      } catch (networkErr) {
+        throw new Error('Unable to connect to storage. Please check your internet connection and try again.')
+      }
 
       if (!uploadRes.ok) {
-        throw new Error('Upload to storage failed')
+        throw new Error('Upload failed. Please try again or contact support if the problem persists.')
       }
 
       setProgress(prev => ({...prev, [id]: 100}))
