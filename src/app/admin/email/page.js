@@ -115,9 +115,9 @@ export default function EmailComposePage() {
               setReplyTo(prefsData.preferences.default_reply_to || adminMember?.email || '')
               // Apply signature to initial template content
               if (prefsData.preferences.default_signature) {
-                setContent(prevContent =>
-                  prevContent.replace(/<p>In solidarity,<br\s*\/?>Labor Party<\/p>/i, `<p>${prefsData.preferences.default_signature}</p>`)
-                )
+                const initialContent = EMAIL_TEMPLATES[0].content
+                const updatedContent = initialContent.replace(/<p>In solidarity,<br\s*\/?>Labor Party<\/p>/i, `<p>${prefsData.preferences.default_signature}</p>`)
+                setContent(updatedContent)
               }
             }
           }
