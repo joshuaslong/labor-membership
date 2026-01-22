@@ -1,5 +1,6 @@
 import { createClient, createAdminClient } from '@/lib/supabase/server'
 import { NextResponse } from 'next/server'
+import { sendNewEventNotifications } from '@/lib/event-notifications'
 
 // GET - List events (filtered by chapter access)
 export async function GET(request) {
@@ -215,6 +216,14 @@ export async function POST(request) {
       .single()
 
     if (error) throw error
+
+    // Send notifications if event is published
+    if (event.status === 'published') {
+      // Send notifications asynchronously (don't await to avoid blocking response)
+      sendNewEventNotifications(event).catch(err => {
+        console.error('Error sending new event notifications:', err)
+      })
+    }
 
     return NextResponse.json({ event }, { status: 201 })
 

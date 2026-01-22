@@ -1,5 +1,6 @@
 import { createClient, createAdminClient } from '@/lib/supabase/server'
 import { NextResponse } from 'next/server'
+import { sendNewEventNotifications } from '@/lib/event-notifications'
 
 // GET - Get a single event with details
 export async function GET(request, { params }) {
@@ -137,16 +138,18 @@ export async function PUT(request, { params }) {
       return NextResponse.json({ error: 'Not an admin' }, { status: 403 })
     }
 
-    // Get the event to check chapter access
+    // Get the event to check chapter access and previous status
     const { data: existingEvent } = await adminClient
       .from('events')
-      .select('chapter_id')
+      .select('chapter_id, status')
       .eq('id', id)
       .single()
 
     if (!existingEvent) {
       return NextResponse.json({ error: 'Event not found' }, { status: 404 })
     }
+
+    const previousStatus = existingEvent.status
 
     // Check if admin can update this event
     const isSuperAdmin = ['super_admin', 'national_admin'].includes(currentAdmin.role)
@@ -221,6 +224,14 @@ export async function PUT(request, { params }) {
       .single()
 
     if (error) throw error
+
+    // Send notifications if event was just published (status changed to published)
+    if (event.status === 'published' && previousStatus !== 'published') {
+      // Send notifications asynchronously (don't await to avoid blocking response)
+      sendNewEventNotifications(event).catch(err => {
+        console.error('Error sending new event notifications:', err)
+      })
+    }
 
     return NextResponse.json({ event })
 
