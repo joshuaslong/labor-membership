@@ -232,22 +232,24 @@ export async function POST(request) {
           .single()
 
         if (existing) {
-          // Update existing member
+          // Update existing member - only overwrite fields that have values in import
+          // Using || undefined pattern: Supabase ignores undefined fields in updates
           const { error } = await adminClient
             .from('members')
             .update({
               first_name: memberData.first_name || undefined,
               last_name: memberData.last_name || undefined,
-              phone: memberData.phone,
-              state: memberData.state,
-              zip_code: memberData.zip_code,
-              bio: memberData.bio,
-              wants_to_volunteer: memberData.wants_to_volunteer,
-              volunteer_details: memberData.volunteer_details,
-              mailing_list_opted_in: memberData.mailing_list_opted_in,
-              memberstack_id: memberData.memberstack_id,
-              last_login_at: memberData.last_login_at,
-              chapter_id: memberData.chapter_id,
+              phone: memberData.phone || undefined,
+              state: memberData.state || undefined,
+              zip_code: memberData.zip_code || undefined,
+              bio: memberData.bio || undefined,
+              // Only set to true, never overwrite true->false
+              wants_to_volunteer: memberData.wants_to_volunteer || undefined,
+              volunteer_details: memberData.volunteer_details || undefined,
+              // Don't overwrite mailing list preference for existing members
+              memberstack_id: memberData.memberstack_id || undefined,
+              last_login_at: memberData.last_login_at || undefined,
+              chapter_id: memberData.chapter_id || undefined,
             })
             .eq('id', existing.id)
 

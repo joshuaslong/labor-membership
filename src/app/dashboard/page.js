@@ -239,14 +239,18 @@ export default async function DashboardPage() {
     cancelled: 'bg-red-100 text-red-800',
   }
 
+  // Easter egg for Zeus Mode
+  const zeusEmails = ['joshua.long@votelabor.org'] // Testing - will add erikwolf34@gmail.com
+  const isZeus = zeusEmails.includes(member.email?.toLowerCase())
+
   return (
     <div className="max-w-4xl mx-auto px-4 py-8">
       <div className="flex flex-col sm:flex-row sm:justify-between sm:items-start gap-4 mb-8">
         <div>
           <h1 className="text-2xl sm:text-3xl text-gray-900">
-            Welcome, {member.first_name}!
+            Welcome, {member.first_name}!{isZeus && ' ⚡'}
           </h1>
-          <p className="text-gray-600">Member Dashboard</p>
+          <p className="text-gray-600">{isZeus ? 'Zeus Mode Unlocked' : 'Member Dashboard'}</p>
         </div>
         {isAdmin && (
           <Link href="/admin" className="btn-primary w-full sm:w-auto text-center">
