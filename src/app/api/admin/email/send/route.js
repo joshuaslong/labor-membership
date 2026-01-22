@@ -184,17 +184,19 @@ export async function POST(request) {
       replyTo: replyTo || undefined,
     })
 
-    // Log the email send
-    await supabase.from('email_logs').insert({
-      admin_id: currentAdmin.id,
-      subject,
-      recipient_type: recipientType,
-      chapter_id: chapterId || currentAdmin.chapter_id,
-      status: 'sent',
-      recipient_count: recipients.length,
-    }).catch(() => {
+    // Log the email send (ignore errors if table doesn't exist)
+    try {
+      await supabase.from('email_logs').insert({
+        admin_id: currentAdmin.id,
+        subject,
+        recipient_type: recipientType,
+        chapter_id: chapterId || currentAdmin.chapter_id,
+        status: 'sent',
+        recipient_count: recipients.length,
+      })
+    } catch {
       // Table might not exist yet, that's ok
-    })
+    }
 
     return NextResponse.json({
       success: true,
