@@ -113,6 +113,12 @@ export default function EmailComposePage() {
               setPreferences(prefsData.preferences)
               // Use saved reply-to if available, otherwise default to admin email
               setReplyTo(prefsData.preferences.default_reply_to || adminMember?.email || '')
+              // Apply signature to initial template content
+              if (prefsData.preferences.default_signature) {
+                setContent(prevContent =>
+                  prevContent.replace(/<p>In solidarity,<br>Labor Party<\/p>$/, prefsData.preferences.default_signature)
+                )
+              }
             }
           }
         } catch (err) {
@@ -611,12 +617,6 @@ export default function EmailComposePage() {
                   className="email-preview"
                   dangerouslySetInnerHTML={{ __html: content.replace('{$name}', 'Member') }}
                 />
-                {preferences.default_signature && (
-                  <div
-                    className="email-preview mt-4"
-                    dangerouslySetInnerHTML={{ __html: preferences.default_signature }}
-                  />
-                )}
                 <div className="border-t border-gray-200 pt-4 mt-6 text-center text-xs text-gray-500">
                   <p>Labor Party</p>
                   <p className="text-labor-red">Unsubscribe</p>
