@@ -48,14 +48,14 @@ export async function middleware(request) {
       return NextResponse.redirect(new URL('/login', request.url))
     }
 
-    // Check admin role
-    const { data: adminUser } = await supabase
+    // Check admin role (user can have multiple admin records)
+    const { data: adminRecords } = await supabase
       .from('admin_users')
       .select('role')
       .eq('user_id', user.id)
-      .single()
+      .limit(1)
 
-    if (!adminUser) {
+    if (!adminRecords || adminRecords.length === 0) {
       // Not an admin - redirect to dashboard
       return NextResponse.redirect(new URL('/dashboard', request.url))
     }
