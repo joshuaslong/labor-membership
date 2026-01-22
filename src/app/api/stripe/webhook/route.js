@@ -1,6 +1,7 @@
 import { NextResponse } from 'next/server'
 import { stripe } from '@/lib/stripe'
 import { createAdminClient } from '@/lib/supabase/server'
+import { sendAutomatedEmail, formatEmailCurrency } from '@/lib/email-templates'
 
 // Disable body parsing - we need raw body for webhook signature verification
 export const config = {
@@ -71,6 +72,13 @@ export async function POST(request) {
           break
         }
 
+        // Get member info for email
+        const { data: member } = await supabase
+          .from('members')
+          .select('email, first_name')
+          .eq('id', memberId)
+          .single()
+
         if (session.mode === 'subscription') {
           // Subscription payment - create subscription record
           const subscription = await stripe.subscriptions.retrieve(session.subscription)
@@ -96,6 +104,27 @@ export async function POST(request) {
             status: 'succeeded',
             payment_type: 'recurring',
           })
+
+          // Send payment receipt email
+          if (member?.email) {
+            try {
+              await sendAutomatedEmail({
+                templateKey: 'payment_receipt',
+                to: member.email,
+                variables: {
+                  name: member.first_name || 'Member',
+                  amount: formatEmailCurrency(session.amount_total),
+                  date: new Date().toLocaleDateString('en-US', { year: 'numeric', month: 'long', day: 'numeric' }),
+                  payment_type: 'recurring membership dues',
+                },
+                recipientType: 'member',
+                recipientId: memberId,
+                relatedId: session.id,
+              })
+            } catch (emailError) {
+              console.error('Failed to send payment receipt email:', emailError)
+            }
+          }
         } else {
           // One-time payment
           await supabase.from('payments').insert({
@@ -106,6 +135,27 @@ export async function POST(request) {
             status: 'succeeded',
             payment_type: 'one_time',
           })
+
+          // Send payment receipt email
+          if (member?.email) {
+            try {
+              await sendAutomatedEmail({
+                templateKey: 'payment_receipt',
+                to: member.email,
+                variables: {
+                  name: member.first_name || 'Member',
+                  amount: formatEmailCurrency(session.amount_total),
+                  date: new Date().toLocaleDateString('en-US', { year: 'numeric', month: 'long', day: 'numeric' }),
+                  payment_type: 'one-time donation',
+                },
+                recipientType: 'member',
+                recipientId: memberId,
+                relatedId: session.id,
+              })
+            } catch (emailError) {
+              console.error('Failed to send payment receipt email:', emailError)
+            }
+          }
         }
         break
       }
@@ -151,6 +201,33 @@ export async function POST(request) {
               status: 'active',
             })
             .eq('stripe_subscription_id', invoice.subscription)
+
+          // Send payment receipt email
+          const { data: member } = await supabase
+            .from('members')
+            .select('email, first_name')
+            .eq('id', subscription.member_id)
+            .single()
+
+          if (member?.email) {
+            try {
+              await sendAutomatedEmail({
+                templateKey: 'payment_receipt',
+                to: member.email,
+                variables: {
+                  name: member.first_name || 'Member',
+                  amount: formatEmailCurrency(invoice.amount_paid),
+                  date: new Date().toLocaleDateString('en-US', { year: 'numeric', month: 'long', day: 'numeric' }),
+                  payment_type: 'recurring membership dues',
+                },
+                recipientType: 'member',
+                recipientId: subscription.member_id,
+                relatedId: invoice.id,
+              })
+            } catch (emailError) {
+              console.error('Failed to send payment receipt email:', emailError)
+            }
+          }
         }
         break
       }
@@ -166,6 +243,40 @@ export async function POST(request) {
             .from('member_subscriptions')
             .update({ status: 'past_due' })
             .eq('stripe_subscription_id', invoice.subscription)
+
+          // Get member and send payment failed email
+          const { data: subscriptionRecord } = await supabase
+            .from('member_subscriptions')
+            .select('member_id')
+            .eq('stripe_subscription_id', invoice.subscription)
+            .single()
+
+          if (subscriptionRecord) {
+            const { data: member } = await supabase
+              .from('members')
+              .select('email, first_name')
+              .eq('id', subscriptionRecord.member_id)
+              .single()
+
+            if (member?.email) {
+              try {
+                await sendAutomatedEmail({
+                  templateKey: 'payment_failed',
+                  to: member.email,
+                  variables: {
+                    name: member.first_name || 'Member',
+                    amount: formatEmailCurrency(invoice.amount_due),
+                    update_payment_url: `${process.env.NEXT_PUBLIC_APP_URL}/dashboard/billing`,
+                  },
+                  recipientType: 'member',
+                  recipientId: subscriptionRecord.member_id,
+                  relatedId: invoice.id,
+                })
+              } catch (emailError) {
+                console.error('Failed to send payment failed email:', emailError)
+              }
+            }
+          }
         }
         break
       }

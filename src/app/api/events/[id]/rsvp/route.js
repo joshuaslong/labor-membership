@@ -1,5 +1,6 @@
 import { createClient, createAdminClient } from '@/lib/supabase/server'
 import { NextResponse } from 'next/server'
+import { sendAutomatedEmail, formatEmailDate, formatEmailTime } from '@/lib/email-templates'
 
 // POST - Create or update RSVP
 export async function POST(request, { params }) {
@@ -17,7 +18,7 @@ export async function POST(request, { params }) {
     // Get member record
     const { data: member } = await adminClient
       .from('members')
-      .select('id')
+      .select('id, email, first_name')
       .eq('user_id', user.id)
       .single()
 
@@ -28,7 +29,7 @@ export async function POST(request, { params }) {
     // Check if event exists and is published
     const { data: event } = await adminClient
       .from('events')
-      .select('id, status, max_attendees, rsvp_deadline')
+      .select('id, title, status, max_attendees, rsvp_deadline, start_date, location')
       .eq('id', id)
       .single()
 
@@ -97,6 +98,30 @@ export async function POST(request, { params }) {
       .single()
 
     if (error) throw error
+
+    // Send RSVP confirmation email for attending/maybe (not declined)
+    if (status !== 'declined' && member.email) {
+      try {
+        const rsvpStatusText = status === 'attending' ? 'confirmed' : 'tentatively confirmed'
+        await sendAutomatedEmail({
+          templateKey: 'rsvp_confirmation',
+          to: member.email,
+          variables: {
+            name: member.first_name || 'Member',
+            event_name: event.title,
+            event_date: formatEmailDate(event.start_date),
+            event_time: formatEmailTime(event.start_date),
+            event_location: event.location || 'TBD',
+            rsvp_status: rsvpStatusText,
+          },
+          recipientType: 'member',
+          recipientId: member.id,
+          relatedId: id,
+        })
+      } catch (emailError) {
+        console.error('Failed to send RSVP confirmation email:', emailError)
+      }
+    }
 
     return NextResponse.json({ rsvp })
 

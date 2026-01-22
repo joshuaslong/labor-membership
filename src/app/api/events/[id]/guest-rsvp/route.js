@@ -1,5 +1,6 @@
 import { NextResponse } from 'next/server'
 import { createAdminClient } from '@/lib/supabase/server'
+import { sendAutomatedEmail, formatEmailDate, formatEmailTime } from '@/lib/email-templates'
 
 export async function POST(request, { params }) {
   try {
@@ -27,7 +28,7 @@ export async function POST(request, { params }) {
     // Verify event exists and is published
     const { data: event, error: eventError } = await supabase
       .from('events')
-      .select('id, title, start_date, status')
+      .select('id, title, start_date, status, location')
       .eq('id', id)
       .eq('status', 'published')
       .single()
@@ -84,6 +85,28 @@ export async function POST(request, { params }) {
         { error: 'Failed to create RSVP' },
         { status: 500 }
       )
+    }
+
+    // Send RSVP confirmation email to guest
+    try {
+      // Extract first name from full name
+      const firstName = name.trim().split(' ')[0]
+      await sendAutomatedEmail({
+        templateKey: 'rsvp_confirmation',
+        to: email.toLowerCase().trim(),
+        variables: {
+          name: firstName,
+          event_name: event.title,
+          event_date: formatEmailDate(event.start_date),
+          event_time: formatEmailTime(event.start_date),
+          event_location: event.location || 'TBD',
+          rsvp_status: 'confirmed',
+        },
+        recipientType: 'guest',
+        relatedId: id,
+      })
+    } catch (emailError) {
+      console.error('Failed to send guest RSVP confirmation email:', emailError)
     }
 
     return NextResponse.json({ success: true, rsvp })

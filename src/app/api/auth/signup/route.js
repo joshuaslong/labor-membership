@@ -1,5 +1,6 @@
 import { NextResponse } from 'next/server'
 import { createAdminClient } from '@/lib/supabase/server'
+import { sendAutomatedEmail } from '@/lib/email-templates'
 
 export async function POST(request) {
   const data = await request.json()
@@ -107,6 +108,22 @@ export async function POST(request) {
       console.error('Error creating member_chapters:', mcError)
       // Don't fail signup, just log the error
     }
+  }
+
+  // Send welcome email (don't fail signup if email fails)
+  try {
+    await sendAutomatedEmail({
+      templateKey: 'welcome',
+      to: data.email,
+      variables: {
+        name: data.first_name,
+        email: data.email,
+      },
+      recipientType: 'member',
+      recipientId: member.id,
+    })
+  } catch (emailError) {
+    console.error('Failed to send welcome email:', emailError)
   }
 
   return NextResponse.json({ member, user: authData.user }, { status: 201 })

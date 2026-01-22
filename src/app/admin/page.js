@@ -221,6 +221,11 @@ export default async function AdminPage() {
             <Link href="/admin/email" className="block w-full btn-secondary text-center">
               Send Email to Members
             </Link>
+            {isSuperAdmin && (
+              <Link href="/admin/email-templates" className="block w-full btn-secondary text-center">
+                Email Templates
+              </Link>
+            )}
             {canManageAdmins && (
               <Link href="/admin/admins" className="block w-full btn-secondary text-center">
                 Manage Administrators
