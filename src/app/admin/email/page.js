@@ -116,7 +116,7 @@ export default function EmailComposePage() {
               // Apply signature to initial template content
               if (prefsData.preferences.default_signature) {
                 setContent(prevContent =>
-                  prevContent.replace(/<p>In solidarity,<br>Labor Party<\/p>/, prefsData.preferences.default_signature)
+                  prevContent.replace(/<p>In solidarity,<br\s*\/?>Labor Party<\/p>/i, `<p>${prefsData.preferences.default_signature}</p>`)
                 )
               }
             }
@@ -168,7 +168,7 @@ export default function EmailComposePage() {
       // Replace default signature with saved signature if available
       let newContent = template.content
       if (preferences.default_signature) {
-        newContent = newContent.replace(/<p>In solidarity,<br>Labor Party<\/p>/, preferences.default_signature)
+        newContent = newContent.replace(/<p>In solidarity,<br\s*\/?>Labor Party<\/p>/i, `<p>${preferences.default_signature}</p>`)
       }
       setContent(newContent)
     }
