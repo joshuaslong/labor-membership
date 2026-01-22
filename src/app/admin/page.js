@@ -226,6 +226,9 @@ export default async function AdminPage() {
                 Email Templates
               </Link>
             )}
+            <Link href="/admin/files" className="block w-full btn-secondary text-center">
+              File Manager
+            </Link>
             {canManageAdmins && (
               <Link href="/admin/admins" className="block w-full btn-secondary text-center">
                 Manage Administrators
