@@ -1,6 +1,13 @@
 import { Resend } from 'resend'
 
-const resend = new Resend(process.env.RESEND_API_KEY)
+// Lazy initialization to avoid build errors when RESEND_API_KEY is not available
+let resend = null
+function getResendClient() {
+  if (!resend) {
+    resend = new Resend(process.env.RESEND_API_KEY)
+  }
+  return resend
+}
 
 /**
  * Image alignment is now handled via inline styles directly in the editor
@@ -30,7 +37,7 @@ export async function sendEmail({
   // Transform data-align attributes to inline styles for email compatibility
   const transformedHtml = transformImageAlignment(htmlContent)
 
-  const { data, error } = await resend.emails.send({
+  const { data, error } = await getResendClient().emails.send({
     from,
     to,
     subject,
@@ -85,7 +92,7 @@ export async function sendBatchEmails({
       }
     })
 
-    const { data, error } = await resend.batch.send(emails)
+    const { data, error } = await getResendClient().batch.send(emails)
 
     if (error) {
       console.error('Resend batch error:', error)
