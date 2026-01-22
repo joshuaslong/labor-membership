@@ -34,7 +34,6 @@ export default function MemberDetailPage() {
   const [error, setError] = useState(null)
   const [success, setSuccess] = useState(null)
   const [selectedChapter, setSelectedChapter] = useState('')
-  const [selectedAdminRole, setSelectedAdminRole] = useState('state_admin')
   const [selectedAdminChapter, setSelectedAdminChapter] = useState('')
   const [adminChapterSearch, setAdminChapterSearch] = useState('')
   const [showAdminChapterDropdown, setShowAdminChapterDropdown] = useState(false)
@@ -183,9 +182,7 @@ export default function MemberDetailPage() {
   }
 
   const handleMakeAdmin = async () => {
-    // For national_admin/super_admin, chapter is not required (will use national chapter)
-    const needsChapter = !['national_admin', 'super_admin'].includes(selectedAdminRole)
-    if (needsChapter && !selectedAdminChapter) {
+    if (!selectedAdminChapter) {
       setError('Please select a chapter for admin access')
       return
     }
@@ -195,20 +192,23 @@ export default function MemberDetailPage() {
     setSuccess(null)
 
     try {
-      // Get national chapter ID for national_admin/super_admin
-      let chapterId = selectedAdminChapter
-      if (!needsChapter) {
-        const nationalChapter = chapters.find(c => c.level === 'national')
-        chapterId = nationalChapter?.id
+      // Derive role from chapter level
+      const selectedChapterData = chapters.find(c => c.id === selectedAdminChapter)
+      const levelToRole = {
+        national: 'national_admin',
+        state: 'state_admin',
+        county: 'county_admin',
+        city: 'city_admin'
       }
+      const role = levelToRole[selectedChapterData?.level] || 'state_admin'
 
       const res = await fetch('/api/admin/admins', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({
           email: member.email,
-          role: selectedAdminRole,
-          chapter_id: chapterId,
+          role: role,
+          chapter_id: selectedAdminChapter,
         }),
       })
 
@@ -227,7 +227,6 @@ export default function MemberDetailPage() {
         .order('created_at', { ascending: false })
 
       setMemberAdminRecords(memberAdmins || [])
-      setSelectedAdminRole('state_admin')
       setSelectedAdminChapter('')
       setSuccess('Admin access granted successfully')
     } catch (err) {
@@ -571,86 +570,73 @@ export default function MemberDetailPage() {
           </h3>
           <div className="space-y-4">
             <div>
-              <label className="block text-sm font-medium text-gray-700 mb-2">Admin Role</label>
-              <select
-                value={selectedAdminRole}
-                onChange={(e) => setSelectedAdminRole(e.target.value)}
-                className="input-field"
-              >
-                <option value="city_admin">City Admin</option>
-                <option value="county_admin">County Admin</option>
-                <option value="state_admin">State Admin</option>
-                {currentUserRoles.includes('super_admin') && (
-                  <>
-                    <option value="national_admin">National Admin</option>
-                    <option value="super_admin">Super Admin</option>
-                  </>
-                )}
-              </select>
-            </div>
-            {!['national_admin', 'super_admin'].includes(selectedAdminRole) && (
-              <div>
-                <label className="block text-sm font-medium text-gray-700 mb-2">Chapter Access</label>
-                <div className="relative" ref={adminChapterDropdownRef}>
-                  <input
-                    type="text"
-                    value={showAdminChapterDropdown ? adminChapterSearch : (chapters.find(c => c.id === selectedAdminChapter)?.name || '')}
-                    onChange={(e) => {
-                      setAdminChapterSearch(e.target.value)
-                      if (!showAdminChapterDropdown) setShowAdminChapterDropdown(true)
-                    }}
-                    onFocus={() => {
-                      setShowAdminChapterDropdown(true)
-                      setAdminChapterSearch('')
-                    }}
-                    placeholder="Select a chapter..."
-                    className="input-field w-full"
-                  />
-                  {showAdminChapterDropdown && (
-                    <div className="absolute z-10 w-full mt-1 bg-white border border-gray-300 rounded-lg shadow-lg max-h-60 overflow-y-auto">
-                      {['national', 'state', 'county', 'city'].map(level => {
-                        const levelChapters = (groupedChapters[level] || []).filter(c =>
-                          c.name.toLowerCase().includes(adminChapterSearch.toLowerCase())
-                        )
-                        if (levelChapters.length === 0) return null
-                        return (
-                          <div key={level}>
-                            <div className="px-3 py-2 text-xs font-semibold text-gray-500 bg-gray-50">
-                              {level.charAt(0).toUpperCase() + level.slice(1)}
-                            </div>
-                            {levelChapters.map(c => (
-                              <button
-                                key={c.id}
-                                type="button"
-                                onClick={() => {
-                                  setSelectedAdminChapter(c.id)
-                                  setAdminChapterSearch('')
-                                  setShowAdminChapterDropdown(false)
-                                }}
-                                className="w-full px-4 py-2 text-left hover:bg-gray-100 text-sm"
-                              >
-                                {c.name}
-                              </button>
-                            ))}
+              <label className="block text-sm font-medium text-gray-700 mb-2">Chapter</label>
+              <div className="relative" ref={adminChapterDropdownRef}>
+                <input
+                  type="text"
+                  value={showAdminChapterDropdown ? adminChapterSearch : (chapters.find(c => c.id === selectedAdminChapter)?.name || '')}
+                  onChange={(e) => {
+                    setAdminChapterSearch(e.target.value)
+                    if (!showAdminChapterDropdown) setShowAdminChapterDropdown(true)
+                  }}
+                  onFocus={() => {
+                    setShowAdminChapterDropdown(true)
+                    setAdminChapterSearch('')
+                  }}
+                  placeholder="Select a chapter..."
+                  className="input-field w-full"
+                />
+                {showAdminChapterDropdown && (
+                  <div className="absolute z-10 w-full mt-1 bg-white border border-gray-300 rounded-lg shadow-lg max-h-60 overflow-y-auto">
+                    {['national', 'state', 'county', 'city'].map(level => {
+                      const levelChapters = (groupedChapters[level] || []).filter(c =>
+                        c.name.toLowerCase().includes(adminChapterSearch.toLowerCase())
+                      )
+                      if (levelChapters.length === 0) return null
+                      return (
+                        <div key={level}>
+                          <div className="px-3 py-2 text-xs font-semibold text-gray-500 bg-gray-50">
+                            {level.charAt(0).toUpperCase() + level.slice(1)}
                           </div>
-                        )
-                      })}
-                    </div>
-                  )}
-                </div>
-                <p className="text-xs text-gray-500 mt-1">
-                  The admin will have access to this chapter and all its sub-chapters.
-                </p>
+                          {levelChapters.map(c => (
+                            <button
+                              key={c.id}
+                              type="button"
+                              onClick={() => {
+                                setSelectedAdminChapter(c.id)
+                                setAdminChapterSearch('')
+                                setShowAdminChapterDropdown(false)
+                              }}
+                              className="w-full px-4 py-2 text-left hover:bg-gray-100 text-sm"
+                            >
+                              {c.name}
+                            </button>
+                          ))}
+                        </div>
+                      )
+                    })}
+                  </div>
+                )}
               </div>
-            )}
-            {['national_admin', 'super_admin'].includes(selectedAdminRole) && (
-              <p className="text-sm text-gray-500">
-                {selectedAdminRole === 'national_admin' ? 'National' : 'Super'} admins have access to all chapters.
-              </p>
-            )}
+              {selectedAdminChapter && (
+                <p className="text-xs text-gray-500 mt-1">
+                  Will be granted <span className="font-medium">
+                    {chapters.find(c => c.id === selectedAdminChapter)?.level === 'national' ? 'National' :
+                     chapters.find(c => c.id === selectedAdminChapter)?.level === 'state' ? 'State' :
+                     chapters.find(c => c.id === selectedAdminChapter)?.level === 'county' ? 'County' :
+                     'City'} Admin
+                  </span> access to this chapter and all its sub-chapters.
+                </p>
+              )}
+              {!selectedAdminChapter && (
+                <p className="text-xs text-gray-500 mt-1">
+                  Select a chapter to grant admin access. The role will match the chapter level.
+                </p>
+              )}
+            </div>
             <button
               onClick={handleMakeAdmin}
-              disabled={saving || (!['national_admin', 'super_admin'].includes(selectedAdminRole) && !selectedAdminChapter)}
+              disabled={saving || !selectedAdminChapter}
               className="btn-primary"
             >
               {saving ? 'Granting Access...' : memberAdminRecords.length > 0 ? 'Add Admin Role' : 'Grant Admin Access'}
