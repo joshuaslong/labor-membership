@@ -1,6 +1,6 @@
 'use client'
 
-import { useState, useEffect } from 'react'
+import { useState, useEffect, useRef } from 'react'
 import { useParams, useRouter } from 'next/navigation'
 import Link from 'next/link'
 import { createClient } from '@/lib/supabase/client'
@@ -30,11 +30,26 @@ export default function MemberDetailPage() {
   const [memberAdminRecords, setMemberAdminRecords] = useState([])
   const [loading, setLoading] = useState(true)
   const [saving, setSaving] = useState(false)
+  const [deleting, setDeleting] = useState(false)
   const [error, setError] = useState(null)
   const [success, setSuccess] = useState(null)
   const [selectedChapter, setSelectedChapter] = useState('')
   const [selectedAdminRole, setSelectedAdminRole] = useState('state_admin')
   const [selectedAdminChapter, setSelectedAdminChapter] = useState('')
+  const [adminChapterSearch, setAdminChapterSearch] = useState('')
+  const [showAdminChapterDropdown, setShowAdminChapterDropdown] = useState(false)
+  const adminChapterDropdownRef = useRef(null)
+
+  // Close admin chapter dropdown when clicking outside
+  useEffect(() => {
+    function handleClickOutside(event) {
+      if (adminChapterDropdownRef.current && !adminChapterDropdownRef.current.contains(event.target)) {
+        setShowAdminChapterDropdown(false)
+      }
+    }
+    document.addEventListener('mousedown', handleClickOutside)
+    return () => document.removeEventListener('mousedown', handleClickOutside)
+  }, [])
 
   useEffect(() => {
     const loadData = async () => {
@@ -262,7 +277,7 @@ export default function MemberDetailPage() {
       return
     }
 
-    setSaving(true)
+    setDeleting(true)
     setError(null)
 
     try {
@@ -279,7 +294,7 @@ export default function MemberDetailPage() {
       router.push('/members?message=Member deleted successfully')
     } catch (err) {
       setError(err.message)
-      setSaving(false)
+      setDeleting(false)
     }
   }
 
@@ -576,22 +591,53 @@ export default function MemberDetailPage() {
             {!['national_admin', 'super_admin'].includes(selectedAdminRole) && (
               <div>
                 <label className="block text-sm font-medium text-gray-700 mb-2">Chapter Access</label>
-                <select
-                  value={selectedAdminChapter}
-                  onChange={(e) => setSelectedAdminChapter(e.target.value)}
-                  className="input-field"
-                >
-                  <option value="">Select a chapter...</option>
-                  {['national', 'state', 'county', 'city'].map(level => (
-                    groupedChapters[level]?.length > 0 && (
-                      <optgroup key={level} label={level.charAt(0).toUpperCase() + level.slice(1)}>
-                        {groupedChapters[level].map(c => (
-                          <option key={c.id} value={c.id}>{c.name}</option>
-                        ))}
-                      </optgroup>
-                    )
-                  ))}
-                </select>
+                <div className="relative" ref={adminChapterDropdownRef}>
+                  <input
+                    type="text"
+                    value={showAdminChapterDropdown ? adminChapterSearch : (chapters.find(c => c.id === selectedAdminChapter)?.name || '')}
+                    onChange={(e) => {
+                      setAdminChapterSearch(e.target.value)
+                      if (!showAdminChapterDropdown) setShowAdminChapterDropdown(true)
+                    }}
+                    onFocus={() => {
+                      setShowAdminChapterDropdown(true)
+                      setAdminChapterSearch('')
+                    }}
+                    placeholder="Select a chapter..."
+                    className="input-field w-full"
+                  />
+                  {showAdminChapterDropdown && (
+                    <div className="absolute z-10 w-full mt-1 bg-white border border-gray-300 rounded-lg shadow-lg max-h-60 overflow-y-auto">
+                      {['national', 'state', 'county', 'city'].map(level => {
+                        const levelChapters = (groupedChapters[level] || []).filter(c =>
+                          c.name.toLowerCase().includes(adminChapterSearch.toLowerCase())
+                        )
+                        if (levelChapters.length === 0) return null
+                        return (
+                          <div key={level}>
+                            <div className="px-3 py-2 text-xs font-semibold text-gray-500 bg-gray-50">
+                              {level.charAt(0).toUpperCase() + level.slice(1)}
+                            </div>
+                            {levelChapters.map(c => (
+                              <button
+                                key={c.id}
+                                type="button"
+                                onClick={() => {
+                                  setSelectedAdminChapter(c.id)
+                                  setAdminChapterSearch('')
+                                  setShowAdminChapterDropdown(false)
+                                }}
+                                className="w-full px-4 py-2 text-left hover:bg-gray-100 text-sm"
+                              >
+                                {c.name}
+                              </button>
+                            ))}
+                          </div>
+                        )
+                      })}
+                    </div>
+                  )}
+                </div>
                 <p className="text-xs text-gray-500 mt-1">
                   The admin will have access to this chapter and all its sub-chapters.
                 </p>
@@ -622,10 +668,10 @@ export default function MemberDetailPage() {
           </p>
           <button
             onClick={handleDeleteMember}
-            disabled={saving}
+            disabled={deleting}
             className="px-4 py-2 bg-red-600 text-white rounded-lg text-sm font-medium hover:bg-red-700 disabled:opacity-50"
           >
-            {saving ? 'Deleting...' : 'Delete Member Permanently'}
+            {deleting ? 'Deleting...' : 'Delete Member Permanently'}
           </button>
         </div>
       )}
