@@ -11,12 +11,13 @@ export default async function Navigation() {
   let memberName = null
 
   if (user) {
-    const { data: adminUser } = await supabase
+    // Check for any admin records (user can have multiple)
+    const { data: adminRecords } = await supabase
       .from('admin_users')
       .select('role')
       .eq('user_id', user.id)
-      .single()
-    isAdmin = !!adminUser
+      .limit(1)
+    isAdmin = adminRecords && adminRecords.length > 0
 
     const { data: member } = await supabase
       .from('members')
