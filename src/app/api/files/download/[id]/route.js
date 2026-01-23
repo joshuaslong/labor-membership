@@ -1,6 +1,6 @@
 import { createClient, createAdminClient } from '@/lib/supabase/server'
 import { NextResponse } from 'next/server'
-import { getPresignedDownloadUrl, getPublicUrl } from '@/lib/r2'
+import { getPresignedDownloadUrl, getPublicUrl, fileExists } from '@/lib/r2'
 
 // GET - Get presigned download URL for a file
 export async function GET(request, { params }) {
@@ -37,6 +37,20 @@ export async function GET(request, { params }) {
 
     if (!canAccess) {
       return NextResponse.json({ error: 'Access denied' }, { status: 403 })
+    }
+
+    // Verify file exists in R2 storage
+    const exists = await fileExists(file.r2_key)
+    if (!exists) {
+      // Clean up orphan database record
+      await adminClient
+        .from('files')
+        .update({ deleted_at: new Date().toISOString() })
+        .eq('id', fileId)
+
+      return NextResponse.json({
+        error: 'This file is no longer available. It may have been deleted or failed to upload properly.'
+      }, { status: 404 })
     }
 
     // For public files, try to return public URL if available

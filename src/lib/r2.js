@@ -1,4 +1,4 @@
-import { S3Client, PutObjectCommand, GetObjectCommand, DeleteObjectCommand, ListObjectsV2Command } from '@aws-sdk/client-s3'
+import { S3Client, PutObjectCommand, GetObjectCommand, DeleteObjectCommand, ListObjectsV2Command, HeadObjectCommand } from '@aws-sdk/client-s3'
 import { getSignedUrl } from '@aws-sdk/s3-request-presigner'
 
 // R2 Configuration
@@ -94,6 +94,26 @@ export async function deleteFile(key) {
   })
 
   await r2Client.send(command)
+}
+
+/**
+ * Check if a file exists in R2
+ * Returns true if exists, false if not
+ */
+export async function fileExists(key) {
+  try {
+    const command = new HeadObjectCommand({
+      Bucket: R2_BUCKET_NAME,
+      Key: key,
+    })
+    await r2Client.send(command)
+    return true
+  } catch (error) {
+    if (error.name === 'NotFound' || error.$metadata?.httpStatusCode === 404) {
+      return false
+    }
+    throw error
+  }
 }
 
 /**

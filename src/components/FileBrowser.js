@@ -93,7 +93,15 @@ export default function FileBrowser({
       const res = await fetch(`/api/files/download/${file.id}`)
       const data = await res.json()
 
-      if (!res.ok) throw new Error(data.error)
+      if (!res.ok) {
+        // If file doesn't exist in storage, refresh the list to remove it
+        if (res.status === 404) {
+          alert(data.error || 'File not found')
+          fetchFiles() // Refresh to remove orphan from list
+          return
+        }
+        throw new Error(data.error)
+      }
 
       // Open download URL in new tab
       window.open(data.url, '_blank')
