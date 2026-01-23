@@ -11,21 +11,76 @@ const BUCKET_LABELS = {
 }
 
 const FILE_ICONS = {
-  'image/': '\ud83d\uddbc\ufe0f',
-  'video/': '\ud83c\udfac',
-  'audio/': '\ud83c\udfb5',
-  'application/pdf': '\ud83d\udcc4',
-  'application/': '\ud83d\udcce',
-  'text/': '\ud83d\udcdd',
-  'default': '\ud83d\udcc1',
+  'video/': '🎬',
+  'audio/': '🎵',
+  'application/pdf': '📄',
+  'application/': '📎',
+  'text/': '📝',
+  'default': '📁',
 }
 
 function getFileIcon(mimeType) {
   if (!mimeType) return FILE_ICONS.default
+  // Don't return icon for images - we'll show preview instead
+  if (mimeType.startsWith('image/')) return null
   for (const [prefix, icon] of Object.entries(FILE_ICONS)) {
     if (prefix !== 'default' && mimeType.startsWith(prefix)) return icon
   }
   return FILE_ICONS.default
+}
+
+function isImageFile(mimeType) {
+  return mimeType && mimeType.startsWith('image/')
+}
+
+// Image preview component with loading state
+function ImagePreview({ fileId, filename }) {
+  const [imageUrl, setImageUrl] = useState(null)
+  const [loading, setLoading] = useState(true)
+  const [error, setError] = useState(false)
+
+  useEffect(() => {
+    const fetchImageUrl = async () => {
+      try {
+        const res = await fetch(`/api/files/download/${fileId}`)
+        if (!res.ok) throw new Error('Failed to load')
+        const data = await res.json()
+        setImageUrl(data.url)
+      } catch {
+        setError(true)
+      } finally {
+        setLoading(false)
+      }
+    }
+    fetchImageUrl()
+  }, [fileId])
+
+  if (loading) {
+    return (
+      <div className="w-12 h-12 bg-gray-100 rounded flex items-center justify-center flex-shrink-0">
+        <div className="w-4 h-4 border-2 border-gray-300 border-t-gray-500 rounded-full animate-spin" />
+      </div>
+    )
+  }
+
+  if (error || !imageUrl) {
+    return (
+      <div className="w-12 h-12 bg-gray-100 rounded flex items-center justify-center flex-shrink-0 text-xl">
+        🖼️
+      </div>
+    )
+  }
+
+  return (
+    <div className="w-12 h-12 relative rounded overflow-hidden flex-shrink-0 bg-gray-100">
+      {/* eslint-disable-next-line @next/next/no-img-element */}
+      <img
+        src={imageUrl}
+        alt={filename}
+        className="w-full h-full object-cover"
+      />
+    </div>
+  )
 }
 
 function formatFileSize(bytes) {
@@ -200,9 +255,13 @@ export default function FileBrowser({
               className="flex items-center justify-between p-4 bg-white border border-gray-200 rounded-lg hover:border-gray-300 transition-colors"
             >
               <div className="flex items-center gap-3 min-w-0 flex-1">
-                <span className="text-2xl flex-shrink-0">
-                  {getFileIcon(file.mime_type)}
-                </span>
+                {isImageFile(file.mime_type) ? (
+                  <ImagePreview fileId={file.id} filename={file.original_filename} />
+                ) : (
+                  <span className="text-2xl flex-shrink-0">
+                    {getFileIcon(file.mime_type)}
+                  </span>
+                )}
                 <div className="min-w-0 flex-1">
                   <div className="font-medium truncate" title={file.original_filename}>
                     {file.original_filename}
