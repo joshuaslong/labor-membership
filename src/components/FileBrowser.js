@@ -33,53 +33,36 @@ function isImageFile(mimeType) {
   return mimeType && mimeType.startsWith('image/')
 }
 
-// Image preview component with loading state
+// Image preview component - uses proxy endpoint to avoid CORS issues
 function ImagePreview({ fileId, filename }) {
-  const [imageUrl, setImageUrl] = useState(null)
-  const [loading, setLoading] = useState(true)
   const [error, setError] = useState(false)
+  const [loading, setLoading] = useState(true)
 
-  useEffect(() => {
-    const fetchImageUrl = async () => {
-      try {
-        // Use preview=true to get inline URL instead of download
-        const res = await fetch(`/api/files/download/${fileId}?preview=true`)
-        if (!res.ok) throw new Error('Failed to load')
-        const data = await res.json()
-        setImageUrl(data.url)
-      } catch {
-        setError(true)
-      } finally {
-        setLoading(false)
-      }
-    }
-    fetchImageUrl()
-  }, [fileId])
+  // Use the proxy endpoint directly as image src
+  const imageUrl = `/api/files/preview/${fileId}`
 
-  if (loading) {
+  if (error) {
     return (
-      <div className="w-20 h-20 bg-gray-100 rounded flex items-center justify-center flex-shrink-0">
-        <div className="w-5 h-5 border-2 border-gray-300 border-t-gray-500 rounded-full animate-spin" />
-      </div>
-    )
-  }
-
-  if (error || !imageUrl) {
-    return (
-      <div className="w-20 h-20 bg-gray-100 rounded flex items-center justify-center flex-shrink-0 text-2xl">
+      <div className="w-12 h-12 bg-gray-100 rounded flex items-center justify-center flex-shrink-0 text-xl">
         🖼️
       </div>
     )
   }
 
   return (
-    <div className="w-20 h-20 relative rounded overflow-hidden flex-shrink-0 bg-gray-100">
+    <div className="w-12 h-12 relative rounded overflow-hidden flex-shrink-0 bg-gray-100">
+      {loading && (
+        <div className="absolute inset-0 flex items-center justify-center">
+          <div className="w-4 h-4 border-2 border-gray-300 border-t-gray-500 rounded-full animate-spin" />
+        </div>
+      )}
       {/* eslint-disable-next-line @next/next/no-img-element */}
       <img
         src={imageUrl}
         alt={filename}
         className="w-full h-full object-cover"
-        onError={() => setError(true)}
+        onLoad={() => setLoading(false)}
+        onError={() => { setError(true); setLoading(false) }}
       />
     </div>
   )
