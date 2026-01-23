@@ -58,22 +58,22 @@ function ImagePreview({ fileId, filename }) {
 
   if (loading) {
     return (
-      <div className="w-12 h-12 bg-gray-100 rounded flex items-center justify-center flex-shrink-0">
-        <div className="w-4 h-4 border-2 border-gray-300 border-t-gray-500 rounded-full animate-spin" />
+      <div className="w-20 h-20 bg-gray-100 rounded flex items-center justify-center flex-shrink-0">
+        <div className="w-5 h-5 border-2 border-gray-300 border-t-gray-500 rounded-full animate-spin" />
       </div>
     )
   }
 
   if (error || !imageUrl) {
     return (
-      <div className="w-12 h-12 bg-gray-100 rounded flex items-center justify-center flex-shrink-0 text-xl">
+      <div className="w-20 h-20 bg-gray-100 rounded flex items-center justify-center flex-shrink-0 text-2xl">
         🖼️
       </div>
     )
   }
 
   return (
-    <div className="w-12 h-12 relative rounded overflow-hidden flex-shrink-0 bg-gray-100">
+    <div className="w-20 h-20 relative rounded overflow-hidden flex-shrink-0 bg-gray-100">
       {/* eslint-disable-next-line @next/next/no-img-element */}
       <img
         src={imageUrl}
