@@ -6,6 +6,8 @@ import { getPresignedDownloadUrl, getPublicUrl, fileExists } from '@/lib/r2'
 export async function GET(request, { params }) {
   try {
     const { id: fileId } = await params
+    const { searchParams } = new URL(request.url)
+    const isPreview = searchParams.get('preview') === 'true'
 
     const supabase = await createClient()
     const { data: { user } } = await supabase.auth.getUser()
@@ -68,10 +70,12 @@ export async function GET(request, { params }) {
     }
 
     // Generate presigned download URL
+    // Use inline disposition for previews (images), attachment for downloads
     const downloadUrl = await getPresignedDownloadUrl(
       file.r2_key,
       3600,
-      file.original_filename
+      file.original_filename,
+      isPreview
     )
 
     return NextResponse.json({

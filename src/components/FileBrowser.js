@@ -42,7 +42,8 @@ function ImagePreview({ fileId, filename }) {
   useEffect(() => {
     const fetchImageUrl = async () => {
       try {
-        const res = await fetch(`/api/files/download/${fileId}`)
+        // Use preview=true to get inline URL instead of download
+        const res = await fetch(`/api/files/download/${fileId}?preview=true`)
         if (!res.ok) throw new Error('Failed to load')
         const data = await res.json()
         setImageUrl(data.url)
@@ -78,6 +79,7 @@ function ImagePreview({ fileId, filename }) {
         src={imageUrl}
         alt={filename}
         className="w-full h-full object-cover"
+        onError={() => setError(true)}
       />
     </div>
   )

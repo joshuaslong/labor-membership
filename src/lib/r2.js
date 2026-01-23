@@ -60,15 +60,20 @@ export async function getPresignedUploadUrl(key, contentType, expiresIn = 3600) 
 
 /**
  * Generate a presigned URL for downloading a file
+ * @param {string} key - The R2 object key
+ * @param {number} expiresIn - URL expiration in seconds
+ * @param {string|null} filename - Original filename for Content-Disposition
+ * @param {boolean} inline - If true, sets Content-Disposition to inline (for previews)
  */
-export async function getPresignedDownloadUrl(key, expiresIn = 3600, filename = null) {
+export async function getPresignedDownloadUrl(key, expiresIn = 3600, filename = null, inline = false) {
   const commandParams = {
     Bucket: R2_BUCKET_NAME,
     Key: key,
   }
 
   if (filename) {
-    commandParams.ResponseContentDisposition = `attachment; filename="${filename}"`
+    const disposition = inline ? 'inline' : 'attachment'
+    commandParams.ResponseContentDisposition = `${disposition}; filename="${filename}"`
   }
 
   const command = new GetObjectCommand(commandParams)
