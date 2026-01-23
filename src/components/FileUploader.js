@@ -1,6 +1,37 @@
 'use client'
 
-import { useState, useRef, useCallback } from 'react'
+import { useState, useRef, useCallback, useEffect } from 'react'
+
+function isImageFile(file) {
+  return file.type && file.type.startsWith('image/')
+}
+
+// Preview component for selected image files (before upload)
+function SelectedImagePreview({ file }) {
+  const [previewUrl, setPreviewUrl] = useState(null)
+
+  useEffect(() => {
+    if (!isImageFile(file)) return
+
+    const url = URL.createObjectURL(file)
+    setPreviewUrl(url)
+
+    return () => URL.revokeObjectURL(url)
+  }, [file])
+
+  if (!previewUrl) return null
+
+  return (
+    <div className="w-16 h-16 relative rounded overflow-hidden flex-shrink-0 bg-gray-100">
+      {/* eslint-disable-next-line @next/next/no-img-element */}
+      <img
+        src={previewUrl}
+        alt={file.name}
+        className="w-full h-full object-cover"
+      />
+    </div>
+  )
+}
 
 const BUCKET_LABELS = {
   'public': 'Public Files (logos, brand kit)',
@@ -226,6 +257,9 @@ export default function FileUploader({
           {files.map(({ file, id, description }) => (
             <div key={id} className="p-4 bg-gray-50 rounded-lg border border-gray-200">
               <div className="flex items-start justify-between gap-4">
+                {isImageFile(file) && (
+                  <SelectedImagePreview file={file} />
+                )}
                 <div className="flex-1 min-w-0">
                   <div className="font-medium truncate">{file.name}</div>
                   <div className="text-sm text-gray-500">
