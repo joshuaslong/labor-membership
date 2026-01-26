@@ -226,6 +226,11 @@ export default async function AdminPage() {
                 Email Templates
               </Link>
             )}
+            {hasFullDataAccess && (
+              <Link href="/admin/initiatives" className="block w-full btn-secondary text-center">
+                Manage Initiatives
+              </Link>
+            )}
             <Link href="/admin/files" className="block w-full btn-secondary text-center">
               File Manager
             </Link>

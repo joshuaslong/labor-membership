@@ -1,18 +1,22 @@
 import Link from 'next/link'
+import { createAdminClient } from '@/lib/supabase/server'
 
 export const metadata = {
   title: 'Initiatives | Labor Party',
   description: 'Support Labor Party direct action campaigns. 100% of donations go directly to the cause.',
 }
 
-const INITIATIVES = [
-  {
-    slug: 'care-packages',
-    title: 'ICE Protestor Care Packages',
-    status: 'active',
-    description: 'Providing water, food, first aid, and essential supplies to protestors standing up against ICE raids in our communities.',
-  },
-]
+async function getInitiatives() {
+  const supabase = createAdminClient()
+
+  const { data: initiatives } = await supabase
+    .from('initiatives')
+    .select('id, slug, title, description, status, image_url')
+    .in('status', ['active', 'completed'])
+    .order('display_order', { ascending: true })
+
+  return initiatives || []
+}
 
 function InitiativeCard({ initiative }) {
   return (
@@ -54,9 +58,10 @@ function InitiativeCard({ initiative }) {
   )
 }
 
-export default function InitiativesPage() {
-  const activeInitiatives = INITIATIVES.filter(i => i.status === 'active')
-  const pastInitiatives = INITIATIVES.filter(i => i.status === 'completed')
+export default async function InitiativesPage() {
+  const initiatives = await getInitiatives()
+  const activeInitiatives = initiatives.filter(i => i.status === 'active')
+  const pastInitiatives = initiatives.filter(i => i.status === 'completed')
 
   return (
     <div className="min-h-[calc(100vh-64px)]">
