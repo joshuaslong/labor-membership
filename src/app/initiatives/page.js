@@ -11,8 +11,6 @@ const INITIATIVES = [
     title: 'ICE Protestor Care Packages',
     status: 'active',
     description: 'Providing water, food, first aid, and essential supplies to protestors standing up against ICE raids in our communities.',
-    raised: null,
-    goal: 5000,
   },
 ]
 
@@ -42,33 +40,6 @@ function InitiativeCard({ initiative }) {
           {initiative.description}
         </p>
       </div>
-
-      {/* Progress Section */}
-      {initiative.goal && (
-        <div className="px-6 pb-4">
-          <div className="flex items-center justify-between text-sm mb-2">
-            <span className="text-gray-500">
-              {initiative.raised !== null ? (
-                <>
-                  <span className="font-semibold text-labor-red">
-                    ${initiative.raised.toLocaleString()}
-                  </span>
-                  {' '}raised
-                </>
-              ) : (
-                'Help us reach our goal'
-              )}
-            </span>
-            <span className="text-gray-400 font-medium">${initiative.goal.toLocaleString()} goal</span>
-          </div>
-          <div className="h-1.5 bg-gray-100 rounded-full overflow-hidden">
-            <div
-              className="h-full bg-labor-red rounded-full transition-all"
-              style={{ width: initiative.raised ? `${Math.min((initiative.raised / initiative.goal) * 100, 100)}%` : '0%' }}
-            />
-          </div>
-        </div>
-      )}
 
       {/* Card Footer */}
       <div className="px-6 py-4 bg-gray-50 border-t border-gray-100">
