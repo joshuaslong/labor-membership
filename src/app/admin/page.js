@@ -218,6 +218,9 @@ export default async function AdminPage() {
             <Link href="/admin/events" className="block w-full btn-secondary text-center">
               Manage Events
             </Link>
+            <Link href="/admin/groups" className="block w-full btn-secondary text-center">
+              Manage Groups
+            </Link>
             <Link href="/admin/email" className="block w-full btn-secondary text-center">
               Send Email to Members
             </Link>

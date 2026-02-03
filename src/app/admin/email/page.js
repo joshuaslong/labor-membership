@@ -53,6 +53,10 @@ export default function EmailComposePage() {
   const [chapterSearch, setChapterSearch] = useState('')
   const [showChapterDropdown, setShowChapterDropdown] = useState(false)
   const chapterDropdownRef = useRef(null)
+  const [groups, setGroups] = useState([])
+  const [selectedGroupId, setSelectedGroupId] = useState('')
+  const [groupChapterId, setGroupChapterId] = useState('')
+  const [groupsLoading, setGroupsLoading] = useState(false)
   const [showPreferences, setShowPreferences] = useState(false)
   const [preferences, setPreferences] = useState({ default_reply_to: '', default_signature: '' })
   const [savingPreferences, setSavingPreferences] = useState(false)
@@ -161,6 +165,31 @@ export default function EmailComposePage() {
     loadData()
   }, [])
 
+  const fetchGroups = async (chapterId) => {
+    setGroupsLoading(true)
+    try {
+      const res = await fetch(`/api/admin/groups?chapterId=${chapterId}`)
+      const data = await res.json()
+      if (res.ok) {
+        setGroups(data.groups || [])
+      }
+    } catch {
+      setGroups([])
+    } finally {
+      setGroupsLoading(false)
+    }
+  }
+
+  const handleGroupChapterChange = (chapterId) => {
+    setGroupChapterId(chapterId)
+    setSelectedGroupId('')
+    if (chapterId) {
+      fetchGroups(chapterId)
+    } else {
+      setGroups([])
+    }
+  }
+
   const handleTemplateChange = (templateId) => {
     setSelectedTemplate(templateId)
     const template = EMAIL_TEMPLATES.find(t => t.id === templateId)
@@ -257,6 +286,7 @@ export default function EmailComposePage() {
           content,
           recipientType,
           chapterId: selectedChapterId || undefined,
+          groupId: selectedGroupId || undefined,
           replyTo: replyTo || undefined,
           senderName: senderName || undefined,
         }),
@@ -441,6 +471,57 @@ export default function EmailComposePage() {
                 </div>
               </label>
             )}
+
+            <label className="flex items-start gap-3 cursor-pointer">
+              <input
+                type="radio"
+                name="recipientType"
+                value="group"
+                checked={recipientType === 'group'}
+                onChange={(e) => setRecipientType(e.target.value)}
+                className="mt-1 w-4 h-4 text-labor-red border-gray-300 focus:ring-labor-red"
+              />
+              <div className="flex-1">
+                <span className="text-sm font-medium text-gray-900">Chapter Group</span>
+                <span className="text-sm text-gray-500 ml-2">(e.g., Volunteers, Phone Bank Team)</span>
+                {recipientType === 'group' && (
+                  <div className="mt-2 space-y-2">
+                    <select
+                      value={groupChapterId}
+                      onChange={(e) => handleGroupChapterChange(e.target.value)}
+                      className="input-field"
+                    >
+                      <option value="">Select chapter...</option>
+                      {chapters.map(ch => (
+                        <option key={ch.id} value={ch.id}>
+                          {ch.name} ({ch.level})
+                        </option>
+                      ))}
+                    </select>
+                    {groupChapterId && (
+                      groupsLoading ? (
+                        <p className="text-sm text-gray-500">Loading groups...</p>
+                      ) : groups.length === 0 ? (
+                        <p className="text-sm text-gray-500">No groups in this chapter. <Link href="/admin/groups" className="text-labor-red hover:underline">Create one</Link></p>
+                      ) : (
+                        <select
+                          value={selectedGroupId}
+                          onChange={(e) => setSelectedGroupId(e.target.value)}
+                          className="input-field"
+                        >
+                          <option value="">Select group...</option>
+                          {groups.map(g => (
+                            <option key={g.id} value={g.id}>
+                              {g.name} ({g.member_count} member{g.member_count !== 1 ? 's' : ''})
+                            </option>
+                          ))}
+                        </select>
+                      )
+                    )}
+                  </div>
+                )}
+              </div>
+            </label>
 
             {isSuperAdmin && (
               <>
@@ -696,7 +777,7 @@ export default function EmailComposePage() {
         <div className="flex gap-4 px-4 sm:px-0 pb-4 sm:pb-0">
           <button
             type="submit"
-            disabled={loading || (recipientType === 'chapter' && !selectedChapterId)}
+            disabled={loading || (recipientType === 'chapter' && !selectedChapterId) || (recipientType === 'group' && !selectedGroupId)}
             className="btn-primary py-3 px-8 flex-1 sm:flex-none"
           >
             {loading ? 'Sending...' : 'Send Email'}

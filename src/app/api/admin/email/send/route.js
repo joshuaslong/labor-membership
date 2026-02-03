@@ -37,7 +37,7 @@ export async function POST(request) {
   }, adminRecords[0])
 
   const body = await request.json()
-  const { subject, content, recipientType, chapterId, replyTo, senderName } = body
+  const { subject, content, recipientType, chapterId, groupId, replyTo, senderName } = body
 
   if (!subject || !content) {
     return NextResponse.json({ error: 'Subject and content are required' }, { status: 400 })
@@ -100,6 +100,45 @@ export async function POST(request) {
 
       if (error) throw new Error('Failed to fetch chapter members')
       recipients = members || []
+
+    } else if (recipientType === 'group') {
+      // Send to a specific chapter group
+      if (!groupId) {
+        return NextResponse.json({ error: 'Group ID is required' }, { status: 400 })
+      }
+
+      // Get the group and verify jurisdiction
+      const { data: group, error: groupError } = await supabase
+        .from('chapter_groups')
+        .select('id, chapter_id, name')
+        .eq('id', groupId)
+        .single()
+
+      if (groupError || !group) {
+        return NextResponse.json({ error: 'Group not found' }, { status: 404 })
+      }
+
+      if (!isSuperAdmin) {
+        const { data: descendants } = await supabase
+          .rpc('get_chapter_descendants', { chapter_uuid: currentAdmin.chapter_id })
+        const allowedChapterIds = descendants?.map(d => d.id) || []
+
+        if (!allowedChapterIds.includes(group.chapter_id) && currentAdmin.chapter_id !== group.chapter_id) {
+          return NextResponse.json({ error: 'You do not have access to this group' }, { status: 403 })
+        }
+      }
+
+      // Get members in this group
+      const { data: assignments, error: assignError } = await supabase
+        .from('member_group_assignments')
+        .select('members(email, first_name, last_name)')
+        .eq('group_id', groupId)
+
+      if (assignError) throw new Error('Failed to fetch group members')
+
+      recipients = (assignments || [])
+        .map(a => a.members)
+        .filter(m => m != null)
 
     } else if (recipientType === 'mailing_list' && isSuperAdmin) {
       // Get mailing list subscribers (non-members)
