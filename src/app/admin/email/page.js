@@ -366,6 +366,76 @@ export default function EmailComposePage() {
         </div>
       )}
 
+      {/* Email Preferences */}
+      <div className="card rounded-none sm:rounded-lg mx-0 mb-4 sm:mb-6">
+        <button
+          type="button"
+          onClick={() => setShowPreferences(!showPreferences)}
+          className="w-full flex items-center justify-between text-left"
+        >
+          <h2 className="text-lg font-semibold text-gray-900">Email Preferences</h2>
+          <svg
+            className={`w-5 h-5 text-gray-500 transition-transform ${showPreferences ? 'rotate-180' : ''}`}
+            fill="none"
+            stroke="currentColor"
+            viewBox="0 0 24 24"
+          >
+            <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M19 9l-7 7-7-7" />
+          </svg>
+        </button>
+        <p className="text-sm text-gray-600 mt-1">
+          Set default reply-to email and signature for all your emails.
+        </p>
+
+        {showPreferences && (
+          <div className="mt-4 pt-4 border-t border-gray-200 space-y-4">
+            <div>
+              <label className="block text-sm font-medium text-gray-700 mb-2">
+                Default Reply-To Email
+              </label>
+              <input
+                type="email"
+                value={preferences.default_reply_to || ''}
+                onChange={(e) => setPreferences({ ...preferences, default_reply_to: e.target.value })}
+                placeholder="your-email@example.com"
+                className="input-field"
+              />
+              <p className="text-xs text-gray-500 mt-1">
+                This will be pre-filled as your reply-to address each time you compose an email.
+              </p>
+            </div>
+
+            <div>
+              <label className="block text-sm font-medium text-gray-700 mb-2">
+                Default Signature / Sign-off
+              </label>
+              <textarea
+                value={preferences.default_signature || ''}
+                onChange={(e) => setPreferences({ ...preferences, default_signature: e.target.value })}
+                placeholder="In solidarity,&#10;Your Name&#10;Your Title"
+                rows={4}
+                className="input-field"
+              />
+              <p className="text-xs text-gray-500 mt-1">
+                This signature will replace the default "In solidarity, Labor Party" when you select a template.
+                Use HTML for formatting (e.g., &lt;br&gt; for line breaks, &lt;strong&gt; for bold).
+              </p>
+            </div>
+
+            <div className="pt-2">
+              <button
+                type="button"
+                onClick={handleSavePreferences}
+                disabled={savingPreferences}
+                className="btn-primary"
+              >
+                {savingPreferences ? 'Saving...' : 'Save Preferences'}
+              </button>
+            </div>
+          </div>
+        )}
+      </div>
+
       <form onSubmit={handleSubmit} className="space-y-4 sm:space-y-6">
         {/* Recipients */}
         <div className="card rounded-none sm:rounded-lg mx-0">
@@ -541,76 +611,6 @@ export default function EmailComposePage() {
             When recipients reply to this email, their response will be sent to this address.
             {preferences.default_reply_to && ` Using your saved default.`}
           </p>
-        </div>
-
-        {/* Preferences */}
-        <div className="card rounded-none sm:rounded-lg mx-0">
-          <button
-            type="button"
-            onClick={() => setShowPreferences(!showPreferences)}
-            className="w-full flex items-center justify-between text-left"
-          >
-            <h2 className="text-lg font-semibold text-gray-900">Email Preferences</h2>
-            <svg
-              className={`w-5 h-5 text-gray-500 transition-transform ${showPreferences ? 'rotate-180' : ''}`}
-              fill="none"
-              stroke="currentColor"
-              viewBox="0 0 24 24"
-            >
-              <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M19 9l-7 7-7-7" />
-            </svg>
-          </button>
-          <p className="text-sm text-gray-600 mt-1">
-            Set default reply-to email and signature for all your emails.
-          </p>
-
-          {showPreferences && (
-            <div className="mt-4 pt-4 border-t border-gray-200 space-y-4">
-              <div>
-                <label className="block text-sm font-medium text-gray-700 mb-2">
-                  Default Reply-To Email
-                </label>
-                <input
-                  type="email"
-                  value={preferences.default_reply_to || ''}
-                  onChange={(e) => setPreferences({ ...preferences, default_reply_to: e.target.value })}
-                  placeholder="your-email@example.com"
-                  className="input-field"
-                />
-                <p className="text-xs text-gray-500 mt-1">
-                  This will be pre-filled as your reply-to address each time you compose an email.
-                </p>
-              </div>
-
-              <div>
-                <label className="block text-sm font-medium text-gray-700 mb-2">
-                  Default Signature / Sign-off
-                </label>
-                <textarea
-                  value={preferences.default_signature || ''}
-                  onChange={(e) => setPreferences({ ...preferences, default_signature: e.target.value })}
-                  placeholder="In solidarity,&#10;Your Name&#10;Your Title"
-                  rows={4}
-                  className="input-field"
-                />
-                <p className="text-xs text-gray-500 mt-1">
-                  This signature will replace the default "In solidarity, Labor Party" when you select a template.
-                  Use HTML for formatting (e.g., &lt;br&gt; for line breaks, &lt;strong&gt; for bold).
-                </p>
-              </div>
-
-              <div className="pt-2">
-                <button
-                  type="button"
-                  onClick={handleSavePreferences}
-                  disabled={savingPreferences}
-                  className="btn-primary"
-                >
-                  {savingPreferences ? 'Saving...' : 'Save Preferences'}
-                </button>
-              </div>
-            </div>
-          )}
         </div>
 
         {/* Email Content */}
