@@ -3,6 +3,7 @@
 import { useState, useEffect } from 'react'
 import Link from 'next/link'
 import { createClient } from '@/lib/supabase/client'
+import ChapterSelect from '@/components/ChapterSelect'
 
 const STATUS_LABELS = {
   draft: { label: 'Draft', className: 'bg-gray-100 text-gray-600' },
@@ -433,25 +434,17 @@ export default function AdminPollsPage() {
 
               <div className="grid md:grid-cols-2 gap-4">
                 <div>
-                  <select
+                  <ChapterSelect
+                    chapters={chapters}
                     value={formData.chapter_id}
-                    onChange={(e) => {
-                      setFormData(prev => ({ ...prev, chapter_id: e.target.value, group_id: '' }))
+                    onChange={(id) => {
+                      setFormData(prev => ({ ...prev, chapter_id: id, group_id: '' }))
                       if (formData.target_type === 'group') {
-                        fetchGroups(e.target.value)
+                        fetchGroups(id)
                       }
                     }}
-                    disabled={editingPoll && !isDraft}
-                    className="input-field"
                     required
-                  >
-                    <option value="">Select Chapter</option>
-                    {chapters.map(ch => (
-                      <option key={ch.id} value={ch.id}>
-                        {ch.name} ({ch.level})
-                      </option>
-                    ))}
-                  </select>
+                  />
                 </div>
 
                 {formData.target_type === 'group' && (
