@@ -36,19 +36,44 @@ export async function GET(request) {
     allowedChapterIds = descendants?.map(d => d.id) || []
   }
 
+  // If a specific chapter is requested, use member_chapters junction table
+  // to get ALL members who belong to that chapter (including via hierarchy)
+  if (chapter_id) {
+    if (allowedChapterIds && !allowedChapterIds.includes(chapter_id)) {
+      return NextResponse.json({ error: 'Access denied to this chapter' }, { status: 403 })
+    }
+
+    // Query via member_chapters to get members in this chapter (direct or via hierarchy)
+    let junctionQuery = supabase
+      .from('member_chapters')
+      .select('member_id, members!inner(*,chapters(name, level))')
+      .eq('chapter_id', chapter_id)
+
+    const { data: memberChapters, error: junctionError } = await junctionQuery
+
+    if (junctionError) {
+      return NextResponse.json({ error: junctionError.message }, { status: 500 })
+    }
+
+    // Extract members and filter by status if needed
+    let members = (memberChapters || []).map(mc => mc.members).filter(m => m !== null)
+    if (status) {
+      members = members.filter(m => m.status === status)
+    }
+
+    // Sort by last name
+    members.sort((a, b) => (a.last_name || '').localeCompare(b.last_name || ''))
+
+    return NextResponse.json({ members })
+  }
+
+  // No specific chapter requested - use original query on members table
   let query = supabase
     .from('members')
     .select('*, chapters(name, level)')
     .order('last_name')
 
-  // If a specific chapter is requested, verify admin has access to it
-  if (chapter_id) {
-    if (allowedChapterIds && !allowedChapterIds.includes(chapter_id)) {
-      return NextResponse.json({ error: 'Access denied to this chapter' }, { status: 403 })
-    }
-    query = query.eq('chapter_id', chapter_id)
-  } else if (allowedChapterIds) {
-    // No specific chapter requested, filter to admin's jurisdiction
+  if (allowedChapterIds) {
     query = query.in('chapter_id', allowedChapterIds)
   }
 
