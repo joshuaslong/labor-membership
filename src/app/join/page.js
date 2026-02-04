@@ -4,6 +4,7 @@ import { useState, useEffect, Suspense } from 'react'
 import { useRouter, useSearchParams } from 'next/navigation'
 import Link from 'next/link'
 import { createClient } from '@/lib/supabase/client'
+import ChapterSelect from '@/components/ChapterSelect'
 
 function JoinForm() {
   const router = useRouter()
@@ -69,6 +70,13 @@ function JoinForm() {
     setForm(prev => ({ ...prev, [field]: value }))
   }
 
+  const formatPhoneNumber = (value) => {
+    const digits = value.replace(/\D/g, '')
+    if (digits.length <= 3) return digits
+    if (digits.length <= 6) return `(${digits.slice(0, 3)}) ${digits.slice(3)}`
+    return `(${digits.slice(0, 3)}) ${digits.slice(3, 6)}-${digits.slice(6, 10)}`
+  }
+
   const handleSubmit = async (e) => {
     e.preventDefault()
     setLoading(true)
@@ -110,12 +118,6 @@ function JoinForm() {
       setLoading(false)
     }
   }
-
-  const chaptersByLevel = chapters.reduce((acc, c) => {
-    acc[c.level] = acc[c.level] || []
-    acc[c.level].push(c)
-    return acc
-  }, {})
 
   // Show loading while checking auth
   if (checkingAuth) {
@@ -196,8 +198,9 @@ function JoinForm() {
           <input
             type="tel"
             className="input-field"
+            placeholder="(555) 123-4567"
             value={form.phone}
-            onChange={e => updateField('phone', e.target.value)}
+            onChange={e => updateField('phone', formatPhoneNumber(e.target.value))}
           />
         </div>
 
@@ -242,23 +245,12 @@ function JoinForm() {
 
         <div>
           <label className="block text-sm font-medium text-gray-700 mb-1">Chapter *</label>
-          <select
-            required
-            className="input-field"
+          <ChapterSelect
+            chapters={chapters}
             value={form.chapter_id}
-            onChange={e => updateField('chapter_id', e.target.value)}
-          >
-            <option value="">Select a chapter...</option>
-            {['national', 'state', 'county', 'city'].map(level => (
-              chaptersByLevel[level]?.length > 0 && (
-                <optgroup key={level} label={level.charAt(0).toUpperCase() + level.slice(1)}>
-                  {chaptersByLevel[level].map(c => (
-                    <option key={c.id} value={c.id}>{c.name}</option>
-                  ))}
-                </optgroup>
-              )
-            ))}
-          </select>
+            onChange={(id) => updateField('chapter_id', id)}
+            required
+          />
           <p className="text-xs text-gray-500 mt-1">
             Joining a local chapter automatically includes you in all parent chapters.
           </p>

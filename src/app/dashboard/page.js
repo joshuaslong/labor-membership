@@ -216,6 +216,50 @@ export default async function DashboardPage() {
     totalContributed = allPayments?.reduce((sum, p) => sum + p.amount_cents, 0) / 100 || 0
   }
 
+  // Get active poll count for this member
+  let activePollCount = 0
+  if (member) {
+    const adminSupabase = createAdminClient()
+
+    // Get member's chapter IDs
+    const { data: memberChapters } = await adminSupabase
+      .from('member_chapters')
+      .select('chapter_id')
+      .eq('member_id', member.id)
+
+    const chapterIds = memberChapters?.map(mc => mc.chapter_id) || []
+
+    // Get member's group IDs
+    const { data: memberGroups } = await adminSupabase
+      .from('member_group_assignments')
+      .select('group_id')
+      .eq('member_id', member.id)
+
+    const groupIds = memberGroups?.map(mg => mg.group_id) || []
+
+    // Count active polls targeting member's chapters
+    if (chapterIds.length > 0) {
+      const { count: chapterPollCount } = await adminSupabase
+        .from('polls')
+        .select('id', { count: 'exact', head: true })
+        .eq('status', 'active')
+        .eq('target_type', 'chapter')
+        .in('chapter_id', chapterIds)
+      activePollCount += chapterPollCount || 0
+    }
+
+    // Count active polls targeting member's groups
+    if (groupIds.length > 0) {
+      const { count: groupPollCount } = await adminSupabase
+        .from('polls')
+        .select('id', { count: 'exact', head: true })
+        .eq('status', 'active')
+        .eq('target_type', 'group')
+        .in('group_id', groupIds)
+      activePollCount += groupPollCount || 0
+    }
+  }
+
   if (!member) {
     if (isAdmin) {
       redirect('/admin')
@@ -402,6 +446,25 @@ export default async function DashboardPage() {
               View full contribution history →
             </Link>
           </div>
+        </div>
+      </div>
+
+      {/* Polls Section */}
+      <div className="mt-6">
+        <div className="card">
+          <div className="flex justify-between items-center mb-4">
+            <h2 className="text-xl">Polls</h2>
+            <Link href="/dashboard/polls" className="text-labor-red text-sm hover:underline">
+              View All
+            </Link>
+          </div>
+          {activePollCount > 0 ? (
+            <p className="text-gray-600">
+              You have <strong>{activePollCount}</strong> active poll{activePollCount !== 1 ? 's' : ''} to vote on.
+            </p>
+          ) : (
+            <p className="text-gray-500 text-sm">No active polls right now.</p>
+          )}
         </div>
       </div>
     </div>

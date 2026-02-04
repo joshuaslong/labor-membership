@@ -3,6 +3,7 @@
 import { useState, useEffect } from 'react'
 import Link from 'next/link'
 import { createClient } from '@/lib/supabase/client'
+import ChapterSelect from '@/components/ChapterSelect'
 
 export default function AdminGroupsPage() {
   const [adminInfo, setAdminInfo] = useState(null)
@@ -302,22 +303,17 @@ export default function AdminGroupsPage() {
         <label className="block text-sm font-medium text-gray-700 mb-2">
           Select Chapter
         </label>
-        <select
-          value={selectedChapterId}
-          onChange={(e) => {
-            setSelectedChapterId(e.target.value)
-            setManagingGroup(null)
-            resetForm()
-          }}
-          className="input-field max-w-md"
-        >
-          <option value="">Choose a chapter...</option>
-          {chapters.map(ch => (
-            <option key={ch.id} value={ch.id}>
-              {ch.name} ({ch.level})
-            </option>
-          ))}
-        </select>
+        <div className="max-w-md">
+          <ChapterSelect
+            chapters={chapters}
+            value={selectedChapterId}
+            onChange={(id) => {
+              setSelectedChapterId(id)
+              setManagingGroup(null)
+              resetForm()
+            }}
+          />
+        </div>
       </div>
 
       {selectedChapterId && (
