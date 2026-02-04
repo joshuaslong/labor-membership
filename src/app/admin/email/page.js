@@ -59,7 +59,7 @@ export default function EmailComposePage() {
   const [preferences, setPreferences] = useState({ default_reply_to: '', default_signature: '' })
   const [savingPreferences, setSavingPreferences] = useState(false)
   const [emailSentInfo, setEmailSentInfo] = useState(null) // { count: number } when email sent successfully
-  const signatureTextareaRef = useRef(null)
+  const signatureRef = useRef(null)
 
 
   useEffect(() => {
@@ -198,25 +198,35 @@ export default function EmailComposePage() {
     setError(null)
 
     try {
+      // Read signature value directly from the textarea DOM element
+      const signatureValue = signatureRef.current?.value || ''
+
+      const prefsToSave = {
+        ...preferences,
+        default_signature: signatureValue
+      }
+
       const res = await fetch('/api/admin/preferences', {
         method: 'PUT',
         headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify(preferences),
+        body: JSON.stringify(prefsToSave),
       })
 
       const data = await res.json()
       if (!res.ok) throw new Error(data.error)
 
+      // Update preferences state with saved values
+      setPreferences(prefsToSave)
       setSuccess('Preferences saved!')
       // Apply the new reply-to immediately
-      if (preferences.default_reply_to) {
-        setReplyTo(preferences.default_reply_to)
+      if (prefsToSave.default_reply_to) {
+        setReplyTo(prefsToSave.default_reply_to)
       }
       // Apply the new signature to current content immediately
-      if (preferences.default_signature) {
+      if (signatureValue) {
         setContent(prevContent => {
           // Replace either the default signature or any previously set signature
-          const updated = prevContent.replace(/<p>In solidarity,<br\s*\/?>Labor Party<\/p>/i, `<p>${preferences.default_signature}</p>`)
+          const updated = prevContent.replace(/<p>In solidarity,<br\s*\/?>Labor Party<\/p>/i, `<p>${signatureValue}</p>`)
           // If the default wasn't found, it might already have a custom signature - don't double-replace
           return updated
         })
@@ -411,19 +421,9 @@ export default function EmailComposePage() {
                 Default Signature / Sign-off
               </label>
               <textarea
-                ref={signatureTextareaRef}
-                value={preferences.default_signature || ''}
-                onChange={(e) => {
-                  const cursorPosition = e.target.selectionStart
-                  const newValue = e.target.value
-                  setPreferences({ ...preferences, default_signature: newValue })
-                  // Restore cursor position after state update
-                  requestAnimationFrame(() => {
-                    if (signatureTextareaRef.current) {
-                      signatureTextareaRef.current.setSelectionRange(cursorPosition, cursorPosition)
-                    }
-                  })
-                }}
+                ref={signatureRef}
+                key={preferences.default_signature}
+                defaultValue={preferences.default_signature || ''}
                 placeholder="In solidarity,
 Your Name
 Your Title"
