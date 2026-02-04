@@ -59,6 +59,7 @@ export default function EmailComposePage() {
   const [preferences, setPreferences] = useState({ default_reply_to: '', default_signature: '' })
   const [savingPreferences, setSavingPreferences] = useState(false)
   const [emailSentInfo, setEmailSentInfo] = useState(null) // { count: number } when email sent successfully
+  const signatureTextareaRef = useRef(null)
 
 
   useEffect(() => {
@@ -410,8 +411,19 @@ export default function EmailComposePage() {
                 Default Signature / Sign-off
               </label>
               <textarea
+                ref={signatureTextareaRef}
                 value={preferences.default_signature || ''}
-                onChange={(e) => setPreferences({ ...preferences, default_signature: e.target.value })}
+                onChange={(e) => {
+                  const cursorPosition = e.target.selectionStart
+                  const newValue = e.target.value
+                  setPreferences({ ...preferences, default_signature: newValue })
+                  // Restore cursor position after state update
+                  requestAnimationFrame(() => {
+                    if (signatureTextareaRef.current) {
+                      signatureTextareaRef.current.setSelectionRange(cursorPosition, cursorPosition)
+                    }
+                  })
+                }}
                 placeholder="In solidarity,
 Your Name
 Your Title"
