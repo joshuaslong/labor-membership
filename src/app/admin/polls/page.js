@@ -367,35 +367,40 @@ export default function AdminPollsPage() {
   }
 
   return (
-    <div className="max-w-5xl mx-auto px-4 py-8">
-      <Link href="/admin" className="text-gray-500 hover:text-gray-900 text-sm mb-4 inline-block">
-        &larr; Back to Admin Dashboard
-      </Link>
-
-      <div className="flex items-center justify-between mb-6">
-        <div>
-          <h1 className="text-2xl sm:text-3xl text-gray-900">Polls</h1>
-          <p className="text-gray-600 mt-1">Create and manage polls for members</p>
+    <div className="min-h-screen bg-stone-50">
+      {/* Header bar */}
+      <div className="border-b border-stone-200 bg-white">
+        <div className="max-w-5xl mx-auto px-4 sm:px-6 py-4">
+          <div className="flex items-center justify-between">
+            <div className="flex items-baseline gap-3">
+              <h1 className="text-xl font-semibold text-gray-900 tracking-tight">Polls</h1>
+            </div>
+            {!showForm && (
+              <button onClick={() => setShowForm(true)} className="btn-primary">
+                New Poll
+              </button>
+            )}
+          </div>
         </div>
-        {!showForm && (
-          <button onClick={() => setShowForm(true)} className="btn-primary">
-            New Poll
-          </button>
-        )}
       </div>
 
-      {error && (
-        <div className="mb-6 p-4 bg-red-50 text-red-700 rounded-lg">
-          {error}
-        </div>
-      )}
+      <div className="max-w-5xl mx-auto px-4 sm:px-6 py-6">
+        <Link href="/admin" className="link-subtle text-sm mb-4 inline-block">
+          &larr; Admin Dashboard
+        </Link>
 
-      {/* Create/Edit Form */}
-      {showForm && (
-        <div className="card mb-8">
-          <h2 className="text-xl font-semibold mb-6">
-            {editingPoll ? 'Edit Poll' : 'New Poll'}
-          </h2>
+        {error && (
+          <div className="mb-6 p-4 bg-red-50 border border-red-200 text-red-700 rounded">
+            {error}
+          </div>
+        )}
+
+        {/* Create/Edit Form */}
+        {showForm && (
+          <div className="bg-white border border-stone-200 rounded p-6 mb-6">
+            <h2 className="text-sm font-semibold text-gray-900 uppercase tracking-wide mb-6">
+              {editingPoll ? 'Edit Poll' : 'New Poll'}
+            </h2>
 
           <form onSubmit={handleSubmit} className="space-y-6">
             {/* Target selection */}
@@ -539,9 +544,9 @@ export default function AdminPollsPage() {
 
               <div className="space-y-6">
                 {formData.questions.map((q, qi) => (
-                  <div key={qi} className="border border-gray-200 rounded-lg p-4">
+                  <div key={qi} className="border border-stone-200 rounded p-4 bg-stone-50">
                     <div className="flex items-start gap-3 mb-3">
-                      <span className="text-sm font-medium text-gray-500 mt-2">Q{qi + 1}</span>
+                      <span className="text-xs font-medium text-gray-500 uppercase mt-2">Q{qi + 1}</span>
                       <div className="flex-1">
                         <input
                           type="text"
@@ -603,7 +608,7 @@ export default function AdminPollsPage() {
               </div>
             </div>
 
-            <div className="flex gap-3 pt-4">
+            <div className="flex gap-3 pt-4 border-t border-stone-200">
               <button
                 type="submit"
                 disabled={saving || !isFormValid()}
@@ -616,119 +621,125 @@ export default function AdminPollsPage() {
               </button>
             </div>
           </form>
-        </div>
-      )}
-
-      {/* Status filter */}
-      {!showForm && (
-        <div className="mb-6 flex gap-2">
-          {['', 'draft', 'active', 'closed', 'archived'].map(s => (
-            <button
-              key={s}
-              onClick={() => setStatusFilter(s)}
-              className={`px-3 py-1.5 text-sm rounded-lg font-medium transition-colors ${
-                statusFilter === s
-                  ? 'bg-labor-red text-white'
-                  : 'bg-gray-100 text-gray-600 hover:bg-gray-200'
-              }`}
-            >
-              {s ? s.charAt(0).toUpperCase() + s.slice(1) : 'All'}
-            </button>
-          ))}
-        </div>
-      )}
-
-      {/* Polls List */}
-      {!showForm && (
-        pollsLoading ? (
-          <div className="text-center py-8">
-            <div className="animate-spin rounded-full h-6 w-6 border-b-2 border-labor-red mx-auto"></div>
           </div>
-        ) : polls.length === 0 ? (
-          <div className="text-center py-12 card">
-            <h3 className="text-lg font-semibold text-gray-900 mb-1">No polls yet</h3>
-            <p className="text-gray-500 text-sm">Create your first poll to get started.</p>
-          </div>
-        ) : (
-          <div className="space-y-4">
-            {polls.map(poll => (
-              <div key={poll.id} className="card">
-                <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-3">
-                  <div className="flex-1 min-w-0">
-                    <div className="flex items-center gap-3 mb-1">
-                      <h3 className="font-semibold text-gray-900 truncate">{poll.title}</h3>
-                      <span className={`px-2 py-0.5 rounded-full text-xs font-medium shrink-0 ${STATUS_LABELS[poll.status]?.className || 'bg-gray-100 text-gray-600'}`}>
-                        {STATUS_LABELS[poll.status]?.label || poll.status}
-                      </span>
-                    </div>
-                    <div className="flex flex-wrap gap-x-4 gap-y-1 text-sm text-gray-500">
-                      <span>
-                        {poll.target_type === 'group' ? `Group: ${poll.group_name}` : `Chapter: ${poll.chapter_name}`}
-                      </span>
-                      <span>{poll.question_count} question{poll.question_count !== 1 ? 's' : ''}</span>
-                      {poll.status !== 'draft' && (
-                        <span>{poll.response_count} response{poll.response_count !== 1 ? 's' : ''}</span>
-                      )}
-                      {poll.closes_at && (
-                        <span>Closes: {new Date(poll.closes_at).toLocaleDateString()}</span>
-                      )}
-                    </div>
-                  </div>
+        )}
 
-                  <div className="flex items-center gap-2 shrink-0">
-                    {poll.status !== 'draft' && (
-                      <Link
-                        href={`/admin/polls/${poll.id}/results`}
-                        className="px-3 py-1.5 text-sm bg-gray-100 hover:bg-gray-200 rounded font-medium"
-                      >
-                        Results
-                      </Link>
-                    )}
-                    {poll.status === 'draft' && (
-                      <>
-                        <button
-                          onClick={() => handleEdit(poll)}
-                          className="px-3 py-1.5 text-sm bg-blue-50 text-blue-700 hover:bg-blue-100 rounded font-medium"
-                        >
-                          Edit
-                        </button>
-                        <button
-                          onClick={() => handleStatusChange(poll, 'active')}
-                          className="px-3 py-1.5 text-sm bg-green-50 text-green-700 hover:bg-green-100 rounded font-medium"
-                        >
-                          Activate
-                        </button>
-                        <button
-                          onClick={() => handleDelete(poll)}
-                          className="px-3 py-1.5 text-sm bg-red-50 text-red-700 hover:bg-red-100 rounded font-medium"
-                        >
-                          Delete
-                        </button>
-                      </>
-                    )}
-                    {poll.status === 'active' && (
-                      <button
-                        onClick={() => handleStatusChange(poll, 'closed')}
-                        className="px-3 py-1.5 text-sm bg-blue-50 text-blue-700 hover:bg-blue-100 rounded font-medium"
-                      >
-                        Close
-                      </button>
-                    )}
-                    {poll.status === 'closed' && (
-                      <button
-                        onClick={() => handleStatusChange(poll, 'archived')}
-                        className="px-3 py-1.5 text-sm bg-gray-100 text-gray-600 hover:bg-gray-200 rounded font-medium"
-                      >
-                        Archive
-                      </button>
-                    )}
-                  </div>
-                </div>
-              </div>
+        {/* Status filter */}
+        {!showForm && (
+          <div className="mb-4 flex gap-2">
+            {['', 'draft', 'active', 'closed', 'archived'].map(s => (
+              <button
+                key={s}
+                onClick={() => setStatusFilter(s)}
+                className={`px-3 py-1.5 text-sm rounded font-medium transition-colors ${
+                  statusFilter === s
+                    ? 'bg-labor-red text-white'
+                    : 'bg-white text-gray-600 border border-stone-200 hover:bg-stone-50 hover:border-stone-300'
+                }`}
+              >
+                {s ? s.charAt(0).toUpperCase() + s.slice(1) : 'All'}
+              </button>
             ))}
           </div>
-        )
-      )}
+        )}
+
+        {/* Polls List */}
+        {!showForm && (
+          pollsLoading ? (
+            <div className="text-center py-8">
+              <div className="animate-spin rounded-full h-6 w-6 border-b-2 border-labor-red mx-auto"></div>
+            </div>
+          ) : polls.length === 0 ? (
+            <div className="text-center py-12 bg-white border border-stone-200 rounded">
+              <h3 className="text-sm font-semibold text-gray-900 uppercase tracking-wide mb-1">No Polls</h3>
+              <p className="text-gray-500 text-sm">Create your first poll to get started.</p>
+            </div>
+          ) : (
+            <div className="space-y-3">
+              {polls.map(poll => (
+                <div key={poll.id} className="bg-white border border-stone-200 rounded p-4 hover:border-stone-300 transition-colors">
+                  <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-3">
+                    <div className="flex-1 min-w-0">
+                      <div className="flex items-center gap-2 mb-1">
+                        <h3 className="font-semibold text-gray-900 truncate">{poll.title}</h3>
+                        <span className={`px-2 py-0.5 rounded text-xs font-medium shrink-0 border ${
+                          poll.status === 'active' ? 'badge-success' :
+                          poll.status === 'closed' ? 'bg-blue-50 text-blue-700 border-blue-200' :
+                          poll.status === 'archived' ? 'badge-neutral' :
+                          'badge-neutral'
+                        }`}>
+                          {STATUS_LABELS[poll.status]?.label || poll.status}
+                        </span>
+                      </div>
+                      <div className="flex flex-wrap gap-x-4 gap-y-1 text-xs text-gray-500">
+                        <span>
+                          {poll.target_type === 'group' ? `Group: ${poll.group_name}` : `${poll.chapter_name}`}
+                        </span>
+                        <span>{poll.question_count}Q</span>
+                        {poll.status !== 'draft' && (
+                          <span className="tabular-nums">{poll.response_count} votes</span>
+                        )}
+                        {poll.closes_at && (
+                          <span>Closes {new Date(poll.closes_at).toLocaleDateString('en-US', { month: 'short', day: 'numeric' })}</span>
+                        )}
+                      </div>
+                    </div>
+
+                    <div className="flex items-center gap-2 shrink-0">
+                      {poll.status !== 'draft' && (
+                        <Link
+                          href={`/admin/polls/${poll.id}/results`}
+                          className="px-3 py-1.5 text-sm bg-white text-gray-700 border border-stone-200 hover:bg-stone-50 hover:border-stone-300 rounded font-medium transition-colors"
+                        >
+                          Results
+                        </Link>
+                      )}
+                      {poll.status === 'draft' && (
+                        <>
+                          <button
+                            onClick={() => handleEdit(poll)}
+                            className="px-3 py-1.5 text-sm text-gray-700 hover:text-gray-900 font-medium"
+                          >
+                            Edit
+                          </button>
+                          <button
+                            onClick={() => handleStatusChange(poll, 'active')}
+                            className="px-3 py-1.5 text-sm bg-labor-red text-white hover:bg-labor-red-600 rounded font-medium transition-colors"
+                          >
+                            Activate
+                          </button>
+                          <button
+                            onClick={() => handleDelete(poll)}
+                            className="px-3 py-1.5 text-sm text-red-600 hover:text-red-700 font-medium"
+                          >
+                            Delete
+                          </button>
+                        </>
+                      )}
+                      {poll.status === 'active' && (
+                        <button
+                          onClick={() => handleStatusChange(poll, 'closed')}
+                          className="px-3 py-1.5 text-sm bg-white text-gray-700 border border-stone-200 hover:bg-stone-50 hover:border-stone-300 rounded font-medium transition-colors"
+                        >
+                          Close
+                        </button>
+                      )}
+                      {poll.status === 'closed' && (
+                        <button
+                          onClick={() => handleStatusChange(poll, 'archived')}
+                          className="px-3 py-1.5 text-sm text-gray-600 hover:text-gray-700 font-medium"
+                        >
+                          Archive
+                        </button>
+                      )}
+                    </div>
+                  </div>
+                </div>
+              ))}
+            </div>
+          )
+        )}
+      </div>
     </div>
   )
 }
