@@ -4,6 +4,7 @@ import { useState, useEffect, useRef } from 'react'
 import Link from 'next/link'
 import { createClient } from '@/lib/supabase/client'
 import EmailEditor from '@/components/EmailEditor'
+import ChapterSelect from '@/components/ChapterSelect'
 
 const LOGO_HEADER = `<p style="text-align: center; margin-bottom: 24px;"><img src="https://members.votelabor.org/logo-dark.png" alt="Labor Party" width="200" style="max-width: 200px; height: auto;" /></p>`
 
@@ -50,9 +51,6 @@ export default function EmailComposePage() {
   const [testEmail, setTestEmail] = useState('')
   const [testLoading, setTestLoading] = useState(false)
   const [senderName, setSenderName] = useState('Labor Party')
-  const [chapterSearch, setChapterSearch] = useState('')
-  const [showChapterDropdown, setShowChapterDropdown] = useState(false)
-  const chapterDropdownRef = useRef(null)
   const [groups, setGroups] = useState([])
   const [selectedGroupId, setSelectedGroupId] = useState('')
   const [groupChapterId, setGroupChapterId] = useState('')
@@ -62,16 +60,6 @@ export default function EmailComposePage() {
   const [savingPreferences, setSavingPreferences] = useState(false)
   const [emailSentInfo, setEmailSentInfo] = useState(null) // { count: number } when email sent successfully
 
-  // Close chapter dropdown when clicking outside
-  useEffect(() => {
-    function handleClickOutside(event) {
-      if (chapterDropdownRef.current && !chapterDropdownRef.current.contains(event.target)) {
-        setShowChapterDropdown(false)
-      }
-    }
-    document.addEventListener('mousedown', handleClickOutside)
-    return () => document.removeEventListener('mousedown', handleClickOutside)
-  }, [])
 
   useEffect(() => {
     const loadData = async () => {
@@ -414,58 +402,13 @@ export default function EmailComposePage() {
                 <div className="flex-1">
                   <span className="text-sm font-medium text-gray-900">Specific Chapter</span>
                   {recipientType === 'chapter' && (
-                    <div className="mt-2 relative" ref={chapterDropdownRef}>
-                      <div className="relative">
-                        <input
-                          type="text"
-                          value={chapterSearch}
-                          onChange={(e) => {
-                            setChapterSearch(e.target.value)
-                            setShowChapterDropdown(true)
-                          }}
-                          onFocus={() => setShowChapterDropdown(true)}
-                          placeholder={selectedChapterId ? chapters.find(c => c.id === selectedChapterId)?.name || 'Select chapter...' : 'Search chapters...'}
-                          className="input-field pr-8"
-                        />
-                        <button
-                          type="button"
-                          onClick={() => setShowChapterDropdown(!showChapterDropdown)}
-                          className="absolute right-2 top-1/2 -translate-y-1/2 text-gray-400 hover:text-gray-600"
-                        >
-                          <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                            <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M19 9l-7 7-7-7" />
-                          </svg>
-                        </button>
-                      </div>
-                      {showChapterDropdown && (
-                        <div className="absolute z-20 w-full mt-1 bg-white border border-gray-200 rounded-lg shadow-lg max-h-60 overflow-auto">
-                          {chapters
-                            .filter(chapter =>
-                              chapter.name.toLowerCase().includes(chapterSearch.toLowerCase()) ||
-                              chapter.level.toLowerCase().includes(chapterSearch.toLowerCase())
-                            )
-                            .map(chapter => (
-                              <button
-                                key={chapter.id}
-                                type="button"
-                                onClick={() => {
-                                  setSelectedChapterId(chapter.id)
-                                  setChapterSearch('')
-                                  setShowChapterDropdown(false)
-                                }}
-                                className={`w-full px-4 py-2 text-left text-sm hover:bg-gray-50 ${selectedChapterId === chapter.id ? 'bg-labor-red-50 text-labor-red' : 'text-gray-700'}`}
-                              >
-                                {chapter.name} <span className="text-gray-400">({chapter.level})</span>
-                              </button>
-                            ))}
-                          {chapters.filter(chapter =>
-                            chapter.name.toLowerCase().includes(chapterSearch.toLowerCase()) ||
-                            chapter.level.toLowerCase().includes(chapterSearch.toLowerCase())
-                          ).length === 0 && (
-                            <div className="px-4 py-2 text-sm text-gray-500">No chapters found</div>
-                          )}
-                        </div>
-                      )}
+                    <div className="mt-2">
+                      <ChapterSelect
+                        chapters={chapters}
+                        value={selectedChapterId}
+                        onChange={setSelectedChapterId}
+                        required
+                      />
                     </div>
                   )}
                 </div>
@@ -486,18 +429,12 @@ export default function EmailComposePage() {
                 <span className="text-sm text-gray-500 ml-2">(e.g., Volunteers, Phone Bank Team)</span>
                 {recipientType === 'group' && (
                   <div className="mt-2 space-y-2">
-                    <select
+                    <ChapterSelect
+                      chapters={chapters}
                       value={groupChapterId}
-                      onChange={(e) => handleGroupChapterChange(e.target.value)}
-                      className="input-field"
-                    >
-                      <option value="">Select chapter...</option>
-                      {chapters.map(ch => (
-                        <option key={ch.id} value={ch.id}>
-                          {ch.name} ({ch.level})
-                        </option>
-                      ))}
-                    </select>
+                      onChange={handleGroupChapterChange}
+                      required
+                    />
                     {groupChapterId && (
                       groupsLoading ? (
                         <p className="text-sm text-gray-500">Loading groups...</p>
