@@ -422,7 +422,6 @@ export default function EmailComposePage() {
               </label>
               <textarea
                 ref={signatureRef}
-                key={preferences.default_signature}
                 defaultValue={preferences.default_signature || ''}
                 placeholder="In solidarity,
 Your Name
