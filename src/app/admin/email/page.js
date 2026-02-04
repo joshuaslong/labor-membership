@@ -412,9 +412,13 @@ export default function EmailComposePage() {
               <textarea
                 value={preferences.default_signature || ''}
                 onChange={(e) => setPreferences({ ...preferences, default_signature: e.target.value })}
-                placeholder="In solidarity,&#10;Your Name&#10;Your Title"
+                placeholder="In solidarity,
+Your Name
+Your Title"
                 rows={4}
-                className="input-field"
+                className="w-full px-3 py-2 bg-white text-gray-900 border border-stone-200 rounded focus:outline-none focus:border-labor-red focus:ring-1 focus:ring-labor-red font-mono text-sm"
+                style={{ resize: 'vertical', textAlign: 'left' }}
+                spellCheck={false}
               />
               <p className="text-xs text-gray-500 mt-1">
                 This signature will replace the default "In solidarity, Labor Party" when you select a template.
