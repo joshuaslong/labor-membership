@@ -1,6 +1,7 @@
 import { NextResponse } from 'next/server'
 import { createClient, createAdminClient } from '@/lib/supabase/server'
-import { sendTestEmail, isResendConfigured } from '@/lib/resend'
+import { sendTestEmail, isResendConfigured, wrapEmailTemplate } from '@/lib/resend'
+import { isValidEmail } from '@/lib/validation'
 
 export async function POST(request) {
   // Check if Resend is configured
@@ -36,60 +37,16 @@ export async function POST(request) {
   }
 
   // Validate email format
-  const emailRegex = /^[^\s@]+@[^\s@]+\.[^\s@]+$/
-  if (!emailRegex.test(testEmail)) {
-    return NextResponse.json({ error: 'Invalid email address' }, { status: 400 })
+  if (!isValidEmail(testEmail)) {
+    return NextResponse.json({ error: 'Invalid email address format' }, { status: 400 })
   }
 
   try {
+    // Replace personalization variables for test
+    const testContent = content.replace(/\{\$name\}/g, 'Test User')
+
     // Wrap content in HTML email template (same as production)
-    const htmlContent = `
-<!DOCTYPE html>
-<html>
-<head>
-  <meta charset="utf-8">
-  <meta name="viewport" content="width=device-width, initial-scale=1.0">
-  <style>
-    body {
-      font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, 'Helvetica Neue', Arial, sans-serif;
-      line-height: 1.6;
-      color: #374151;
-      max-width: 600px;
-      margin: 0 auto;
-      padding: 20px;
-    }
-    .header {
-      text-align: center;
-      padding-bottom: 20px;
-      border-bottom: 2px solid #E25555;
-      margin-bottom: 24px;
-    }
-    .content {
-      padding: 0 0 24px;
-    }
-    .footer {
-      border-top: 1px solid #e5e7eb;
-      padding-top: 20px;
-      text-align: center;
-      font-size: 12px;
-      color: #9ca3af;
-    }
-    a {
-      color: #E25555;
-    }
-  </style>
-</head>
-<body>
-  <div class="content">
-    ${content.replace(/\{\$name\}/g, 'Test User')}
-  </div>
-  <div class="footer">
-    <p>Labor Party</p>
-    <p><a href="#">Unsubscribe</a></p>
-  </div>
-</body>
-</html>
-`
+    const htmlContent = wrapEmailTemplate(testContent, { includeUnsubscribe: false })
 
     // Use provided sender name or default to "Labor Party"
     const fromName = senderName || 'Labor Party'

@@ -8,32 +8,48 @@ import ChapterSelect from '@/components/ChapterSelect'
 
 const LOGO_HEADER = `<p style="text-align: center; margin-bottom: 24px;"><img src="https://members.votelabor.org/logo-dark.png" alt="Labor Party" width="200" style="max-width: 200px; height: auto;" /></p>`
 
+// Default signature if user hasn't set a custom one
+const DEFAULT_SIGNATURE = 'In solidarity,<br>Labor Party'
+
+// Email templates use {$SIGNATURE} marker for signature placement
 const EMAIL_TEMPLATES = [
   {
     id: 'announcement',
     name: 'General Announcement',
     subject: '',
-    content: `${LOGO_HEADER}<p>Dear {$name},</p><p>[Your announcement here]</p><p>In solidarity,<br>Labor Party</p>`,
+    content: `${LOGO_HEADER}<p>Dear {$name},</p><p>[Your announcement here]</p><p>{$SIGNATURE}</p>`,
   },
   {
     id: 'event',
     name: 'Event Invitation',
     subject: "You're Invited: ",
-    content: `${LOGO_HEADER}<p>Dear {$name},</p><p>You're invited to join us for an upcoming event!</p><p><strong>Event:</strong> [Event Name]<br><strong>Date:</strong> [Date]<br><strong>Time:</strong> [Time]<br><strong>Location:</strong> [Location/Virtual Link]</p><p>[Additional details about the event]</p><p>We hope to see you there!</p><p>In solidarity,<br>Labor Party</p>`,
+    content: `${LOGO_HEADER}<p>Dear {$name},</p><p>You're invited to join us for an upcoming event!</p><p><strong>Event:</strong> [Event Name]<br><strong>Date:</strong> [Date]<br><strong>Time:</strong> [Time]<br><strong>Location:</strong> [Location/Virtual Link]</p><p>[Additional details about the event]</p><p>We hope to see you there!</p><p>{$SIGNATURE}</p>`,
   },
   {
     id: 'action',
     name: 'Call to Action',
     subject: 'Action Needed: ',
-    content: `${LOGO_HEADER}<p>Dear {$name},</p><p>We need your help with an urgent action.</p><p><strong>What:</strong> [Describe the action]</p><p><strong>Why it matters:</strong> [Explain the importance]</p><p><strong>How you can help:</strong></p><ul><li>[Action item 1]</li><li>[Action item 2]</li><li>[Action item 3]</li></ul><p>Together, we can make a difference.</p><p>In solidarity,<br>Labor Party</p>`,
+    content: `${LOGO_HEADER}<p>Dear {$name},</p><p>We need your help with an urgent action.</p><p><strong>What:</strong> [Describe the action]</p><p><strong>Why it matters:</strong> [Explain the importance]</p><p><strong>How you can help:</strong></p><ul><li>[Action item 1]</li><li>[Action item 2]</li><li>[Action item 3]</li></ul><p>Together, we can make a difference.</p><p>{$SIGNATURE}</p>`,
   },
   {
     id: 'blank',
     name: 'Blank Template',
     subject: '',
-    content: `${LOGO_HEADER}<p>Dear {$name},</p><p></p><p>In solidarity,<br>Labor Party</p>`,
+    content: `${LOGO_HEADER}<p>Dear {$name},</p><p></p><p>{$SIGNATURE}</p>`,
   },
 ]
+
+/**
+ * Apply signature to email content
+ * Replaces {$SIGNATURE} marker with actual signature
+ * @param {string} content - Email content with {$SIGNATURE} marker
+ * @param {string} signature - Signature to insert (or default if not provided)
+ * @returns {string} Content with signature applied
+ */
+function applySignature(content, signature) {
+  const signatureToUse = signature || DEFAULT_SIGNATURE
+  return content.replace(/\{\$SIGNATURE\}/g, signatureToUse)
+}
 
 export default function EmailComposePage() {
   const [subject, setSubject] = useState('')
@@ -109,15 +125,17 @@ export default function EmailComposePage() {
               // Use saved reply-to if available, otherwise default to admin email
               setReplyTo(prefsData.preferences.default_reply_to || adminMember?.email || '')
               // Apply signature to initial template content
-              if (prefsData.preferences.default_signature) {
-                const initialContent = EMAIL_TEMPLATES[0].content
-                const updatedContent = initialContent.replace(/<p>In solidarity,<br\s*\/?>Labor Party<\/p>/i, `<p>${prefsData.preferences.default_signature}</p>`)
-                setContent(updatedContent)
-              }
+              const initialContent = EMAIL_TEMPLATES[0].content
+              const contentWithSignature = applySignature(initialContent, prefsData.preferences.default_signature)
+              setContent(contentWithSignature)
             }
+          } else {
+            console.warn('Failed to load preferences:', await prefsRes.text())
+            setError('Could not load email preferences. Using defaults.')
           }
         } catch (err) {
           console.error('Error loading preferences:', err)
+          setError('Failed to load email preferences. Using defaults.')
           // Fall back to admin email
           if (adminMember?.email) {
             setReplyTo(adminMember.email)
@@ -157,14 +175,20 @@ export default function EmailComposePage() {
 
   const fetchGroups = async (chapterId) => {
     setGroupsLoading(true)
+    setError(null) // Clear previous errors
     try {
       const res = await fetch(`/api/admin/groups?chapterId=${chapterId}`)
       const data = await res.json()
       if (res.ok) {
         setGroups(data.groups || [])
+      } else {
+        setGroups([])
+        setError(`Failed to load groups: ${data.error || 'Unknown error'}`)
       }
-    } catch {
+    } catch (err) {
       setGroups([])
+      setError('Network error while loading groups. Please try again.')
+      console.error('Error fetching groups:', err)
     } finally {
       setGroupsLoading(false)
     }
@@ -185,12 +209,9 @@ export default function EmailComposePage() {
     const template = EMAIL_TEMPLATES.find(t => t.id === templateId)
     if (template) {
       setSubject(template.subject)
-      // Replace default signature with saved signature if available
-      let newContent = template.content
-      if (preferences.default_signature) {
-        newContent = newContent.replace(/<p>In solidarity,<br\s*\/?>Labor Party<\/p>/i, `<p>${preferences.default_signature}</p>`)
-      }
-      setContent(newContent)
+      // Apply signature (custom or default) to template
+      const contentWithSignature = applySignature(template.content, preferences.default_signature)
+      setContent(contentWithSignature)
     }
   }
 
@@ -248,13 +269,16 @@ export default function EmailComposePage() {
       setSuccess('Signature saved!')
       setShowSignatureModal(false)
 
-      // Apply the new signature to current content immediately
-      if (modalSignature) {
-        setContent(prevContent => {
-          const updated = prevContent.replace(/<p>In solidarity,<br\s*\/?>Labor Party<\/p>/i, `<p>${modalSignature}</p>`)
-          return updated
-        })
-      }
+      // Re-apply signature to current template to pick up changes
+      // This only works if content still has {$SIGNATURE} marker
+      // If user edited the email, we don't want to overwrite their work
+      setContent(prevContent => {
+        // Only apply if marker exists (template hasn't been heavily customized)
+        if (prevContent.includes('{$SIGNATURE}')) {
+          return applySignature(prevContent, modalSignature)
+        }
+        return prevContent
+      })
     } catch (err) {
       setError(err.message)
     } finally {
@@ -377,6 +401,7 @@ export default function EmailComposePage() {
             <h2 className="text-xl font-semibold text-gray-900 mb-4">Edit Email Signature</h2>
             <p className="text-sm text-gray-600 mb-4">
               Use HTML for formatting (e.g., &lt;br&gt; for line breaks, &lt;strong&gt; for bold).
+              This signature will automatically replace the {'{$SIGNATURE}'} marker in email templates.
             </p>
             <textarea
               value={modalSignature}
@@ -496,7 +521,7 @@ export default function EmailComposePage() {
                 {preferences.default_signature ? 'Edit Signature' : 'Add Signature'}
               </button>
               <p className="text-xs text-gray-500 mt-2">
-                This signature will replace the default "In solidarity, Labor Party" when you select a template.
+                This signature automatically replaces the {'{$SIGNATURE}'} marker in email templates.
               </p>
             </div>
 
@@ -752,7 +777,11 @@ export default function EmailComposePage() {
               <div className="p-4 sm:p-6">
                 <div
                   className="email-preview"
-                  dangerouslySetInnerHTML={{ __html: content.replace('{$name}', 'Member') }}
+                  dangerouslySetInnerHTML={{
+                    __html: content
+                      .replace(/\{\$name\}/g, 'Member')
+                      .replace(/\{\$SIGNATURE\}/g, preferences.default_signature || DEFAULT_SIGNATURE)
+                  }}
                 />
                 <div className="border-t border-gray-200 pt-4 mt-6 text-center text-xs text-gray-500">
                   <p>Labor Party</p>

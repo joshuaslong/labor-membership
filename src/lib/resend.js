@@ -23,6 +23,64 @@ const FROM_DOMAIN = process.env.RESEND_FROM_EMAIL || 'noreply@mail.votelabor.org
 const FROM_EMAIL = `Labor Party <${FROM_DOMAIN}>`
 
 /**
+ * Wrap email content in standard HTML email template
+ * @param {string} content - The email body content (HTML)
+ * @param {object} options - Template options
+ * @param {boolean} options.includeUnsubscribe - Whether to include unsubscribe link (default: true)
+ * @returns {string} Complete HTML email
+ */
+export function wrapEmailTemplate(content, options = {}) {
+  const { includeUnsubscribe = true } = options
+  const appUrl = process.env.NEXT_PUBLIC_APP_URL || 'https://members.votelabor.org'
+
+  return `<!DOCTYPE html>
+<html>
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <style>
+    body {
+      font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, 'Helvetica Neue', Arial, sans-serif;
+      line-height: 1.6;
+      color: #374151;
+      max-width: 600px;
+      margin: 0 auto;
+      padding: 20px;
+    }
+    .header {
+      text-align: center;
+      padding-bottom: 20px;
+      border-bottom: 2px solid #E25555;
+      margin-bottom: 24px;
+    }
+    .content {
+      padding: 0 0 24px;
+    }
+    .footer {
+      border-top: 1px solid #e5e7eb;
+      padding-top: 20px;
+      text-align: center;
+      font-size: 12px;
+      color: #9ca3af;
+    }
+    a {
+      color: #E25555;
+    }
+  </style>
+</head>
+<body>
+  <div class="content">
+    ${content}
+  </div>
+  ${includeUnsubscribe ? `<div class="footer">
+    <p>Labor Party</p>
+    <p><a href="${appUrl}/unsubscribe">Unsubscribe</a></p>
+  </div>` : ''}
+</body>
+</html>`
+}
+
+/**
  * Send an email to a single recipient
  */
 export async function sendEmail({

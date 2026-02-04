@@ -1,6 +1,7 @@
 import { NextResponse } from 'next/server'
 import { createClient, createAdminClient } from '@/lib/supabase/server'
-import { sendBatchEmails, isResendConfigured } from '@/lib/resend'
+import { sendBatchEmails, isResendConfigured, wrapEmailTemplate } from '@/lib/resend'
+import { validateRecipients } from '@/lib/validation'
 
 export async function POST(request) {
   // Check if Resend is configured
@@ -155,60 +156,31 @@ export async function POST(request) {
       return NextResponse.json({ error: 'No recipients found for the selected criteria' }, { status: 400 })
     }
 
+    // Validate email addresses
+    const { valid: validRecipients, invalid: invalidRecipients } = validateRecipients(recipients)
+
+    if (validRecipients.length === 0) {
+      return NextResponse.json({
+        error: 'No valid email addresses found',
+        details: `All ${invalidRecipients.length} recipients have invalid email addresses`
+      }, { status: 400 })
+    }
+
+    // Log warning if some recipients are invalid
+    if (invalidRecipients.length > 0) {
+      console.warn(`Skipping ${invalidRecipients.length} recipients with invalid emails:`,
+        invalidRecipients.map(r => ({ email: r.email, reason: r.reason }))
+      )
+    }
+
     // Wrap content in HTML email template
-    const htmlContent = `
-<!DOCTYPE html>
-<html>
-<head>
-  <meta charset="utf-8">
-  <meta name="viewport" content="width=device-width, initial-scale=1.0">
-  <style>
-    body {
-      font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, 'Helvetica Neue', Arial, sans-serif;
-      line-height: 1.6;
-      color: #374151;
-      max-width: 600px;
-      margin: 0 auto;
-      padding: 20px;
-    }
-    .header {
-      text-align: center;
-      padding-bottom: 20px;
-      border-bottom: 2px solid #E25555;
-      margin-bottom: 24px;
-    }
-    .content {
-      padding: 0 0 24px;
-    }
-    .footer {
-      border-top: 1px solid #e5e7eb;
-      padding-top: 20px;
-      text-align: center;
-      font-size: 12px;
-      color: #9ca3af;
-    }
-    a {
-      color: #E25555;
-    }
-  </style>
-</head>
-<body>
-  <div class="content">
-    ${content}
-  </div>
-  <div class="footer">
-    <p>Labor Party</p>
-    <p><a href="${process.env.NEXT_PUBLIC_APP_URL}/unsubscribe">Unsubscribe</a></p>
-  </div>
-</body>
-</html>
-`
+    const htmlContent = wrapEmailTemplate(content)
 
     // Use provided sender name or default to "Labor Party"
     const fromName = senderName || 'Labor Party'
 
     // Format recipients for Resend
-    const formattedRecipients = recipients.map(r => ({
+    const formattedRecipients = validRecipients.map(r => ({
       email: r.email,
       firstName: r.first_name,
       lastName: r.last_name,
@@ -231,16 +203,22 @@ export async function POST(request) {
         recipient_type: recipientType,
         chapter_id: chapterId || currentAdmin.chapter_id,
         status: 'sent',
-        recipient_count: recipients.length,
+        recipient_count: validRecipients.length,
+        skipped_count: invalidRecipients.length,
       })
     } catch {
       // Table might not exist yet, that's ok
     }
 
+    const responseMessage = invalidRecipients.length > 0
+      ? `Email sent to ${validRecipients.length} recipient${validRecipients.length !== 1 ? 's' : ''}. Skipped ${invalidRecipients.length} invalid email${invalidRecipients.length !== 1 ? 's' : ''}.`
+      : `Email sent to ${validRecipients.length} recipient${validRecipients.length !== 1 ? 's' : ''}`
+
     return NextResponse.json({
       success: true,
-      message: `Email sent to ${recipients.length} recipient${recipients.length !== 1 ? 's' : ''}`,
-      count: recipients.length,
+      message: responseMessage,
+      count: validRecipients.length,
+      skipped: invalidRecipients.length,
     })
   } catch (error) {
     console.error('Email send error:', error)
