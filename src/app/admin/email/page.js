@@ -59,7 +59,8 @@ export default function EmailComposePage() {
   const [preferences, setPreferences] = useState({ default_reply_to: '', default_signature: '' })
   const [savingPreferences, setSavingPreferences] = useState(false)
   const [emailSentInfo, setEmailSentInfo] = useState(null) // { count: number } when email sent successfully
-  const signatureRef = useRef(null)
+  const [showSignatureModal, setShowSignatureModal] = useState(false)
+  const [modalSignature, setModalSignature] = useState('')
 
 
   useEffect(() => {
@@ -198,12 +199,40 @@ export default function EmailComposePage() {
     setError(null)
 
     try {
-      // Read signature value directly from the textarea DOM element
-      const signatureValue = signatureRef.current?.value || ''
+      const res = await fetch('/api/admin/preferences', {
+        method: 'PUT',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify(preferences),
+      })
 
+      const data = await res.json()
+      if (!res.ok) throw new Error(data.error)
+
+      setSuccess('Preferences saved!')
+      // Apply the new reply-to immediately
+      if (preferences.default_reply_to) {
+        setReplyTo(preferences.default_reply_to)
+      }
+    } catch (err) {
+      setError(err.message)
+    } finally {
+      setSavingPreferences(false)
+    }
+  }
+
+  const handleOpenSignatureModal = () => {
+    setModalSignature(preferences.default_signature || '')
+    setShowSignatureModal(true)
+  }
+
+  const handleSaveSignature = async () => {
+    setSavingPreferences(true)
+    setError(null)
+
+    try {
       const prefsToSave = {
         ...preferences,
-        default_signature: signatureValue
+        default_signature: modalSignature
       }
 
       const res = await fetch('/api/admin/preferences', {
@@ -215,19 +244,14 @@ export default function EmailComposePage() {
       const data = await res.json()
       if (!res.ok) throw new Error(data.error)
 
-      // Update preferences state with saved values
       setPreferences(prefsToSave)
-      setSuccess('Preferences saved!')
-      // Apply the new reply-to immediately
-      if (prefsToSave.default_reply_to) {
-        setReplyTo(prefsToSave.default_reply_to)
-      }
+      setSuccess('Signature saved!')
+      setShowSignatureModal(false)
+
       // Apply the new signature to current content immediately
-      if (signatureValue) {
+      if (modalSignature) {
         setContent(prevContent => {
-          // Replace either the default signature or any previously set signature
-          const updated = prevContent.replace(/<p>In solidarity,<br\s*\/?>Labor Party<\/p>/i, `<p>${signatureValue}</p>`)
-          // If the default wasn't found, it might already have a custom signature - don't double-replace
+          const updated = prevContent.replace(/<p>In solidarity,<br\s*\/?>Labor Party<\/p>/i, `<p>${modalSignature}</p>`)
           return updated
         })
       }
@@ -346,6 +370,43 @@ export default function EmailComposePage() {
         </div>
       )}
 
+      {/* Signature Editor Modal */}
+      {showSignatureModal && (
+        <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50 p-4">
+          <div className="bg-white rounded-lg shadow-2xl max-w-2xl w-full p-6">
+            <h2 className="text-xl font-semibold text-gray-900 mb-4">Edit Email Signature</h2>
+            <p className="text-sm text-gray-600 mb-4">
+              Use HTML for formatting (e.g., &lt;br&gt; for line breaks, &lt;strong&gt; for bold).
+            </p>
+            <textarea
+              value={modalSignature}
+              onChange={(e) => setModalSignature(e.target.value)}
+              placeholder="In solidarity,&#10;Your Name&#10;Your Title"
+              rows={8}
+              className="w-full px-3 py-2 bg-white text-gray-900 border border-stone-200 rounded focus:outline-none focus:border-labor-red focus:ring-1 focus:ring-labor-red font-mono text-sm"
+              style={{ resize: 'vertical' }}
+              autoFocus
+            />
+            <div className="flex gap-3 mt-4">
+              <button
+                onClick={handleSaveSignature}
+                disabled={savingPreferences}
+                className="btn-primary"
+              >
+                {savingPreferences ? 'Saving...' : 'Save Signature'}
+              </button>
+              <button
+                onClick={() => setShowSignatureModal(false)}
+                disabled={savingPreferences}
+                className="btn-secondary"
+              >
+                Cancel
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
+
       <Link href="/admin" className="text-gray-500 hover:text-gray-900 text-sm mb-4 inline-block px-4 sm:px-0">
         ← Back to Admin
       </Link>
@@ -420,20 +481,22 @@ export default function EmailComposePage() {
               <label className="block text-sm font-medium text-gray-700 mb-2">
                 Default Signature / Sign-off
               </label>
-              <textarea
-                ref={signatureRef}
-                defaultValue={preferences.default_signature || ''}
-                placeholder="In solidarity,
-Your Name
-Your Title"
-                rows={4}
-                className="w-full px-3 py-2 bg-white text-gray-900 border border-stone-200 rounded focus:outline-none focus:border-labor-red focus:ring-1 focus:ring-labor-red font-mono text-sm"
-                style={{ resize: 'vertical', textAlign: 'left' }}
-                spellCheck={false}
-              />
-              <p className="text-xs text-gray-500 mt-1">
+              {preferences.default_signature ? (
+                <div className="mb-2 p-3 bg-stone-50 border border-stone-200 rounded text-sm text-gray-700 font-mono whitespace-pre-wrap">
+                  {preferences.default_signature}
+                </div>
+              ) : (
+                <p className="text-sm text-gray-500 mb-2">No signature set</p>
+              )}
+              <button
+                type="button"
+                onClick={handleOpenSignatureModal}
+                className="btn-secondary text-sm"
+              >
+                {preferences.default_signature ? 'Edit Signature' : 'Add Signature'}
+              </button>
+              <p className="text-xs text-gray-500 mt-2">
                 This signature will replace the default "In solidarity, Labor Party" when you select a template.
-                Use HTML for formatting (e.g., &lt;br&gt; for line breaks, &lt;strong&gt; for bold).
               </p>
             </div>
 
