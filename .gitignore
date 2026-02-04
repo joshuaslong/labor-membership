@@ -23,6 +23,9 @@ npm-debug.log*
 .idea/
 .vscode/
 
+# Git worktrees
+.worktrees/
+
 # Supabase temp
 supabase/.temp/
 
