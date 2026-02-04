@@ -5,7 +5,6 @@ import { createClient, createAdminClient } from '@/lib/supabase/server'
 export const dynamic = 'force-dynamic'
 
 export default async function AdminPage() {
-  // Verify admin access (defense in depth - middleware handles redirect)
   const authClient = await createClient()
   const { data: { user } } = await authClient.auth.getUser()
 
@@ -15,7 +14,6 @@ export default async function AdminPage() {
 
   const supabase = createAdminClient()
 
-  // Get current admin's role and chapter (user can have multiple admin records)
   const { data: adminRecords } = await supabase
     .from('admin_users')
     .select('id, role, chapter_id, chapters(name)')
@@ -25,7 +23,6 @@ export default async function AdminPage() {
     redirect('/dashboard')
   }
 
-  // Use highest privilege role for determining access
   const roleHierarchy = ['super_admin', 'national_admin', 'state_admin', 'county_admin', 'city_admin']
   const currentAdmin = adminRecords.reduce((highest, current) => {
     const currentIndex = roleHierarchy.indexOf(current.role)
@@ -33,8 +30,6 @@ export default async function AdminPage() {
     return currentIndex < highestIndex ? current : highest
   }, adminRecords[0])
 
-  // Get chapter IDs this admin can access
-  // super_admin and national_admin have access to all data
   let allowedChapterIds = null
   if (!['super_admin', 'national_admin'].includes(currentAdmin.role)) {
     const { data: descendants } = await supabase
@@ -42,11 +37,8 @@ export default async function AdminPage() {
     allowedChapterIds = descendants?.map(d => d.id) || []
   }
 
-  // Get member stats (filtered by chapter for non-super admins)
-  // Use member_chapters junction table for accurate counts
   let memberIds = []
   if (allowedChapterIds) {
-    // Get members in allowed chapters via member_chapters junction table
     const { data: memberChapterData } = await supabase
       .from('member_chapters')
       .select('member_id')
@@ -54,7 +46,6 @@ export default async function AdminPage() {
 
     memberIds = [...new Set(memberChapterData?.map(mc => mc.member_id) || [])]
 
-    // Also include members with legacy chapter_id that aren't in member_chapters
     const { data: legacyMembers } = await supabase
       .from('members')
       .select('id')
@@ -69,8 +60,7 @@ export default async function AdminPage() {
   if (allowedChapterIds && memberIds.length > 0) {
     membersQuery = membersQuery.in('id', memberIds)
   } else if (allowedChapterIds && memberIds.length === 0) {
-    // No members in allowed chapters
-    membersQuery = membersQuery.eq('id', '00000000-0000-0000-0000-000000000000') // Will return empty
+    membersQuery = membersQuery.eq('id', '00000000-0000-0000-0000-000000000000')
   }
   const { data: members } = await membersQuery
 
@@ -80,7 +70,6 @@ export default async function AdminPage() {
     return acc
   }, { total: 0 }) || { total: 0 }
 
-  // Get chapter counts by level (filtered for non-super admins)
   let chaptersQuery = supabase.from('chapters').select('id, level')
   if (allowedChapterIds) {
     chaptersQuery = chaptersQuery.in('id', allowedChapterIds)
@@ -93,10 +82,8 @@ export default async function AdminPage() {
     return acc
   }, { total: 0 }) || { total: 0 }
 
-  // Get payment totals (filtered by member's chapter for non-super admins)
   let totalRevenue = 0
   if (allowedChapterIds && memberIds.length > 0) {
-    // Use the memberIds from member_chapters junction table
     const { data: payments } = await supabase
       .from('payments')
       .select('amount_cents')
@@ -104,7 +91,6 @@ export default async function AdminPage() {
       .in('member_id', memberIds)
     totalRevenue = payments?.reduce((sum, p) => sum + p.amount_cents, 0) / 100 || 0
   } else if (!allowedChapterIds) {
-    // Super admin sees all payments
     const { data: payments } = await supabase
       .from('payments')
       .select('amount_cents')
@@ -112,7 +98,6 @@ export default async function AdminPage() {
     totalRevenue = payments?.reduce((sum, p) => sum + p.amount_cents, 0) / 100 || 0
   }
 
-  // Recent members (filtered by chapter for non-super admins)
   let recentMembersQuery = supabase
     .from('members')
     .select('id, first_name, last_name, email, status, joined_date')
@@ -126,130 +111,149 @@ export default async function AdminPage() {
 
   const isSuperAdmin = currentAdmin.role === 'super_admin'
   const hasFullDataAccess = ['super_admin', 'national_admin'].includes(currentAdmin.role)
-  // Admins who can manage other admins (not national_admin or city_admin)
   const canManageAdmins = ['super_admin', 'state_admin', 'county_admin'].includes(currentAdmin.role)
 
   return (
-    <div className="max-w-6xl mx-auto px-4 py-8">
-      <div className="mb-6 sm:mb-8">
-        <h1 className="text-2xl sm:text-3xl text-gray-900">Admin Dashboard</h1>
-        {!hasFullDataAccess && currentAdmin.chapters && (
-          <p className="text-gray-600 mt-1">
-            Managing: {currentAdmin.chapters.name} and sub-chapters
-          </p>
-        )}
-      </div>
-
-      {/* Stats grid */}
-      <div className="grid grid-cols-2 lg:grid-cols-4 gap-4 sm:gap-6 mb-6 sm:mb-8">
-        <div className="card p-4 sm:p-6">
-          <div className="text-xs sm:text-sm text-gray-500">Total Members</div>
-          <div className="text-2xl sm:text-3xl font-bold text-gray-900">{memberStats.total}</div>
-          <div className="text-xs sm:text-sm text-gray-500">{memberStats.active || 0} active</div>
-        </div>
-        <div className="card p-4 sm:p-6">
-          <div className="text-xs sm:text-sm text-gray-500">Pending</div>
-          <div className="text-2xl sm:text-3xl font-bold text-yellow-600">{memberStats.pending || 0}</div>
-          <div className="text-xs sm:text-sm text-gray-500">Awaiting review</div>
-        </div>
-        <div className="card p-4 sm:p-6">
-          <div className="text-xs sm:text-sm text-gray-500">Chapters</div>
-          <div className="text-2xl sm:text-3xl font-bold text-labor-red">{chapterStats.total}</div>
-          <div className="text-xs sm:text-sm text-gray-500 truncate">
-            {chapterStats.state || 0}s {chapterStats.county || 0}c {chapterStats.city || 0}ci
+    <div className="min-h-screen bg-stone-50">
+      {/* Header bar */}
+      <div className="border-b border-stone-200 bg-white">
+        <div className="max-w-7xl mx-auto px-4 sm:px-6 py-4">
+          <div className="flex items-baseline gap-3">
+            <h1 className="text-xl font-semibold text-gray-900 tracking-tight">Organizing Dashboard</h1>
+            {!hasFullDataAccess && currentAdmin.chapters && (
+              <span className="text-sm text-gray-500">
+                {currentAdmin.chapters.name}
+              </span>
+            )}
           </div>
-        </div>
-        <div className="card p-4 sm:p-6">
-          <div className="text-xs sm:text-sm text-gray-500">Total Revenue</div>
-          <div className="text-2xl sm:text-3xl font-bold text-green-600">${totalRevenue.toLocaleString()}</div>
-          <div className="text-xs sm:text-sm text-gray-500">From contributions</div>
         </div>
       </div>
 
-      <div className="grid md:grid-cols-2 gap-6 sm:gap-8">
-        {/* Recent Members */}
-        <div className="card">
-          <div className="flex justify-between items-center mb-4">
-            <h2 className="text-xl">Recent Members</h2>
-            <Link href="/members" className="text-labor-red text-sm hover:underline">View All</Link>
+      <div className="max-w-7xl mx-auto px-4 sm:px-6 py-6">
+        {/* Stats - dense, functional */}
+        <div className="grid grid-cols-2 lg:grid-cols-4 gap-3 mb-6">
+          <div className="bg-white border border-stone-200 rounded p-4">
+            <div className="text-xs uppercase tracking-wide text-gray-500 font-medium mb-1">Members</div>
+            <div className="text-2xl font-semibold text-gray-900 tabular-nums">{memberStats.total}</div>
+            <div className="text-xs text-gray-600 mt-0.5">{memberStats.active || 0} active</div>
           </div>
-          {recentMembers?.length > 0 ? (
-            <div className="space-y-3">
-              {recentMembers.map(member => (
-                <div key={member.id} className="flex justify-between items-center border-b pb-3 last:border-0">
-                  <div>
-                    <div className="font-medium">
-                      {member.first_name} {member.last_name}
-                    </div>
-                    <div className="text-sm text-gray-500">{member.email}</div>
-                  </div>
-                  <div className="text-sm text-gray-500">
-                    {new Date(member.joined_date).toLocaleDateString()}
-                  </div>
-                </div>
-              ))}
+          <div className="bg-white border border-stone-200 rounded p-4">
+            <div className="text-xs uppercase tracking-wide text-gray-500 font-medium mb-1">Pending</div>
+            <div className="text-2xl font-semibold text-amber-600 tabular-nums">{memberStats.pending || 0}</div>
+            <div className="text-xs text-gray-600 mt-0.5">Need review</div>
+          </div>
+          <div className="bg-white border border-stone-200 rounded p-4">
+            <div className="text-xs uppercase tracking-wide text-gray-500 font-medium mb-1">Chapters</div>
+            <div className="text-2xl font-semibold text-labor-red tabular-nums">{chapterStats.total}</div>
+            <div className="text-xs text-gray-600 mt-0.5 font-mono">
+              {chapterStats.state || 0}s {chapterStats.county || 0}c {chapterStats.city || 0}ci
             </div>
-          ) : (
-            <p className="text-gray-500">No members yet.</p>
-          )}
+          </div>
+          <div className="bg-white border border-stone-200 rounded p-4">
+            <div className="text-xs uppercase tracking-wide text-gray-500 font-medium mb-1">Revenue</div>
+            <div className="text-2xl font-semibold text-green-700 tabular-nums">${totalRevenue.toLocaleString()}</div>
+            <div className="text-xs text-gray-600 mt-0.5">Contributions</div>
+          </div>
         </div>
 
-        {/* Quick Actions */}
-        <div className="card">
-          <h2 className="text-xl mb-4">Quick Actions</h2>
-          <div className="space-y-3">
-            <Link href="/admin/import" className="block w-full btn-primary text-center">
-              Import Members
-            </Link>
-            {isSuperAdmin && (
-              <Link href="/admin/chapters/new" className="block w-full btn-secondary text-center">
-                Create New Chapter
+        <div className="grid lg:grid-cols-3 gap-6">
+          {/* Recent members - 2/3 width */}
+          <div className="lg:col-span-2 bg-white border border-stone-200 rounded">
+            <div className="px-4 py-3 border-b border-stone-200 flex items-center justify-between">
+              <h2 className="text-sm font-semibold text-gray-900 uppercase tracking-wide">Recent Members</h2>
+              <Link href="/members" className="text-xs text-labor-red hover:text-labor-red-600 font-medium">
+                View All →
               </Link>
-            )}
-            <Link href="/chapters" className="block w-full btn-secondary text-center">
-              {isSuperAdmin ? 'Manage Chapters' : 'View Chapters'}
-            </Link>
-            <Link href="/members" className="block w-full btn-secondary text-center">
-              {hasFullDataAccess ? 'View All Members' : 'View Members'}
-            </Link>
-            <Link href="/members?status=pending" className="block w-full btn-secondary text-center">
-              Review Pending Members
-            </Link>
-            <Link href="/admin/events" className="block w-full btn-secondary text-center">
-              Manage Events
-            </Link>
-            <Link href="/admin/groups" className="block w-full btn-secondary text-center">
-              Manage Groups
-            </Link>
-            <Link href="/admin/polls" className="block w-full btn-secondary text-center">
-              Manage Polls
-            </Link>
-            <Link href="/admin/email" className="block w-full btn-secondary text-center">
-              Send Email to Members
-            </Link>
-            {isSuperAdmin && (
-              <Link href="/admin/email-templates" className="block w-full btn-secondary text-center">
-                Email Templates
+            </div>
+            <div className="divide-y divide-stone-100">
+              {recentMembers?.length > 0 ? (
+                recentMembers.map(member => (
+                  <div key={member.id} className="px-4 py-3 flex items-center justify-between hover:bg-stone-50">
+                    <div className="min-w-0 flex-1">
+                      <div className="text-sm font-medium text-gray-900">
+                        {member.first_name} {member.last_name}
+                      </div>
+                      <div className="text-xs text-gray-500 truncate">{member.email}</div>
+                    </div>
+                    <div className="text-xs text-gray-500 tabular-nums ml-4">
+                      {new Date(member.joined_date).toLocaleDateString('en-US', { month: 'short', day: 'numeric' })}
+                    </div>
+                  </div>
+                ))
+              ) : (
+                <div className="px-4 py-8 text-center text-sm text-gray-500">No members yet</div>
+              )}
+            </div>
+          </div>
+
+          {/* Quick actions - dense, functional list */}
+          <div className="bg-white border border-stone-200 rounded">
+            <div className="px-4 py-3 border-b border-stone-200">
+              <h2 className="text-sm font-semibold text-gray-900 uppercase tracking-wide">Actions</h2>
+            </div>
+            <div className="p-2">
+              <Link
+                href="/admin/import"
+                className="flex items-center gap-2 px-3 py-2 rounded text-sm font-medium bg-labor-red text-white hover:bg-labor-red-600 transition-colors mb-1"
+              >
+                <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 4v16m8-8H4" />
+                </svg>
+                Import Members
               </Link>
-            )}
-            {hasFullDataAccess && (
-              <Link href="/admin/initiatives" className="block w-full btn-secondary text-center">
-                Manage Initiatives
-              </Link>
-            )}
-            <Link href="/admin/files" className="block w-full btn-secondary text-center">
-              File Manager
-            </Link>
-            {canManageAdmins && (
-              <Link href="/admin/admins" className="block w-full btn-secondary text-center">
-                Manage Administrators
-              </Link>
-            )}
-            {isSuperAdmin && (
-              <Link href="/admin/sync-payments" className="block w-full btn-secondary text-center">
-                Sync Stripe Payments
-              </Link>
-            )}
+
+              <div className="space-y-0.5 mt-2">
+                {isSuperAdmin && (
+                  <Link href="/admin/chapters/new" className="block px-3 py-1.5 text-sm text-gray-700 hover:bg-stone-50 rounded">
+                    Create Chapter
+                  </Link>
+                )}
+                <Link href="/chapters" className="block px-3 py-1.5 text-sm text-gray-700 hover:bg-stone-50 rounded">
+                  {isSuperAdmin ? 'Manage Chapters' : 'Chapters'}
+                </Link>
+                <Link href="/members" className="block px-3 py-1.5 text-sm text-gray-700 hover:bg-stone-50 rounded">
+                  {hasFullDataAccess ? 'All Members' : 'Members'}
+                </Link>
+                <Link href="/members?status=pending" className="block px-3 py-1.5 text-sm text-gray-700 hover:bg-stone-50 rounded">
+                  Pending Members
+                </Link>
+                <Link href="/admin/events" className="block px-3 py-1.5 text-sm text-gray-700 hover:bg-stone-50 rounded">
+                  Events
+                </Link>
+                <Link href="/admin/groups" className="block px-3 py-1.5 text-sm text-gray-700 hover:bg-stone-50 rounded">
+                  Groups
+                </Link>
+                <Link href="/admin/polls" className="block px-3 py-1.5 text-sm text-gray-700 hover:bg-stone-50 rounded">
+                  Polls
+                </Link>
+                <Link href="/admin/email" className="block px-3 py-1.5 text-sm text-gray-700 hover:bg-stone-50 rounded">
+                  Send Email
+                </Link>
+                {isSuperAdmin && (
+                  <Link href="/admin/email-templates" className="block px-3 py-1.5 text-sm text-gray-700 hover:bg-stone-50 rounded">
+                    Email Templates
+                  </Link>
+                )}
+                {hasFullDataAccess && (
+                  <Link href="/admin/initiatives" className="block px-3 py-1.5 text-sm text-gray-700 hover:bg-stone-50 rounded">
+                    Initiatives
+                  </Link>
+                )}
+                <Link href="/admin/files" className="block px-3 py-1.5 text-sm text-gray-700 hover:bg-stone-50 rounded">
+                  Files
+                </Link>
+                {canManageAdmins && (
+                  <Link href="/admin/admins" className="block px-3 py-1.5 text-sm text-gray-700 hover:bg-stone-50 rounded">
+                    Administrators
+                  </Link>
+                )}
+                {isSuperAdmin && (
+                  <Link href="/admin/sync-payments" className="block px-3 py-1.5 text-sm text-gray-700 hover:bg-stone-50 rounded">
+                    Sync Payments
+                  </Link>
+                )}
+              </div>
+            </div>
           </div>
         </div>
       </div>

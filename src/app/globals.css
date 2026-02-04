@@ -9,95 +9,82 @@
   }
 
   body {
-    @apply text-gray-900 bg-gray-50;
+    @apply text-gray-900 bg-stone-50;
     font-feature-settings: 'cv02', 'cv03', 'cv04', 'cv11';
   }
 
-  /* Lighter headings like Vercel */
   h1, h2, h3, h4, h5, h6 {
-    @apply font-medium tracking-tight;
+    @apply font-semibold tracking-tight;
   }
 
-  /* Tabular numbers for data */
   .tabular-nums {
     font-variant-numeric: tabular-nums;
   }
 }
 
 @layer components {
-  /* Primary button - bold, confident */
+  /* Primary action - labor red, purposeful */
   .btn-primary {
     @apply inline-flex items-center justify-center gap-2
            bg-labor-red text-white font-medium
-           px-4 py-2.5 rounded-md
-           transition-all duration-150
+           px-4 py-2 rounded
+           transition-colors duration-150
            hover:bg-labor-red-600
-           active:scale-[0.98]
-           disabled:opacity-50 disabled:cursor-not-allowed disabled:active:scale-100;
-    box-shadow: 0 1px 2px rgba(0, 0, 0, 0.05), inset 0 1px 0 rgba(255, 255, 255, 0.1);
-  }
-  
-  .btn-primary:hover:not(:disabled) {
-    box-shadow: 0 2px 4px rgba(0, 0, 0, 0.1), inset 0 1px 0 rgba(255, 255, 255, 0.1);
-  }
-
-  /* Secondary button - subtle, supportive */
-  .btn-secondary {
-    @apply inline-flex items-center justify-center gap-2
-           bg-white text-gray-700 font-medium
-           px-4 py-2.5 rounded-md
-           border border-gray-200
-           transition-all duration-150
-           hover:bg-gray-50 hover:border-gray-300
-           active:scale-[0.98]
            disabled:opacity-50 disabled:cursor-not-allowed;
   }
 
-  /* Ghost button - minimal presence */
+  /* Secondary button - borders-only, functional */
+  .btn-secondary {
+    @apply inline-flex items-center justify-center gap-2
+           bg-white text-gray-700 font-medium
+           px-4 py-2 rounded
+           border border-stone-200
+           transition-colors duration-150
+           hover:bg-stone-50 hover:border-stone-300
+           disabled:opacity-50 disabled:cursor-not-allowed;
+  }
+
+  /* Ghost button - minimal */
   .btn-ghost {
     @apply inline-flex items-center justify-center gap-2
            text-gray-600 font-medium
-           px-4 py-2.5 rounded-md
-           transition-all duration-150
-           hover:bg-gray-100 hover:text-gray-900
-           active:scale-[0.98];
+           px-4 py-2 rounded
+           transition-colors duration-150
+           hover:bg-stone-100 hover:text-gray-900;
   }
 
-  /* Input field - clean, focused */
+  /* Input - borders-only, functional */
   .input-field {
-    @apply w-full px-3 py-2.5
+    @apply w-full px-3 py-2
            bg-white text-gray-900
-           border border-gray-200 rounded-md
-           transition-all duration-150
+           border border-stone-200 rounded
+           transition-colors duration-150
            placeholder:text-gray-400
-           focus:outline-none focus:border-labor-red focus:ring-2 focus:ring-labor-red-100;
+           focus:outline-none focus:border-labor-red focus:ring-1 focus:ring-labor-red;
   }
 
   .input-field:hover:not(:focus) {
-    @apply border-gray-300;
+    @apply border-stone-300;
   }
 
-  /* Input with label */
   .input-label {
-    @apply block text-sm font-medium text-gray-700 mb-1.5;
+    @apply block text-sm font-medium text-gray-700 mb-1;
   }
 
-  /* Card - subtle elevation, defined boundaries */
+  /* Card - borders-only, subtle */
   .card {
-    @apply bg-white rounded-lg p-6;
-    box-shadow: 0 0 0 1px rgba(0, 0, 0, 0.05), 0 1px 3px rgba(0, 0, 0, 0.06);
+    @apply bg-white rounded border border-stone-200 p-6;
   }
 
   .card-hover {
     @apply card transition-all duration-150;
   }
-  
+
   .card-hover:hover {
-    box-shadow: 0 0 0 1px rgba(0, 0, 0, 0.08), 0 4px 8px rgba(0, 0, 0, 0.08);
-    transform: translateY(-1px);
+    @apply border-stone-300;
+    box-shadow: 0 1px 3px rgba(0, 0, 0, 0.05);
   }
 
-  /* Section header */
   .section-title {
     @apply text-2xl font-semibold text-gray-900 tracking-tight;
   }
@@ -106,7 +93,7 @@
     @apply text-base text-gray-500 mt-1;
   }
 
-  /* Badge - status indicators */
+  /* Badge - functional status indicators */
   .badge {
     @apply inline-flex items-center px-2 py-0.5 rounded text-xs font-medium;
   }
@@ -124,10 +111,9 @@
   }
 
   .badge-neutral {
-    @apply badge bg-gray-100 text-gray-600 border border-gray-200;
+    @apply badge bg-stone-100 text-gray-600 border border-stone-200;
   }
 
-  /* Link styles */
   .link {
     @apply text-labor-red hover:text-labor-red-600 transition-colors duration-150;
   }
@@ -136,36 +122,31 @@
     @apply text-gray-500 hover:text-gray-900 transition-colors duration-150;
   }
 
-  /* Divider */
   .divider {
-    @apply border-t border-gray-100;
+    @apply border-t border-stone-200;
   }
 
-  /* Page container */
   .page-container {
-    @apply max-w-6xl mx-auto px-6 py-8;
+    @apply max-w-7xl mx-auto px-6 py-8;
   }
 
-  /* Stat card for dashboards */
   .stat-card {
     @apply card;
   }
 
   /* Email Editor - React Quill Custom Styling */
   .email-editor-wrapper {
-    @apply border border-gray-200 rounded-lg overflow-hidden bg-white;
+    @apply border border-stone-200 rounded overflow-hidden bg-white;
   }
 
-  /* Mobile full-width editor */
   .email-editor-mobile .email-editor-wrapper {
-    @apply rounded-none sm:rounded-lg border-x-0 sm:border-x;
+    @apply rounded-none sm:rounded border-x-0 sm:border-x;
   }
 
   .email-editor-wrapper .ql-toolbar {
-    @apply border-0 border-b border-gray-200 bg-gray-50 p-2;
+    @apply border-0 border-b border-stone-200 bg-stone-50 p-2;
   }
 
-  /* Mobile toolbar: allow horizontal scroll and make it sticky */
   @media (max-width: 640px) {
     .email-editor-wrapper .ql-toolbar {
       @apply overflow-x-auto whitespace-nowrap p-1.5;
@@ -185,7 +166,6 @@
     font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, 'Helvetica Neue', Arial, sans-serif;
   }
 
-  /* Taller editor on mobile for more immersive experience */
   @media (max-width: 640px) {
     .email-editor-mobile .email-editor-wrapper .ql-editor {
       min-height: 50vh;
@@ -196,9 +176,8 @@
     @apply italic text-gray-400;
   }
 
-  /* Toolbar button styling */
   .email-editor-wrapper .ql-toolbar button {
-    @apply w-8 h-8 p-1 rounded hover:bg-gray-200 transition-colors;
+    @apply w-8 h-8 p-1 rounded hover:bg-stone-200 transition-colors;
   }
 
   .email-editor-wrapper .ql-toolbar button.ql-active {
@@ -221,31 +200,27 @@
     @apply fill-labor-red-700;
   }
 
-  /* Dropdown styling */
   .email-editor-wrapper .ql-toolbar select {
-    @apply border border-gray-200 rounded px-2 py-1 text-sm bg-white;
+    @apply border border-stone-200 rounded px-2 py-1 text-sm bg-white;
   }
 
   .email-editor-wrapper .ql-toolbar .ql-picker-label {
-    @apply border border-gray-200 rounded px-2 py-1 hover:bg-gray-100;
+    @apply border border-stone-200 rounded px-2 py-1 hover:bg-stone-100;
   }
 
   .email-editor-wrapper .ql-toolbar .ql-picker-label.ql-active {
     @apply bg-labor-red-100 border-labor-red-300;
   }
 
-  /* Focus state */
   .email-editor-wrapper:focus-within {
-    @apply ring-2 ring-labor-red-100 border-labor-red-300;
+    @apply ring-1 ring-labor-red border-labor-red;
   }
 
-  /* Custom insert variable button */
   .email-editor-wrapper .ql-insert-variable::after {
     content: '{$}';
     @apply font-mono font-bold;
   }
 
-  /* Image handling in editor */
   .email-editor-wrapper .ql-editor img {
     max-width: 100%;
     height: auto;
@@ -257,7 +232,6 @@
     outline-offset: 2px;
   }
 
-  /* Image alignment via classes */
   .email-editor-wrapper .ql-editor img.align-center {
     display: block !important;
     margin-left: auto !important;
@@ -276,7 +250,6 @@
     margin-right: auto !important;
   }
 
-  /* Also support alignment in preview */
   .prose img.align-center {
     display: block !important;
     margin-left: auto !important;
@@ -295,7 +268,6 @@
     margin-right: auto !important;
   }
 
-  /* Allow Quill inline styles to show in preview */
   .prose [style*="font-family"] {
     font-family: inherit;
   }
@@ -304,7 +276,7 @@
     font-family: inherit;
   }
 
-  /* Email preview - preserve inline styles from editor */
+  /* Email preview */
   .email-preview {
     font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, 'Helvetica Neue', Arial, sans-serif;
     line-height: 1.4;
@@ -314,20 +286,16 @@
     margin: 0 0 0.5em 0;
     line-height: 1.4;
   }
-  /* Centered paragraphs (for images) */
   .email-preview p[style*="text-align: center"] {
     text-align: center;
   }
   .email-preview img {
     height: auto !important;
-    /* Don't override inline width styles */
   }
-  /* Images with width attribute should respect it */
   .email-preview img[width="100"] { width: 100px; max-width: 100%; }
   .email-preview img[width="200"] { width: 200px; max-width: 100%; }
   .email-preview img[width="300"] { width: 300px; max-width: 100%; }
   .email-preview img[width="400"] { width: 400px; max-width: 100%; }
-  /* Image alignment - inline styles from editor are respected automatically */
   .email-preview img[style*="margin-left: auto"][style*="margin-right: auto"] {
     display: block;
   }
@@ -381,13 +349,13 @@
     margin: 0.25em 0;
   }
   .email-preview pre {
-    background: #f3f4f6;
+    background: #f5f5f4;
     padding: 1em;
     border-radius: 4px;
     overflow-x: auto;
   }
   .email-preview code {
-    background: #f3f4f6;
+    background: #f5f5f4;
     padding: 0.2em 0.4em;
     border-radius: 3px;
     font-family: ui-monospace, monospace;
@@ -424,24 +392,23 @@
     @apply text-sm text-gray-500 mt-1;
   }
 
-  /* Table styles */
+  /* Table - borders-only */
   .table-container {
-    @apply overflow-hidden rounded-lg border border-gray-200;
+    @apply overflow-hidden rounded border border-stone-200;
   }
 
   .table-header {
-    @apply bg-gray-50 text-left text-xs font-medium text-gray-500 uppercase tracking-wide;
+    @apply bg-stone-50 text-left text-xs font-medium text-gray-500 uppercase tracking-wide;
   }
 
   .table-row {
-    @apply border-t border-gray-100 hover:bg-gray-50 transition-colors;
+    @apply border-t border-stone-100 hover:bg-stone-50 transition-colors;
   }
 
   .table-cell {
     @apply px-4 py-3 text-sm text-gray-900;
   }
 
-  /* Empty state */
   .empty-state {
     @apply text-center py-12;
   }
