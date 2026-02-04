@@ -11,17 +11,17 @@ export default function EmailEditor({ value, onChange, placeholder = 'Enter your
   const editorRef = useRef(null)
   const internalValueRef = useRef(value)
   const skipNextUpdateRef = useRef(false)
-
-  // Track internal value to prevent re-render loops
-  useEffect(() => {
-    internalValueRef.current = value
-  }, [value])
+  const isUserTypingRef = useRef(false)
 
   // Custom onChange that preserves image attributes
   const handleChange = useCallback((content, delta, source, editor) => {
+    // Mark that user is typing to prevent external updates
+    isUserTypingRef.current = true
+
     // Skip if we're in the middle of a custom operation
     if (skipNextUpdateRef.current) {
       skipNextUpdateRef.current = false
+      isUserTypingRef.current = false
       return
     }
 
@@ -35,6 +35,11 @@ export default function EmailEditor({ value, onChange, placeholder = 'Enter your
       internalValueRef.current = content
       onChange(content)
     }
+
+    // Clear typing flag after a short delay
+    setTimeout(() => {
+      isUserTypingRef.current = false
+    }, 100)
   }, [onChange])
 
   // Set up image click handler for resize controls
@@ -274,11 +279,22 @@ export default function EmailEditor({ value, onChange, placeholder = 'Enter your
   ]
 
   // Track when value changes externally (e.g., template change or signature update)
-  // and sync it to the editor
+  // and force update only when not typing
   useEffect(() => {
     // Only update if the external value is different from our internal tracking
-    if (value !== internalValueRef.current) {
+    // AND the user is not currently typing
+    if (value !== internalValueRef.current && !isUserTypingRef.current) {
       internalValueRef.current = value
+      // Force Quill to update by accessing the editor instance
+      if (editorRef.current) {
+        const editor = editorRef.current.getEditor()
+        const currentSelection = editor.getSelection()
+        editor.clipboard.dangerouslyPasteHTML(value)
+        // Restore selection if it existed
+        if (currentSelection) {
+          editor.setSelection(currentSelection)
+        }
+      }
     }
   }, [value])
 
@@ -287,7 +303,7 @@ export default function EmailEditor({ value, onChange, placeholder = 'Enter your
       <ReactQuill
         ref={editorRef}
         theme="snow"
-        value={value}
+        defaultValue={value}
         onChange={handleChange}
         modules={modules}
         formats={formats}
