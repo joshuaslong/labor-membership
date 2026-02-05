@@ -10,7 +10,7 @@ function TopNav({ sections = [] }) {
 
   const isActive = (section) => {
     if (section === 'workspace') return pathname === '/workspace'
-    return pathname.startsWith(`/${section}`)
+    return pathname.startsWith(`/workspace/${section}`)
   }
 
   const sectionLabels = {
@@ -43,7 +43,7 @@ function TopNav({ sections = [] }) {
               {sections.map(section => (
                 <Link
                   key={section}
-                  href={section === 'workspace' ? '/workspace' : `/${section}`}
+                  href={section === 'workspace' ? '/workspace' : `/workspace/${section}`}
                   className={`text-sm font-medium focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-labor-red ${
                     isActive(section)
                       ? 'text-labor-red border-b-2 border-labor-red pb-1'

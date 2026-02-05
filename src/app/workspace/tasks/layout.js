@@ -14,20 +14,20 @@ export default async function TasksLayout({ children }) {
   const sections = ['workspace', ...getAccessibleSections(teamMember.roles)]
 
   const sidebarItems = [
-    { type: 'link', label: 'My Tasks', href: '/tasks?owner=me' },
-    { type: 'link', label: 'All Tasks', href: '/tasks' },
+    { type: 'link', label: 'My Tasks', href: '/workspace/tasks?owner=me' },
+    { type: 'link', label: 'All Tasks', href: '/workspace/tasks' },
     { type: 'header', label: 'By Status' },
-    { type: 'link', label: 'Not Started', href: '/tasks?status=NOT_STARTED' },
-    { type: 'link', label: 'In Progress', href: '/tasks?status=IN_PROGRESS' },
-    { type: 'link', label: 'Blocked', href: '/tasks?status=BLOCKED' },
-    { type: 'link', label: 'In Review', href: '/tasks?status=IN_REVIEW' },
-    { type: 'link', label: 'Done', href: '/tasks?status=DONE' },
+    { type: 'link', label: 'Not Started', href: '/workspace/tasks?status=NOT_STARTED' },
+    { type: 'link', label: 'In Progress', href: '/workspace/tasks?status=IN_PROGRESS' },
+    { type: 'link', label: 'Blocked', href: '/workspace/tasks?status=BLOCKED' },
+    { type: 'link', label: 'In Review', href: '/workspace/tasks?status=IN_REVIEW' },
+    { type: 'link', label: 'Done', href: '/workspace/tasks?status=DONE' },
     { type: 'header', label: 'By Priority' },
-    { type: 'link', label: 'P1 - Critical', href: '/tasks?priority=P1' },
-    { type: 'link', label: 'P2 - High', href: '/tasks?priority=P2' },
-    { type: 'link', label: 'P3 - Standard', href: '/tasks?priority=P3' },
+    { type: 'link', label: 'P1 - Critical', href: '/workspace/tasks?priority=P1' },
+    { type: 'link', label: 'P2 - High', href: '/workspace/tasks?priority=P2' },
+    { type: 'link', label: 'P3 - Standard', href: '/workspace/tasks?priority=P3' },
     { type: 'divider' },
-    { type: 'link', label: 'Create Task', href: '/tasks/new' }
+    { type: 'link', label: 'Create Task', href: '/workspace/tasks/new' }
   ]
 
   return (

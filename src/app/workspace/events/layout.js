@@ -4,26 +4,25 @@ import { getCurrentTeamMember, getAccessibleSections } from '@/lib/teamMember'
 import { redirect } from 'next/navigation'
 import { canAccessSection } from '@/lib/permissions'
 
-export default async function MembersLayout({ children }) {
+export default async function EventsLayout({ children }) {
   const teamMember = await getCurrentTeamMember()
 
-  if (!teamMember || !canAccessSection(teamMember.roles, 'members')) {
+  if (!teamMember || !canAccessSection(teamMember.roles, 'events')) {
     redirect('/workspace')
   }
 
   const sections = ['workspace', ...getAccessibleSections(teamMember.roles)]
 
   const sidebarItems = [
-    { type: 'link', label: 'All Members', href: '/members' },
-    { type: 'link', label: 'Pending Approval', href: '/members?status=pending' },
-    { type: 'header', label: 'By Segment' },
-    { type: 'link', label: 'Donors', href: '/members?segment=donor' },
-    { type: 'link', label: 'Volunteers', href: '/members?segment=volunteer' },
-    { type: 'link', label: 'Event Attendees', href: '/members?segment=event_attendee' },
-    { type: 'link', label: 'Organizers', href: '/members?segment=organizer' },
-    { type: 'link', label: 'New Members', href: '/members?segment=new_member' },
+    { type: 'link', label: 'All Events', href: '/workspace/events' },
+    { type: 'link', label: 'Upcoming', href: '/workspace/events?time=upcoming' },
+    { type: 'link', label: 'Past', href: '/workspace/events?time=past' },
+    { type: 'header', label: 'By Status' },
+    { type: 'link', label: 'Draft', href: '/workspace/events?status=draft' },
+    { type: 'link', label: 'Published', href: '/workspace/events?status=published' },
+    { type: 'link', label: 'Cancelled', href: '/workspace/events?status=cancelled' },
     { type: 'divider' },
-    { type: 'link', label: 'Import Members', href: '/members/import' }
+    { type: 'link', label: 'Create Event', href: '/workspace/events/new' }
   ]
 
   return (

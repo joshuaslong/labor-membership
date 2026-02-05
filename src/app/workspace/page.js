@@ -22,15 +22,15 @@ export default async function WorkspacePage() {
 
   const primaryAction = {
     label: 'Import Members',
-    href: '/members/import',
+    href: '/workspace/members/import',
     icon: 'M12 4v16m8-8H4'
   }
 
   const actions = [
-    { label: 'View Members', href: '/members' },
-    { label: 'Create Event', href: '/events/new' },
-    { label: 'Send Email', href: '/communicate' },
-    { label: 'View Tasks', href: '/tasks' }
+    { label: 'View Members', href: '/workspace/members' },
+    { label: 'Create Event', href: '/workspace/events/new' },
+    { label: 'Send Email', href: '/workspace/communicate' },
+    { label: 'View Tasks', href: '/workspace/tasks' }
   ]
 
   return (
