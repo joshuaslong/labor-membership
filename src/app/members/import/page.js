@@ -14,7 +14,6 @@ const CSV_COLUMNS = [
   ['Member Bio', 'Text'],
   ['Volunteering', 'true / false'],
   ['Mailing List', 'true / false'],
-  ['Volunteering Details', 'Text'],
   ['Donor', 'true / false'],
   ['Organizer', 'true / false'],
 ]
