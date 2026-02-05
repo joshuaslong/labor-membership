@@ -25,10 +25,13 @@ export default function ImportMembersPage() {
   const [results, setResults] = useState(null)
   const [error, setError] = useState(null)
   const [copied, setCopied] = useState(new Set())
+  const [justCopied, setJustCopied] = useState(null)
 
   const copyToClipboard = useCallback((text, key) => {
     navigator.clipboard.writeText(text)
     setCopied(prev => new Set(prev).add(key))
+    setJustCopied(key)
+    setTimeout(() => setJustCopied(prev => prev === key ? null : prev), 1500)
   }, [])
 
   const handleSubmit = async (e) => {
@@ -217,7 +220,9 @@ export default function ImportMembersPage() {
                     )}
                   </span>
                   <span className="text-xs font-mono text-gray-900 flex-1">{col}</span>
-                  <span className="text-xs text-gray-400">{hint}</span>
+                  <span className={`text-xs transition-colors ${justCopied === col ? 'text-green-600 font-medium' : 'text-gray-400'}`}>
+                    {justCopied === col ? 'Copied!' : hint}
+                  </span>
                 </button>
               ))}
             </div>
