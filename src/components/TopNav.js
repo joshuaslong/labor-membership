@@ -25,7 +25,7 @@ function TopNav({ sections = [] }) {
   }
 
   return (
-    <div className="border-b border-stone-200 bg-white">
+    <div className="border-b border-stone-200 bg-white sticky top-0 z-30">
       <div className="px-4 sm:px-6">
         <div className="flex items-center justify-between py-4">
           <div className="flex items-center gap-6">

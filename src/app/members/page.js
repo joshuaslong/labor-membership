@@ -2,7 +2,9 @@ import { createClient } from '@/lib/supabase/server'
 import { getCurrentTeamMember } from '@/lib/teamMember'
 import { getChapterScope } from '@/lib/permissions'
 import { redirect } from 'next/navigation'
+import Link from 'next/link'
 import SegmentBadge from '@/components/SegmentBadge'
+import MembersToolbar from '@/components/MembersToolbar'
 
 export default async function MembersPage({ searchParams: searchParamsPromise }) {
   const teamMember = await getCurrentTeamMember()
@@ -20,6 +22,7 @@ export default async function MembersPage({ searchParams: searchParamsPromise })
       first_name,
       last_name,
       email,
+      status,
       joined_date,
       chapter_id,
       chapters(name),
@@ -33,7 +36,12 @@ export default async function MembersPage({ searchParams: searchParamsPromise })
   if (scope && scope.chapterId) {
     query = query.eq('chapter_id', scope.chapterId)
   }
-  // Note: For now, ignore scope.includeDescendants - that requires RPC function
+
+  // Search by name or email
+  if (searchParams?.search) {
+    const term = `%${searchParams.search}%`
+    query = query.or(`first_name.ilike.${term},last_name.ilike.${term},email.ilike.${term}`)
+  }
 
   // Filter by segment if specified
   if (searchParams?.segment) {
@@ -73,10 +81,22 @@ export default async function MembersPage({ searchParams: searchParamsPromise })
       ? statusLabels[searchParams.status] || 'Members'
       : 'All Members'
 
+  const statusBadge = {
+    active: 'bg-green-50 text-green-700',
+    pending: 'bg-amber-50 text-amber-700',
+    lapsed: 'bg-orange-50 text-orange-700',
+    cancelled: 'bg-red-50 text-red-700',
+  }
+
   return (
     <div className="max-w-7xl mx-auto px-4 sm:px-6 py-6">
-      <div className="mb-6">
+      <div className="mb-4 flex items-center justify-between">
         <h1 className="text-sm font-semibold text-gray-900 uppercase tracking-wide">{pageTitle}</h1>
+        {members && <span className="text-xs text-gray-400 tabular-nums">{members.length} result{members.length !== 1 ? 's' : ''}</span>}
+      </div>
+
+      <div className="mb-4">
+        <MembersToolbar />
       </div>
 
       <div className="bg-white border border-stone-200 rounded overflow-hidden">
@@ -91,6 +111,7 @@ export default async function MembersPage({ searchParams: searchParamsPromise })
               <tr>
                 <th scope="col" className="px-4 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wide">Name</th>
                 <th scope="col" className="px-4 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wide">Email</th>
+                <th scope="col" className="px-4 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wide">Status</th>
                 <th scope="col" className="px-4 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wide">Segments</th>
                 <th scope="col" className="px-4 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wide">Chapter</th>
                 <th scope="col" className="px-4 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wide">Joined</th>
@@ -99,10 +120,17 @@ export default async function MembersPage({ searchParams: searchParamsPromise })
             <tbody className="divide-y divide-stone-100">
               {members.map(member => (
                 <tr key={member.id} className="hover:bg-stone-50">
-                  <td className="px-4 py-3 text-sm text-gray-900">
-                    {member.first_name} {member.last_name}
+                  <td className="px-4 py-3 text-sm">
+                    <Link href={`/members/${member.id}`} className="text-gray-900 hover:text-labor-red">
+                      {member.first_name} {member.last_name}
+                    </Link>
                   </td>
                   <td className="px-4 py-3 text-sm text-gray-600">{member.email}</td>
+                  <td className="px-4 py-3">
+                    <span className={`inline-flex items-center px-2 py-0.5 rounded text-xs font-medium ${statusBadge[member.status] || 'bg-gray-50 text-gray-700'}`}>
+                      {member.status}
+                    </span>
+                  </td>
                   <td className="px-4 py-3">
                     <div className="flex flex-wrap gap-1">
                       {member.member_segments?.map((seg) => (
