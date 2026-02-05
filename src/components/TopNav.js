@@ -1,18 +1,10 @@
 'use client'
 
 import Link from 'next/link'
+import Image from 'next/image'
 import { usePathname } from 'next/navigation'
 import PropTypes from 'prop-types'
 
-/**
- * TopNav component provides the main navigation bar for the application.
- * Displays navigation links for different sections and a logout option.
- *
- * @component
- * @param {Object} props - Component props
- * @param {string[]} props.sections - Array of section identifiers to display in navigation
- * @returns {JSX.Element} The rendered navigation bar
- */
 function TopNav({ sections = [] }) {
   const pathname = usePathname()
 
@@ -34,11 +26,18 @@ function TopNav({ sections = [] }) {
 
   return (
     <div className="border-b border-stone-200 bg-white">
-      <div className="max-w-7xl mx-auto px-4 sm:px-6">
+      <div className="px-4 sm:px-6">
         <div className="flex items-center justify-between py-4">
           <div className="flex items-center gap-6">
-            <Link href="/workspace" className="text-lg font-semibold text-gray-900">
-              Labor Party
+            <Link href="/workspace" className="flex-shrink-0">
+              <Image
+                src="/logo-workspace.png"
+                alt="Labor Party"
+                width={160}
+                height={32}
+                className="h-7 w-auto"
+                priority
+              />
             </Link>
             <nav aria-label="Main navigation" className="flex gap-4">
               {sections.map(section => (
@@ -57,7 +56,6 @@ function TopNav({ sections = [] }) {
             </nav>
           </div>
           <div>
-            {/* User menu placeholder */}
             <Link
               href="/api/auth/logout"
               className="text-sm text-gray-700 hover:text-gray-900"
