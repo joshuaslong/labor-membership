@@ -22,7 +22,7 @@ export default async function WorkspacePage() {
 
   const primaryAction = {
     label: 'Import Members',
-    href: '/admin/import',
+    href: '/members/import',
     icon: 'M12 4v16m8-8H4'
   }
 

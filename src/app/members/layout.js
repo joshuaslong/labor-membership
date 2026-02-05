@@ -23,7 +23,7 @@ export default async function MembersLayout({ children }) {
     { type: 'link', label: 'Organizers', href: '/members?segment=organizer' },
     { type: 'link', label: 'New Members', href: '/members?segment=new_member' },
     { type: 'divider' },
-    { type: 'link', label: 'Import Members', href: '/admin/import' }
+    { type: 'link', label: 'Import Members', href: '/members/import' }
   ]
 
   return (
