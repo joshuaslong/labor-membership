@@ -11,7 +11,7 @@ CREATE TABLE tasks (
   priority TEXT NOT NULL CHECK (priority IN ('P1', 'P2', 'P3')),
   status TEXT NOT NULL CHECK (status IN ('NOT_STARTED', 'IN_PROGRESS', 'BLOCKED', 'IN_REVIEW', 'DONE')) DEFAULT 'NOT_STARTED',
   dependencies UUID[] DEFAULT '{}', -- array of task IDs
-  references TEXT[] DEFAULT '{}', -- links or file names
+  "references" TEXT[] DEFAULT '{}', -- links or file names
   skill_type TEXT CHECK (skill_type IN ('WRITING', 'DESIGN', 'VIDEO', 'TECHNICAL', 'RESEARCH', 'COORDINATION')),
   notes TEXT, -- block reasons, feedback, context
   created_by UUID NOT NULL REFERENCES team_members(id) ON DELETE RESTRICT,
