@@ -336,8 +336,8 @@ export async function POST(request) {
 
 // GET endpoint to download a sample CSV template
 export async function GET() {
-  const template = `email\tCreatedAt\tLast Login\tFirst Name\tLast Name\tState\tZip Code\tPhone-Number\tMember Bio\tVolunteering\tMailing List\tVolunteering Details\tDonor\tOrganizer
-john@example.com\t2024-01-15\t2024-06-01\tJohn\tDoe\tPennsylvania\t15213\t5551234567\tUnion organizer for 10 years\ttrue\ttrue\tExperience with community outreach\tfalse\ttrue`
+  const template = `email,CreatedAt,Last Login,First Name,Last Name,State,Zip Code,Phone-Number,Member Bio,Volunteering,Mailing List,Volunteering Details,Donor,Organizer
+john@example.com,2024-01-15,2024-06-01,John,Doe,Pennsylvania,15213,5551234567,"Union organizer for 10 years",true,true,"Experience with community outreach",false,true`
 
   return new Response(template, {
     headers: {

@@ -1,12 +1,36 @@
 'use client'
 
-import { useState } from 'react'
+import { useState, useCallback } from 'react'
+
+const CSV_COLUMNS = [
+  ['email', 'Required'],
+  ['CreatedAt', 'Join date'],
+  ['Last Login', 'Date'],
+  ['First Name', 'Text'],
+  ['Last Name', 'Text'],
+  ['State', 'Name or code'],
+  ['Zip Code', '5-digit'],
+  ['Phone-Number', 'Any format'],
+  ['Member Bio', 'Text'],
+  ['Volunteering', 'true / false'],
+  ['Mailing List', 'true / false'],
+  ['Volunteering Details', 'Text'],
+  ['Donor', 'true / false'],
+  ['Organizer', 'true / false'],
+]
 
 export default function ImportMembersPage() {
   const [file, setFile] = useState(null)
   const [loading, setLoading] = useState(false)
   const [results, setResults] = useState(null)
   const [error, setError] = useState(null)
+  const [copied, setCopied] = useState(null)
+
+  const copyToClipboard = useCallback((text, key) => {
+    navigator.clipboard.writeText(text)
+    setCopied(key)
+    setTimeout(() => setCopied(null), 1500)
+  }, [])
 
   const handleSubmit = async (e) => {
     e.preventDefault()
@@ -165,33 +189,39 @@ export default function ImportMembersPage() {
           <div className="bg-white border border-stone-200 rounded">
             <div className="px-4 py-3 border-b border-stone-200 flex items-center justify-between">
               <h2 className="text-sm font-semibold text-gray-900">CSV Columns</h2>
-              <span className="text-xs text-gray-400">tab or comma</span>
+              <button
+                type="button"
+                onClick={() => copyToClipboard(CSV_COLUMNS.map(([col]) => col).join(','), 'all')}
+                className="text-xs text-gray-400 hover:text-gray-700 transition-colors"
+              >
+                {copied === 'all' ? 'Copied header row!' : 'Copy all'}
+              </button>
             </div>
-            <table className="w-full text-xs">
-              <tbody className="divide-y divide-stone-100">
-                {[
-                  ['email', 'Required'],
-                  ['CreatedAt', 'Join date'],
-                  ['Last Login', 'Date'],
-                  ['First Name', 'Text'],
-                  ['Last Name', 'Text'],
-                  ['State', 'Name or code'],
-                  ['Zip Code', '5-digit'],
-                  ['Phone-Number', 'Any format'],
-                  ['Member Bio', 'Text'],
-                  ['Volunteering', 'true / false'],
-                  ['Mailing List', 'true / false'],
-                  ['Volunteering Details', 'Text'],
-                  ['Donor', 'true / false'],
-                  ['Organizer', 'true / false'],
-                ].map(([col, hint]) => (
-                  <tr key={col}>
-                    <td className="px-4 py-1.5 font-mono text-gray-900">{col}</td>
-                    <td className="px-4 py-1.5 text-gray-400 text-right">{hint}</td>
-                  </tr>
-                ))}
-              </tbody>
-            </table>
+            <div className="divide-y divide-stone-100">
+              {CSV_COLUMNS.map(([col, hint]) => (
+                <button
+                  key={col}
+                  type="button"
+                  onClick={() => copyToClipboard(col, col)}
+                  className="w-full flex items-center gap-2 px-4 py-1.5 text-left hover:bg-stone-50 transition-colors group"
+                >
+                  <span className="w-3.5 h-3.5 flex-shrink-0 flex items-center justify-center">
+                    {copied === col ? (
+                      <svg className="w-3.5 h-3.5 text-green-500" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2.5}>
+                        <path strokeLinecap="round" strokeLinejoin="round" d="M5 13l4 4L19 7" />
+                      </svg>
+                    ) : (
+                      <svg className="w-3 h-3 text-gray-300 group-hover:text-gray-500 transition-colors" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2}>
+                        <rect x="9" y="9" width="13" height="13" rx="2" ry="2" />
+                        <path d="M5 15H4a2 2 0 01-2-2V4a2 2 0 012-2h9a2 2 0 012 2v1" />
+                      </svg>
+                    )}
+                  </span>
+                  <span className="text-xs font-mono text-gray-900 flex-1">{col}</span>
+                  <span className="text-xs text-gray-400">{hint}</span>
+                </button>
+              ))}
+            </div>
             <div className="px-4 py-3 border-t border-stone-200">
               <a
                 href="/api/admin/import-members"
