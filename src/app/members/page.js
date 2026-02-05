@@ -1,5 +1,6 @@
 import { createClient } from '@/lib/supabase/server'
 import { getCurrentTeamMember } from '@/lib/teamMember'
+import { getChapterScope } from '@/lib/permissions'
 import { redirect } from 'next/navigation'
 import SegmentBadge from '@/components/SegmentBadge'
 
@@ -25,6 +26,13 @@ export default async function MembersPage({ searchParams }) {
     .order('joined_date', { ascending: false })
     .limit(50)
 
+  // Apply chapter scope filtering
+  const scope = getChapterScope(teamMember.roles, teamMember.chapter_id)
+  if (scope && scope.chapterId) {
+    query = query.eq('chapter_id', scope.chapterId)
+  }
+  // Note: For now, ignore scope.includeDescendants - that requires RPC function
+
   // Filter by segment if specified
   if (searchParams?.segment) {
     query = query.filter('member_segments.segment', 'eq', searchParams.segment)
@@ -35,7 +43,13 @@ export default async function MembersPage({ searchParams }) {
     query = query.eq('status', searchParams.status)
   }
 
-  const { data: members } = await query
+  const { data: members, error } = await query
+
+  // Handle database errors
+  if (error) {
+    console.error('Error fetching members:', error)
+    throw new Error('Failed to load members')
+  }
 
   return (
     <div className="max-w-7xl mx-auto px-4 sm:px-6 py-6">
@@ -44,38 +58,45 @@ export default async function MembersPage({ searchParams }) {
       </div>
 
       <div className="bg-white border border-stone-200 rounded overflow-hidden">
-        <table className="min-w-full divide-y divide-stone-200">
-          <thead className="bg-stone-50">
-            <tr>
-              <th className="px-4 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wide">Name</th>
-              <th className="px-4 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wide">Email</th>
-              <th className="px-4 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wide">Segments</th>
-              <th className="px-4 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wide">Chapter</th>
-              <th className="px-4 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wide">Joined</th>
-            </tr>
-          </thead>
-          <tbody className="divide-y divide-stone-100">
-            {members?.map(member => (
-              <tr key={member.id} className="hover:bg-stone-50">
-                <td className="px-4 py-3 text-sm text-gray-900">
-                  {member.first_name} {member.last_name}
-                </td>
-                <td className="px-4 py-3 text-sm text-gray-600">{member.email}</td>
-                <td className="px-4 py-3">
-                  <div className="flex flex-wrap gap-1">
-                    {member.member_segments?.map((seg) => (
-                      <SegmentBadge key={seg.segment} segment={seg.segment} />
-                    ))}
-                  </div>
-                </td>
-                <td className="px-4 py-3 text-sm text-gray-600">{member.chapters?.name}</td>
-                <td className="px-4 py-3 text-sm text-gray-600 tabular-nums">
-                  {new Date(member.joined_date).toLocaleDateString()}
-                </td>
+        {!members || members.length === 0 ? (
+          <div className="px-4 py-12 text-center text-gray-500">
+            <p>No members found.</p>
+          </div>
+        ) : (
+          <table className="min-w-full divide-y divide-stone-200" aria-label="Members list">
+            <caption className="sr-only">List of members with their details</caption>
+            <thead className="bg-stone-50">
+              <tr>
+                <th scope="col" className="px-4 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wide">Name</th>
+                <th scope="col" className="px-4 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wide">Email</th>
+                <th scope="col" className="px-4 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wide">Segments</th>
+                <th scope="col" className="px-4 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wide">Chapter</th>
+                <th scope="col" className="px-4 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wide">Joined</th>
               </tr>
-            ))}
-          </tbody>
-        </table>
+            </thead>
+            <tbody className="divide-y divide-stone-100">
+              {members.map(member => (
+                <tr key={member.id} className="hover:bg-stone-50">
+                  <td className="px-4 py-3 text-sm text-gray-900">
+                    {member.first_name} {member.last_name}
+                  </td>
+                  <td className="px-4 py-3 text-sm text-gray-600">{member.email}</td>
+                  <td className="px-4 py-3">
+                    <div className="flex flex-wrap gap-1">
+                      {member.member_segments?.map((seg) => (
+                        <SegmentBadge key={seg.segment} segment={seg.segment} />
+                      ))}
+                    </div>
+                  </td>
+                  <td className="px-4 py-3 text-sm text-gray-600">{member.chapters?.name}</td>
+                  <td className="px-4 py-3 text-sm text-gray-600 tabular-nums">
+                    {new Date(member.joined_date).toLocaleDateString()}
+                  </td>
+                </tr>
+              ))}
+            </tbody>
+          </table>
+        )}
       </div>
     </div>
   )
