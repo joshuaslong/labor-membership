@@ -6,6 +6,8 @@ export default async function TasksPage({ searchParams }) {
   const teamMember = await getCurrentTeamMember()
   if (!teamMember) redirect('/login')
 
+  // Using createClient() instead of createAdminClient() as this is a server component
+  // accessing data scoped to the current user's session
   const supabase = await createClient()
 
   // Build query
@@ -39,7 +41,11 @@ export default async function TasksPage({ searchParams }) {
     query = query.eq('priority', searchParams.priority)
   }
 
-  const { data: tasks } = await query
+  const { data: tasks, error } = await query
+
+  if (error) {
+    throw new Error(`Failed to fetch tasks: ${error.message}`)
+  }
 
   const priorityColors = {
     P1: 'text-red-700 bg-red-50 border-red-200',
@@ -68,15 +74,16 @@ export default async function TasksPage({ searchParams }) {
       </div>
 
       <div className="bg-white border border-stone-200 rounded overflow-hidden">
-        <table className="min-w-full divide-y divide-stone-200">
+        <table className="min-w-full divide-y divide-stone-200" aria-label="Tasks list">
+          <caption className="sr-only">List of tasks</caption>
           <thead className="bg-stone-50">
             <tr>
-              <th className="px-4 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wide">Task</th>
-              <th className="px-4 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wide">Owner</th>
-              <th className="px-4 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wide">Status</th>
-              <th className="px-4 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wide">Priority</th>
-              <th className="px-4 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wide">Deadline</th>
-              <th className="px-4 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wide">Est. Time</th>
+              <th scope="col" className="px-4 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wide">Task</th>
+              <th scope="col" className="px-4 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wide">Owner</th>
+              <th scope="col" className="px-4 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wide">Status</th>
+              <th scope="col" className="px-4 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wide">Priority</th>
+              <th scope="col" className="px-4 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wide">Deadline</th>
+              <th scope="col" className="px-4 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wide">Est. Time</th>
             </tr>
           </thead>
           <tbody className="divide-y divide-stone-100">
@@ -103,7 +110,7 @@ export default async function TasksPage({ searchParams }) {
                   {new Date(task.deadline).toLocaleDateString()}
                 </td>
                 <td className="px-4 py-3 text-sm text-gray-600 tabular-nums">
-                  {Math.floor(task.time_estimate_min / 60)}h {task.time_estimate_min % 60}m
+                  {task.time_estimate_min ? `${Math.floor(task.time_estimate_min / 60)}h ${task.time_estimate_min % 60}m` : 'N/A'}
                 </td>
               </tr>
             ))}
