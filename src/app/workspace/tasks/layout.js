@@ -1,6 +1,5 @@
 import ContextualSidebar from '@/components/ContextualSidebar'
-import TopNav from '@/components/TopNav'
-import { getCurrentTeamMember, getAccessibleSections } from '@/lib/teamMember'
+import { getCurrentTeamMember } from '@/lib/teamMember'
 import { redirect } from 'next/navigation'
 import { canAccessSection } from '@/lib/permissions'
 
@@ -10,8 +9,6 @@ export default async function TasksLayout({ children }) {
   if (!teamMember || !canAccessSection(teamMember.roles, 'tasks')) {
     redirect('/workspace')
   }
-
-  const sections = ['workspace', ...getAccessibleSections(teamMember.roles)]
 
   const sidebarItems = [
     { type: 'link', label: 'My Tasks', href: '/workspace/tasks?owner=me' },
@@ -31,14 +28,11 @@ export default async function TasksLayout({ children }) {
   ]
 
   return (
-    <div className="min-h-screen bg-stone-50">
-      <TopNav sections={sections} />
-      <div className="flex">
-        <ContextualSidebar items={sidebarItems} />
-        <main className="flex-1 min-h-[calc(100vh-61px)] overflow-y-auto">
-          {children}
-        </main>
-      </div>
+    <div className="flex">
+      <ContextualSidebar items={sidebarItems} />
+      <main className="flex-1 min-h-[calc(100vh-61px)] overflow-y-auto">
+        {children}
+      </main>
     </div>
   )
 }
