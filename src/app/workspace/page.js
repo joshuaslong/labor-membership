@@ -1,15 +1,7 @@
-import { getCurrentTeamMember } from '@/lib/teamMember'
-import { redirect } from 'next/navigation'
 import StatCard from '@/components/StatCard'
 import QuickActions from '@/components/QuickActions'
 
 export default async function WorkspacePage() {
-  const teamMember = await getCurrentTeamMember()
-
-  if (!teamMember) {
-    redirect('/login')
-  }
-
   // Placeholder stats - will implement role-specific logic later
   const stats = [
     { label: 'Members', value: '0', subtext: 'Loading...' },
@@ -41,8 +33,8 @@ export default async function WorkspacePage() {
         {/* Stats and recent activity - 2/3 width */}
         <div className="lg:col-span-2">
           <div className="grid grid-cols-2 gap-3 mb-6">
-            {stats.map((stat, index) => (
-              <StatCard key={index} {...stat} />
+            {stats.map((stat) => (
+              <StatCard key={stat.label} {...stat} />
             ))}
           </div>
 
