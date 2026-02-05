@@ -24,12 +24,11 @@ export default function ImportMembersPage() {
   const [loading, setLoading] = useState(false)
   const [results, setResults] = useState(null)
   const [error, setError] = useState(null)
-  const [copied, setCopied] = useState(null)
+  const [copied, setCopied] = useState(new Set())
 
   const copyToClipboard = useCallback((text, key) => {
     navigator.clipboard.writeText(text)
-    setCopied(key)
-    setTimeout(() => setCopied(null), 1500)
+    setCopied(prev => new Set(prev).add(key))
   }, [])
 
   const handleSubmit = async (e) => {
@@ -194,7 +193,7 @@ export default function ImportMembersPage() {
                 onClick={() => copyToClipboard(CSV_COLUMNS.map(([col]) => col).join(','), 'all')}
                 className="text-xs text-gray-400 hover:text-gray-700 transition-colors"
               >
-                {copied === 'all' ? 'Copied header row!' : 'Copy all'}
+                {copied.has('all') ? 'Copied!' : 'Copy all'}
               </button>
             </div>
             <div className="divide-y divide-stone-100">
@@ -206,7 +205,7 @@ export default function ImportMembersPage() {
                   className="w-full flex items-center gap-2 px-4 py-1.5 text-left hover:bg-stone-50 transition-colors group"
                 >
                   <span className="w-3.5 h-3.5 flex-shrink-0 flex items-center justify-center">
-                    {copied === col ? (
+                    {copied.has(col) ? (
                       <svg className="w-3.5 h-3.5 text-green-500" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2.5}>
                         <path strokeLinecap="round" strokeLinejoin="round" d="M5 13l4 4L19 7" />
                       </svg>
