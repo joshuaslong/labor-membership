@@ -163,19 +163,39 @@ export default function ImportMembersPage() {
         <div className="space-y-4">
           {/* CSV Format */}
           <div className="bg-white border border-stone-200 rounded">
-            <div className="px-4 py-3 border-b border-stone-200">
-              <h2 className="text-sm font-semibold text-gray-900">CSV Format</h2>
+            <div className="px-4 py-3 border-b border-stone-200 flex items-center justify-between">
+              <h2 className="text-sm font-semibold text-gray-900">CSV Columns</h2>
+              <span className="text-xs text-gray-400">tab or comma</span>
             </div>
-            <div className="p-4">
-              <p className="text-xs text-gray-600 mb-3">Tab or comma-delimited with columns:</p>
-              <div className="bg-stone-50 border border-stone-200 rounded p-2">
-                <code className="text-xs text-gray-700 leading-relaxed break-all">
-                  email, CreatedAt, Last Login, First Name, Last Name, State, Zip Code, Phone-Number, Member Bio, Volunteering, Mailing List, Volunteering Details, Donor, Organizer
-                </code>
-              </div>
+            <table className="w-full text-xs">
+              <tbody className="divide-y divide-stone-100">
+                {[
+                  ['email', 'Required'],
+                  ['CreatedAt', 'Join date'],
+                  ['Last Login', 'Date'],
+                  ['First Name', 'Text'],
+                  ['Last Name', 'Text'],
+                  ['State', 'Name or code'],
+                  ['Zip Code', '5-digit'],
+                  ['Phone-Number', 'Any format'],
+                  ['Member Bio', 'Text'],
+                  ['Volunteering', 'true / false'],
+                  ['Mailing List', 'true / false'],
+                  ['Volunteering Details', 'Text'],
+                  ['Donor', 'true / false'],
+                  ['Organizer', 'true / false'],
+                ].map(([col, hint]) => (
+                  <tr key={col}>
+                    <td className="px-4 py-1.5 font-mono text-gray-900">{col}</td>
+                    <td className="px-4 py-1.5 text-gray-400 text-right">{hint}</td>
+                  </tr>
+                ))}
+              </tbody>
+            </table>
+            <div className="px-4 py-3 border-t border-stone-200">
               <a
                 href="/api/admin/import-members"
-                className="inline-flex items-center gap-1 text-xs text-labor-red hover:underline mt-3"
+                className="inline-flex items-center gap-1 text-xs text-labor-red hover:underline"
               >
                 Download template
                 <svg className="w-3 h-3" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2}>
