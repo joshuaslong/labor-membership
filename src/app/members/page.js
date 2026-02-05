@@ -6,6 +6,8 @@ import Link from 'next/link'
 import SegmentBadge from '@/components/SegmentBadge'
 import MembersToolbar from '@/components/MembersToolbar'
 
+const PAGE_SIZE = 50
+
 export default async function MembersPage({ searchParams: searchParamsPromise }) {
   const teamMember = await getCurrentTeamMember()
   if (!teamMember) redirect('/login')
@@ -13,8 +15,37 @@ export default async function MembersPage({ searchParams: searchParamsPromise })
   const searchParams = await searchParamsPromise
 
   const supabase = await createClient()
+  const page = Math.max(1, parseInt(searchParams?.page) || 1)
+  const from = (page - 1) * PAGE_SIZE
+  const to = from + PAGE_SIZE - 1
 
-  // Build query with filters
+  // Build base query (shared between count and data)
+  function applyFilters(q) {
+    const scope = getChapterScope(teamMember.roles, teamMember.chapter_id)
+    if (scope && scope.chapterId) {
+      q = q.eq('chapter_id', scope.chapterId)
+    }
+    if (searchParams?.search) {
+      const term = `%${searchParams.search}%`
+      q = q.or(`first_name.ilike.${term},last_name.ilike.${term},email.ilike.${term}`)
+    }
+    if (searchParams?.segment) {
+      q = q.filter('member_segments.segment', 'eq', searchParams.segment)
+    }
+    if (searchParams?.status) {
+      q = q.eq('status', searchParams.status)
+    }
+    return q
+  }
+
+  // Get total count
+  let countQuery = supabase
+    .from('members')
+    .select('id, member_segments(segment)', { count: 'exact', head: true })
+  countQuery = applyFilters(countQuery)
+  const { count: totalCount } = await countQuery
+
+  // Get page of data
   let query = supabase
     .from('members')
     .select(`
@@ -29,33 +60,12 @@ export default async function MembersPage({ searchParams: searchParamsPromise })
       member_segments(segment, auto_applied)
     `)
     .order('joined_date', { ascending: false })
-    .limit(50)
+    .range(from, to)
 
-  // Apply chapter scope filtering
-  const scope = getChapterScope(teamMember.roles, teamMember.chapter_id)
-  if (scope && scope.chapterId) {
-    query = query.eq('chapter_id', scope.chapterId)
-  }
-
-  // Search by name or email
-  if (searchParams?.search) {
-    const term = `%${searchParams.search}%`
-    query = query.or(`first_name.ilike.${term},last_name.ilike.${term},email.ilike.${term}`)
-  }
-
-  // Filter by segment if specified
-  if (searchParams?.segment) {
-    query = query.filter('member_segments.segment', 'eq', searchParams.segment)
-  }
-
-  // Filter by status if specified
-  if (searchParams?.status) {
-    query = query.eq('status', searchParams.status)
-  }
+  query = applyFilters(query)
 
   const { data: members, error } = await query
 
-  // Handle database errors
   if (error) {
     console.error('Error fetching members:', error)
     throw new Error('Failed to load members')
@@ -88,11 +98,30 @@ export default async function MembersPage({ searchParams: searchParamsPromise })
     cancelled: 'bg-red-50 text-red-700',
   }
 
+  const totalPages = Math.ceil((totalCount || 0) / PAGE_SIZE)
+  const hasNext = page < totalPages
+  const hasPrev = page > 1
+
+  // Build pagination URL preserving existing params
+  function pageUrl(p) {
+    const params = new URLSearchParams()
+    if (searchParams?.search) params.set('search', searchParams.search)
+    if (searchParams?.segment) params.set('segment', searchParams.segment)
+    if (searchParams?.status) params.set('status', searchParams.status)
+    if (p > 1) params.set('page', String(p))
+    const qs = params.toString()
+    return qs ? `/members?${qs}` : '/members'
+  }
+
   return (
     <div className="max-w-7xl mx-auto px-4 sm:px-6 py-6">
       <div className="mb-4 flex items-center justify-between">
         <h1 className="text-sm font-semibold text-gray-900 uppercase tracking-wide">{pageTitle}</h1>
-        {members && <span className="text-xs text-gray-400 tabular-nums">{members.length} result{members.length !== 1 ? 's' : ''}</span>}
+        {totalCount != null && (
+          <span className="text-xs text-gray-400 tabular-nums">
+            {totalCount} member{totalCount !== 1 ? 's' : ''}
+          </span>
+        )}
       </div>
 
       <div className="mb-4">
@@ -148,6 +177,44 @@ export default async function MembersPage({ searchParams: searchParamsPromise })
           </table>
         )}
       </div>
+
+      {/* Pagination */}
+      {totalPages > 1 && (
+        <div className="mt-4 flex items-center justify-between">
+          <div className="text-xs text-gray-500 tabular-nums">
+            {from + 1}–{Math.min(from + PAGE_SIZE, totalCount)} of {totalCount}
+          </div>
+          <div className="flex items-center gap-2">
+            {hasPrev ? (
+              <Link
+                href={pageUrl(page - 1)}
+                className="px-3 py-1.5 text-sm border border-stone-200 rounded bg-white text-gray-700 hover:bg-stone-50"
+              >
+                Previous
+              </Link>
+            ) : (
+              <span className="px-3 py-1.5 text-sm border border-stone-100 rounded bg-stone-50 text-gray-300">
+                Previous
+              </span>
+            )}
+            <span className="text-xs text-gray-500 tabular-nums">
+              Page {page} of {totalPages}
+            </span>
+            {hasNext ? (
+              <Link
+                href={pageUrl(page + 1)}
+                className="px-3 py-1.5 text-sm border border-stone-200 rounded bg-white text-gray-700 hover:bg-stone-50"
+              >
+                Next
+              </Link>
+            ) : (
+              <span className="px-3 py-1.5 text-sm border border-stone-100 rounded bg-stone-50 text-gray-300">
+                Next
+              </span>
+            )}
+          </div>
+        </div>
+      )}
     </div>
   )
 }
