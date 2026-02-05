@@ -1,6 +1,7 @@
 import './globals.css'
 import { Geist, Geist_Mono } from 'next/font/google'
 import Navigation from '@/components/Navigation'
+import NavigationWrapper from '@/components/NavigationWrapper'
 
 const geistSans = Geist({
   subsets: ['latin'],
@@ -24,7 +25,9 @@ export default function RootLayout({ children }) {
   return (
     <html lang="en" className={`${geistSans.variable} ${geistMono.variable}`}>
       <body className="min-h-screen bg-gray-50 font-sans antialiased">
-        <Navigation />
+        <NavigationWrapper>
+          <Navigation />
+        </NavigationWrapper>
         <main>{children}</main>
       </body>
     </html>

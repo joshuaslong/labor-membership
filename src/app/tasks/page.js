@@ -2,12 +2,12 @@ import { createClient } from '@/lib/supabase/server'
 import { getCurrentTeamMember } from '@/lib/teamMember'
 import { redirect } from 'next/navigation'
 
-export default async function TasksPage({ searchParams }) {
+export default async function TasksPage({ searchParams: searchParamsPromise }) {
   const teamMember = await getCurrentTeamMember()
   if (!teamMember) redirect('/login')
 
-  // Using createClient() instead of createAdminClient() as this is a server component
-  // accessing data scoped to the current user's session
+  const searchParams = await searchParamsPromise
+
   const supabase = await createClient()
 
   // Build query

@@ -4,9 +4,11 @@ import { getChapterScope } from '@/lib/permissions'
 import { redirect } from 'next/navigation'
 import SegmentBadge from '@/components/SegmentBadge'
 
-export default async function MembersPage({ searchParams }) {
+export default async function MembersPage({ searchParams: searchParamsPromise }) {
   const teamMember = await getCurrentTeamMember()
   if (!teamMember) redirect('/login')
+
+  const searchParams = await searchParamsPromise
 
   const supabase = await createClient()
 
