@@ -1,7 +1,7 @@
 'use client'
 
 import Link from 'next/link'
-import { usePathname } from 'next/navigation'
+import { usePathname, useSearchParams } from 'next/navigation'
 import PropTypes from 'prop-types'
 
 /**
@@ -25,13 +25,18 @@ import PropTypes from 'prop-types'
  */
 function ContextualSidebar({ items = [] }) {
   const pathname = usePathname()
+  const searchParams = useSearchParams()
 
   // Defensive validation: ensure items is an array
   if (!Array.isArray(items)) {
     return null
   }
 
-  const isActive = (href) => pathname === href
+  // Build current full path including query params for comparison
+  const currentSearch = searchParams.toString()
+  const currentPath = currentSearch ? `${pathname}?${currentSearch}` : pathname
+
+  const isActive = (href) => currentPath === href
 
   return (
     <nav className="w-60 bg-white border-r border-stone-200 min-h-screen" aria-label="Section navigation">

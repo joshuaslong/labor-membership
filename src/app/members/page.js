@@ -53,10 +53,30 @@ export default async function MembersPage({ searchParams: searchParamsPromise })
     throw new Error('Failed to load members')
   }
 
+  // Contextual page title
+  const segmentLabels = {
+    donor: 'Donors',
+    volunteer: 'Volunteers',
+    event_attendee: 'Event Attendees',
+    organizer: 'Organizers',
+    new_member: 'New Members',
+  }
+  const statusLabels = {
+    pending: 'Pending Approval',
+    active: 'Active Members',
+    lapsed: 'Lapsed Members',
+    cancelled: 'Cancelled Members',
+  }
+  const pageTitle = searchParams?.segment
+    ? segmentLabels[searchParams.segment] || 'Members'
+    : searchParams?.status
+      ? statusLabels[searchParams.status] || 'Members'
+      : 'All Members'
+
   return (
     <div className="max-w-7xl mx-auto px-4 sm:px-6 py-6">
       <div className="mb-6">
-        <h1 className="text-sm font-semibold text-gray-900 uppercase tracking-wide">Members</h1>
+        <h1 className="text-sm font-semibold text-gray-900 uppercase tracking-wide">{pageTitle}</h1>
       </div>
 
       <div className="bg-white border border-stone-200 rounded overflow-hidden">
