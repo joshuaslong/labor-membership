@@ -19,7 +19,7 @@ export default async function MembersPage({ searchParams: searchParamsPromise })
   const from = (page - 1) * PAGE_SIZE
   const to = from + PAGE_SIZE - 1
 
-  // Build base query (shared between count and data)
+  // Apply shared filters (chapter scope, search, status)
   function applyFilters(q) {
     const scope = getChapterScope(teamMember.roles, teamMember.chapter_id)
     if (scope && scope.chapterId) {
@@ -38,10 +38,10 @@ export default async function MembersPage({ searchParams: searchParamsPromise })
     return q
   }
 
-  // Get total count
-  let countQuery = supabase
-    .from('members')
-    .select('id, member_segments(segment)', { count: 'exact', head: true })
+  // Get total count — only join member_segments when segment filter is active
+  let countQuery = searchParams?.segment
+    ? supabase.from('members').select('id, member_segments(segment)', { count: 'exact', head: true })
+    : supabase.from('members').select('id', { count: 'exact', head: true })
   countQuery = applyFilters(countQuery)
   const { count: totalCount } = await countQuery
 

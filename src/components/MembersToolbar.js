@@ -16,6 +16,8 @@ export default function MembersToolbar() {
 
   const updateParams = useCallback((updates) => {
     const params = new URLSearchParams(searchParams.toString())
+    // Reset to page 1 when any filter changes
+    params.delete('page')
     Object.entries(updates).forEach(([key, value]) => {
       if (value) {
         params.set(key, value)

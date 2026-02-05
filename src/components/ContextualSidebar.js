@@ -39,7 +39,7 @@ function ContextualSidebar({ items = [] }) {
   const isActive = (href) => currentPath === href
 
   return (
-    <nav className="w-60 bg-white border-r border-stone-200 sticky top-[65px] h-[calc(100vh-65px)] overflow-y-auto flex-shrink-0" aria-label="Section navigation">
+    <nav className="w-60 bg-white border-r border-stone-200 sticky top-[61px] h-[calc(100vh-61px)] overflow-y-auto flex-shrink-0" aria-label="Section navigation">
       <div className="p-4 space-y-1">
         {items.map((item, index) => {
           // Defensive validation: ensure item exists
