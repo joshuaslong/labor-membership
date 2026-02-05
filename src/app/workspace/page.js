@@ -1,13 +1,23 @@
+import { redirect } from 'next/navigation'
 import StatCard from '@/components/StatCard'
 import QuickActions from '@/components/QuickActions'
+import { getCurrentTeamMember } from '@/lib/teamMember'
+import { getWorkspaceStats } from '@/lib/workspaceStats'
 
 export default async function WorkspacePage() {
-  // Placeholder stats - will implement role-specific logic later
+  const teamMember = await getCurrentTeamMember()
+
+  if (!teamMember) {
+    redirect('/login')
+  }
+
+  const statsData = await getWorkspaceStats(teamMember)
+
   const stats = [
-    { label: 'Members', value: '0', subtext: 'Loading...' },
-    { label: 'Pending', value: '0', subtext: 'Loading...' },
-    { label: 'Events', value: '0', subtext: 'Loading...' },
-    { label: 'Tasks', value: '0', subtext: 'Loading...' }
+    { label: 'Members', value: statsData.members, subtext: `${statsData.pending} pending` },
+    { label: 'Pending', value: statsData.pending, subtext: 'Need review', valueColor: 'text-amber-600' },
+    { label: 'Events', value: statsData.events, subtext: 'This month' },
+    { label: 'Tasks', value: statsData.tasks, subtext: 'Assigned to you' }
   ]
 
   const primaryAction = {
