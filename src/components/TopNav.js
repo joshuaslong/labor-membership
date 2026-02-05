@@ -2,8 +2,18 @@
 
 import Link from 'next/link'
 import { usePathname } from 'next/navigation'
+import PropTypes from 'prop-types'
 
-export default function TopNav({ sections = [] }) {
+/**
+ * TopNav component provides the main navigation bar for the application.
+ * Displays navigation links for different sections and a logout option.
+ *
+ * @component
+ * @param {Object} props - Component props
+ * @param {string[]} props.sections - Array of section identifiers to display in navigation
+ * @returns {JSX.Element} The rendered navigation bar
+ */
+function TopNav({ sections = [] }) {
   const pathname = usePathname()
 
   const isActive = (section) => {
@@ -30,12 +40,12 @@ export default function TopNav({ sections = [] }) {
             <Link href="/workspace" className="text-lg font-semibold text-gray-900">
               Labor Party
             </Link>
-            <nav className="flex gap-4">
+            <nav aria-label="Main navigation" className="flex gap-4">
               {sections.map(section => (
                 <Link
                   key={section}
                   href={section === 'workspace' ? '/workspace' : `/${section}`}
-                  className={`text-sm font-medium ${
+                  className={`text-sm font-medium focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-labor-red ${
                     isActive(section)
                       ? 'text-labor-red border-b-2 border-labor-red pb-1'
                       : 'text-gray-700 hover:text-gray-900 pb-1'
@@ -48,7 +58,11 @@ export default function TopNav({ sections = [] }) {
           </div>
           <div>
             {/* User menu placeholder */}
-            <Link href="/api/auth/logout" className="text-sm text-gray-700 hover:text-gray-900">
+            <Link
+              href="/api/auth/logout"
+              className="text-sm text-gray-700 hover:text-gray-900"
+              aria-label="Log out of your account"
+            >
               Logout
             </Link>
           </div>
@@ -57,3 +71,11 @@ export default function TopNav({ sections = [] }) {
     </div>
   )
 }
+
+TopNav.displayName = 'TopNav'
+
+TopNav.propTypes = {
+  sections: PropTypes.arrayOf(PropTypes.string)
+}
+
+export default TopNav
