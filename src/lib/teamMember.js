@@ -1,4 +1,10 @@
 import { createClient } from '@/lib/supabase/server'
+import { canAccessSection } from '@/lib/permissions'
+
+/**
+ * All available sections in the application
+ */
+const ALL_SECTIONS = ['members', 'events', 'communicate', 'chapters', 'resources', 'tasks', 'admin']
 
 /**
  * Get team member record for current user
@@ -9,12 +15,17 @@ export async function getCurrentTeamMember() {
 
   if (!user) return null
 
-  const { data: teamMember } = await supabase
+  const { data: teamMember, error } = await supabase
     .from('team_members')
     .select('*, chapters(id, name, level)')
     .eq('user_id', user.id)
     .eq('active', true)
     .single()
+
+  if (error) {
+    console.error('Error fetching team member:', error)
+    return null
+  }
 
   return teamMember
 }
@@ -25,22 +36,17 @@ export async function getCurrentTeamMember() {
 export function getAccessibleSections(roles) {
   if (!roles || !Array.isArray(roles)) return []
 
+  // Super admin has access to everything
+  if (roles.includes('super_admin')) {
+    return [...ALL_SECTIONS]
+  }
+
   const sections = []
 
-  // Check each section
-  const sectionChecks = [
-    { name: 'members', roles: ['super_admin', 'national_admin', 'state_admin', 'county_admin', 'city_admin', 'membership_coordinator', 'data_manager'] },
-    { name: 'events', roles: ['super_admin', 'national_admin', 'state_admin', 'county_admin', 'city_admin', 'event_coordinator'] },
-    { name: 'communicate', roles: ['super_admin', 'national_admin', 'state_admin', 'county_admin', 'city_admin', 'communications_lead'] },
-    { name: 'chapters', roles: ['super_admin', 'national_admin', 'state_admin', 'county_admin', 'city_admin'] },
-    { name: 'resources', roles: ['super_admin', 'national_admin', 'state_admin', 'county_admin', 'city_admin', 'content_creator'] },
-    { name: 'tasks', roles: ['super_admin', 'national_admin', 'state_admin', 'county_admin', 'city_admin', 'volunteer_manager'] },
-    { name: 'admin', roles: ['super_admin', 'national_admin'] }
-  ]
-
-  for (const check of sectionChecks) {
-    if (roles.some(role => check.roles.includes(role))) {
-      sections.push(check.name)
+  // Check each section using the shared permissions logic
+  for (const section of ALL_SECTIONS) {
+    if (canAccessSection(roles, section)) {
+      sections.push(section)
     }
   }
 
@@ -52,5 +58,5 @@ export function getAccessibleSections(roles) {
  */
 export async function hasTeamMemberAccess() {
   const teamMember = await getCurrentTeamMember()
-  return teamMember !== null && teamMember.roles.length > 0
+  return teamMember !== null && teamMember?.roles?.length > 0
 }
