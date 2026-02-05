@@ -109,9 +109,25 @@ function parseCSV(csvText) {
   return rows
 }
 
+// Check if a CSV value is truthy
+function isTruthy(value) {
+  if (!value) return false
+  const v = value.toString().trim().toLowerCase()
+  return v === 'true' || v === '1' || v === 'yes' || v === 'y'
+}
+
 // Map Memberstack fields to our schema with normalization
 function mapMemberstackToMember(row) {
   const stateCode = normalizeState(row.state)
+  const isVolunteer = isTruthy(row.volunteering) || isTruthy(row.volunteer)
+  const isDonor = isTruthy(row.donor)
+  const isOrganizer = isTruthy(row.organizer)
+
+  // Build segments array from CSV data
+  const segments = []
+  if (isVolunteer) segments.push('volunteer')
+  if (isDonor) segments.push('donor')
+  if (isOrganizer) segments.push('organizer')
 
   return {
     email: row.email?.toLowerCase().trim(),
@@ -121,7 +137,7 @@ function mapMemberstackToMember(row) {
     state: stateCode,
     zip_code: row.zip_code || row.zipcode || null,
     bio: row.member_bio || null,
-    wants_to_volunteer: row.volunteering === 'true' || row.volunteering === 'TRUE' || row.volunteering === '1',
+    wants_to_volunteer: isVolunteer,
     volunteer_details: row.volunteering_details || null,
     // Default mailing list to TRUE (as requested)
     mailing_list_opted_in: true,
@@ -129,8 +145,9 @@ function mapMemberstackToMember(row) {
     last_login_at: row.last_login ? new Date(row.last_login).toISOString() : null,
     status: 'active',
     memberstack_id: row.id || row.member_id || null,
-    // Will be set later based on state
+    // Internal fields (removed before insert)
     _state_code: stateCode,
+    _segments: segments,
   }
 }
 
@@ -156,6 +173,15 @@ export async function POST(request) {
     if (!hasAdminAccess) {
       return NextResponse.json({ error: 'Admin access required' }, { status: 403 })
     }
+
+    // Get admin user ID for segment applied_by tracking
+    const adminUserId = adminRecords?.[0] ? (await adminClient
+      .from('admin_users')
+      .select('id')
+      .eq('user_id', user.id)
+      .limit(1)
+      .single()
+    ).data?.id : null
 
     // Get CSV data from request
     const formData = await request.formData()
@@ -196,6 +222,7 @@ export async function POST(request) {
       stateAssignments: 0,
       phoneNormalized: 0,
       stateNormalized: 0,
+      segmentsApplied: 0,
     }
 
     for (const row of rows) {
@@ -208,7 +235,9 @@ export async function POST(request) {
 
         const memberData = mapMemberstackToMember(row)
         const stateCode = memberData._state_code
+        const segments = memberData._segments
         delete memberData._state_code
+        delete memberData._segments
 
         // Track normalization stats
         if (memberData.phone && row.phone_number !== memberData.phone) {
@@ -231,7 +260,10 @@ export async function POST(request) {
           .eq('email', memberData.email)
           .single()
 
+        let memberId
+
         if (existing) {
+          memberId = existing.id
           // Update existing member - only overwrite fields that have values in import
           // Using || undefined pattern: Supabase ignores undefined fields in updates
           const { error } = await adminClient
@@ -257,12 +289,33 @@ export async function POST(request) {
           results.updated++
         } else {
           // Insert new member
-          const { error } = await adminClient
+          const { data: inserted, error } = await adminClient
             .from('members')
             .insert(memberData)
+            .select('id')
+            .single()
 
           if (error) throw error
+          memberId = inserted.id
           results.imported++
+        }
+
+        // Apply segments from CSV data
+        if (segments.length > 0 && memberId) {
+          const segmentRows = segments.map(segment => ({
+            member_id: memberId,
+            segment,
+            applied_by: adminUserId,
+            auto_applied: false,
+          }))
+
+          const { error: segError } = await adminClient
+            .from('member_segments')
+            .upsert(segmentRows, { onConflict: 'member_id,segment', ignoreDuplicates: true })
+
+          if (!segError) {
+            results.segmentsApplied += segments.length
+          }
         }
       } catch (err) {
         results.skipped++
@@ -283,8 +336,8 @@ export async function POST(request) {
 
 // GET endpoint to download a sample CSV template
 export async function GET() {
-  const template = `email\tCreatedAt\tLast Login\tFirst Name\tLast Name\tState\tZip Code\tPhone-Number\tMember Bio\tVolunteering\tMailing List\tVolunteering Details
-john@example.com\t2024-01-15\t2024-06-01\tJohn\tDoe\tPennsylvania\t15213\t5551234567\tUnion organizer for 10 years\ttrue\ttrue\tExperience with community outreach`
+  const template = `email\tCreatedAt\tLast Login\tFirst Name\tLast Name\tState\tZip Code\tPhone-Number\tMember Bio\tVolunteering\tMailing List\tVolunteering Details\tDonor\tOrganizer
+john@example.com\t2024-01-15\t2024-06-01\tJohn\tDoe\tPennsylvania\t15213\t5551234567\tUnion organizer for 10 years\ttrue\ttrue\tExperience with community outreach\tfalse\ttrue`
 
   return new Response(template, {
     headers: {

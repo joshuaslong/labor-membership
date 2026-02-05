@@ -57,7 +57,7 @@ export default function ImportMembersPage() {
           Tab or comma-delimited with these columns:
         </p>
         <code className="block bg-gray-100 p-3 rounded text-xs overflow-x-auto">
-          email, CreatedAt, Last Login, First Name, Last Name, State, Zip Code, Phone-Number, Member Bio, Volunteering, Mailing List, Volunteering Details
+          email, CreatedAt, Last Login, First Name, Last Name, State, Zip Code, Phone-Number, Member Bio, Volunteering, Mailing List, Volunteering Details, Donor, Organizer
         </code>
         <a
           href="/api/admin/import-members"
@@ -74,6 +74,7 @@ export default function ImportMembersPage() {
           <li><strong>States:</strong> Full names converted to 2-letter codes (e.g., "Pennsylvania" to "PA")</li>
           <li><strong>Mailing list:</strong> All members set to opted-in by default</li>
           <li><strong>Chapter assignment:</strong> Members automatically assigned to their state chapter</li>
+          <li><strong>Segments:</strong> Volunteer, Donor, and Organizer segments applied from CSV columns. New members (joined &lt; 90 days) auto-tagged.</li>
         </ul>
       </div>
 
@@ -117,6 +118,7 @@ export default function ImportMembersPage() {
               <li>Assigned to state chapters: {results.stateAssignments || 0}</li>
               <li>Phone numbers normalized: {results.phoneNormalized || 0}</li>
               <li>State names normalized: {results.stateNormalized || 0}</li>
+              <li>Segments applied: {results.segmentsApplied || 0}</li>
               <li>Skipped: {results.skipped}</li>
             </ul>
 
