@@ -1,7 +1,8 @@
 import { DEFAULT_SIGNATURE } from '../utils/emailTemplates'
 
 /**
- * Email preview section showing how the email will look
+ * Email preview - shows how the email will look
+ * Designed to work in the sticky sidebar column
  */
 export default function EmailPreview({
   subject,
@@ -16,39 +17,43 @@ export default function EmailPreview({
     .replace(/\{\$SIGNATURE\}/g, signature || DEFAULT_SIGNATURE)
 
   return (
-    <div className="card rounded-none sm:rounded-lg mx-0 p-4 sm:p-6">
-      <h2 className="text-lg font-semibold text-gray-900 mb-4">Preview</h2>
-      <div className="-mx-4 sm:mx-0">
-        <div className="border-y sm:border sm:rounded-lg border-gray-200 bg-white min-h-[50vh] sm:min-h-0">
-          {/* Email header preview */}
-          <div className="border-b border-gray-200 p-4 text-sm space-y-1">
-            <div className="flex">
-              <span className="text-gray-500 w-20">From:</span>
-              <span className="text-gray-900">{senderName || 'Labor Party'} &lt;noreply@mail.votelabor.org&gt;</span>
-            </div>
-            {replyTo && (
-              <div className="flex">
-                <span className="text-gray-500 w-20">Reply-To:</span>
-                <span className="text-gray-900">{replyTo}</span>
-              </div>
-            )}
-            <div className="flex">
-              <span className="text-gray-500 w-20">Subject:</span>
-              <span className="text-gray-900 font-medium">{subject || '(No subject)'}</span>
-            </div>
-          </div>
-          {/* Email body preview */}
-          <div className="p-4 sm:p-6">
-            <div
-              className="email-preview"
-              dangerouslySetInnerHTML={{ __html: previewContent }}
-            />
-            <div className="border-t border-gray-200 pt-4 mt-6 text-center text-xs text-gray-500">
-              <p>Labor Party</p>
-              <p className="text-labor-red">Unsubscribe</p>
-            </div>
-          </div>
+    <div className="bg-white rounded-lg border border-stone-200 shadow-sm overflow-hidden">
+      {/* Email header */}
+      <div className="border-b border-stone-200 p-4 text-sm space-y-1 bg-stone-50">
+        <div className="flex">
+          <span className="text-stone-500 w-16 flex-shrink-0">From</span>
+          <span className="text-gray-900 truncate">{senderName || 'Labor Party'}</span>
         </div>
+        {replyTo && (
+          <div className="flex">
+            <span className="text-stone-500 w-16 flex-shrink-0">Reply</span>
+            <span className="text-gray-900 truncate">{replyTo}</span>
+          </div>
+        )}
+        <div className="flex">
+          <span className="text-stone-500 w-16 flex-shrink-0">Subject</span>
+          <span className="text-gray-900 font-medium truncate">{subject || '(No subject)'}</span>
+        </div>
+      </div>
+
+      {/* Email body */}
+      <div className="p-4">
+        {content ? (
+          <div
+            className="email-preview text-sm"
+            dangerouslySetInnerHTML={{ __html: previewContent }}
+          />
+        ) : (
+          <p className="text-stone-400 text-sm italic">
+            Start typing to see preview...
+          </p>
+        )}
+      </div>
+
+      {/* Footer */}
+      <div className="border-t border-stone-200 p-4 text-center text-xs text-stone-500 bg-stone-50">
+        <p className="font-medium">Labor Party</p>
+        <p className="text-labor-red mt-1">Unsubscribe</p>
       </div>
     </div>
   )

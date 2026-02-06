@@ -10,9 +10,10 @@ import { useEmailActions } from '@/app/admin/email/hooks/useEmailActions'
 import { useEmailDraft } from '@/app/admin/email/hooks/useEmailDraft'
 import { EMAIL_TEMPLATES } from '@/app/admin/email/utils/emailTemplates'
 
-import EmailPreferences from '@/app/admin/email/components/EmailPreferences'
+import EmailComposerLayout from '@/components/EmailComposerLayout'
 import SignatureModal from '@/app/admin/email/components/SignatureModal'
 import RecipientSelector from '@/app/admin/email/components/RecipientSelector'
+import SenderSection from '@/app/admin/email/components/SenderSection'
 import EmailContentForm from '@/app/admin/email/components/EmailContentForm'
 import EmailPreview from '@/app/admin/email/components/EmailPreview'
 import EmailActions from '@/app/admin/email/components/EmailActions'
@@ -131,8 +132,19 @@ function CommunicateContent() {
     })
   }
 
+  // Clear draft handler
+  const handleClearDraft = () => {
+    if (confirm('Clear draft? This will reset the form to defaults.')) {
+      draft.clearDraft()
+      emailForm.resetForm()
+      recipients.setRecipientType('my_chapter')
+      recipients.setSelectedChapterId('')
+      recipients.setSelectedGroupId('')
+    }
+  }
+
   return (
-    <div className="p-6 max-w-4xl">
+    <>
       {/* Modals */}
       <EmailSentModal
         emailSentInfo={actions.emailSentInfo}
@@ -147,134 +159,117 @@ function CommunicateContent() {
         saving={emailPrefs.savingPreferences}
       />
 
-      {/* Header */}
-      <div className="flex items-center justify-between mb-2">
-        <h1 className="text-2xl font-semibold text-gray-900">Compose Email</h1>
-        {draft.lastSaved && (
-          <div className="flex items-center gap-2">
-            <span className="text-xs text-gray-500">
-              Draft saved {new Date(draft.lastSaved).toLocaleTimeString()}
-            </span>
-            <button
-              type="button"
-              onClick={() => {
-                if (confirm('Clear draft? This will reset the form to defaults.')) {
-                  draft.clearDraft()
-                  emailForm.resetForm()
-                  recipients.setRecipientType('my_chapter')
-                  recipients.setSelectedChapterId('')
-                  recipients.setSelectedGroupId('')
-                }
-              }}
-              className="text-xs text-gray-500 hover:text-red-600 underline"
-            >
-              Clear Draft
-            </button>
-          </div>
-        )}
-      </div>
-      <p className="text-gray-600 mb-6">
-        Send emails to members in your chapter. Your draft is automatically saved.
-      </p>
+      <form onSubmit={handleSubmit}>
+        <EmailComposerLayout
+          header={
+            <div className="flex items-center justify-between">
+              <div>
+                <h1 className="text-xl font-semibold text-gray-900">Compose Email</h1>
+                <p className="text-sm text-gray-500 mt-0.5">Send to members in your chapter</p>
+              </div>
+              {draft.lastSaved && (
+                <div className="flex items-center gap-3 text-sm">
+                  <span className="text-stone-500">
+                    Saved {new Date(draft.lastSaved).toLocaleTimeString()}
+                  </span>
+                  <button
+                    type="button"
+                    onClick={handleClearDraft}
+                    className="text-stone-500 hover:text-red-600"
+                  >
+                    Clear
+                  </button>
+                </div>
+              )}
+            </div>
+          }
+          preview={
+            <EmailPreview
+              subject={emailForm.subject}
+              content={emailForm.content}
+              senderName={emailForm.senderName}
+              replyTo={emailForm.replyTo}
+              signature={emailPrefs.preferences.default_signature}
+            />
+          }
+          actions={
+            <EmailActions
+              testEmail={emailForm.testEmail}
+              setTestEmail={emailForm.setTestEmail}
+              onTestEmail={handleTestEmail}
+              testLoading={actions.testLoading}
+              loading={actions.loading}
+              canSend={recipients.isValid() && emailForm.subject && emailForm.content}
+              subject={emailForm.subject}
+              content={emailForm.content}
+            />
+          }
+        >
+          {/* Success/Error Messages */}
+          {actions.success && (
+            <div className="bg-green-50 text-green-700 p-3 rounded-lg flex justify-between items-center text-sm">
+              <span>{actions.success}</span>
+              <button onClick={() => actions.setSuccess(null)} className="text-green-600 hover:text-green-800">
+                <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M6 18L18 6M6 6l12 12" />
+                </svg>
+              </button>
+            </div>
+          )}
 
-      {/* Success/Error Messages */}
-      {actions.success && (
-        <div className="bg-green-50 text-green-700 p-4 rounded-lg mb-6 flex justify-between items-center">
-          <span>{actions.success}</span>
-          <button onClick={() => actions.setSuccess(null)} className="text-green-600 hover:text-green-800">
-            <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-              <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M6 18L18 6M6 6l12 12" />
-            </svg>
-          </button>
-        </div>
-      )}
+          {(actions.error || recipients.error) && (
+            <div className="bg-red-50 text-red-700 p-3 rounded-lg flex justify-between items-center text-sm">
+              <span>{actions.error || recipients.error}</span>
+              <button
+                onClick={() => {
+                  actions.setError(null)
+                  recipients.setError(null)
+                }}
+                className="text-red-600 hover:text-red-800"
+              >
+                <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M6 18L18 6M6 6l12 12" />
+                </svg>
+              </button>
+            </div>
+          )}
 
-      {actions.error && (
-        <div className="bg-red-50 text-red-700 p-4 rounded-lg mb-6 flex justify-between items-center">
-          <span>{actions.error}</span>
-          <button onClick={() => actions.setError(null)} className="text-red-600 hover:text-red-800">
-            <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-              <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M6 18L18 6M6 6l12 12" />
-            </svg>
-          </button>
-        </div>
-      )}
+          {/* Form Sections */}
+          <RecipientSelector
+            recipientType={recipients.recipientType}
+            setRecipientType={recipients.setRecipientType}
+            selectedChapterId={recipients.selectedChapterId}
+            setSelectedChapterId={recipients.setSelectedChapterId}
+            selectedGroupId={recipients.selectedGroupId}
+            setSelectedGroupId={recipients.setSelectedGroupId}
+            groupChapterId={recipients.groupChapterId}
+            groups={recipients.groups}
+            groupsLoading={recipients.groupsLoading}
+            handleGroupChapterChange={recipients.handleGroupChapterChange}
+            adminInfo={adminContext.adminInfo}
+            chapters={adminContext.chapters}
+            isSuperAdmin={adminContext.isSuperAdmin}
+          />
 
-      {recipients.error && (
-        <div className="bg-red-50 text-red-700 p-4 rounded-lg mb-6 flex justify-between items-center">
-          <span>{recipients.error}</span>
-          <button onClick={() => recipients.setError(null)} className="text-red-600 hover:text-red-800">
-            <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-              <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M6 18L18 6M6 6l12 12" />
-            </svg>
-          </button>
-        </div>
-      )}
+          <SenderSection
+            senderName={emailForm.senderName}
+            setSenderName={emailForm.setSenderName}
+            replyTo={emailForm.replyTo}
+            setReplyTo={emailForm.setReplyTo}
+            defaultReplyTo={emailPrefs.preferences.default_reply_to}
+          />
 
-      {/* Preferences Section */}
-      <EmailPreferences
-        preferences={emailPrefs.preferences}
-        setPreferences={emailPrefs.setPreferences}
-        showPreferences={emailPrefs.showPreferences}
-        setShowPreferences={emailPrefs.setShowPreferences}
-        savingPreferences={emailPrefs.savingPreferences}
-        handleSavePreferences={emailPrefs.handleSavePreferences}
-        handleOpenSignatureModal={emailPrefs.handleOpenSignatureModal}
-      />
-
-      {/* Main Form */}
-      <form onSubmit={handleSubmit} className="space-y-6">
-        <RecipientSelector
-          recipientType={recipients.recipientType}
-          setRecipientType={recipients.setRecipientType}
-          selectedChapterId={recipients.selectedChapterId}
-          setSelectedChapterId={recipients.setSelectedChapterId}
-          selectedGroupId={recipients.selectedGroupId}
-          setSelectedGroupId={recipients.setSelectedGroupId}
-          groupChapterId={recipients.groupChapterId}
-          groups={recipients.groups}
-          groupsLoading={recipients.groupsLoading}
-          handleGroupChapterChange={recipients.handleGroupChapterChange}
-          adminInfo={adminContext.adminInfo}
-          chapters={adminContext.chapters}
-          isSuperAdmin={adminContext.isSuperAdmin}
-        />
-
-        <EmailContentForm
-          selectedTemplate={emailForm.selectedTemplate}
-          handleTemplateChange={emailForm.handleTemplateChange}
-          senderName={emailForm.senderName}
-          setSenderName={emailForm.setSenderName}
-          replyTo={emailForm.replyTo}
-          setReplyTo={emailForm.setReplyTo}
-          subject={emailForm.subject}
-          setSubject={emailForm.setSubject}
-          content={emailForm.content}
-          setContent={emailForm.setContent}
-          preferences={emailPrefs.preferences}
-        />
-
-        <EmailPreview
-          subject={emailForm.subject}
-          content={emailForm.content}
-          senderName={emailForm.senderName}
-          replyTo={emailForm.replyTo}
-          signature={emailPrefs.preferences.default_signature}
-        />
-
-        <EmailActions
-          testEmail={emailForm.testEmail}
-          setTestEmail={emailForm.setTestEmail}
-          onTestEmail={handleTestEmail}
-          testLoading={actions.testLoading}
-          onSendEmail={() => {}}
-          loading={actions.loading}
-          canSend={recipients.isValid() && emailForm.subject && emailForm.content}
-          subject={emailForm.subject}
-          content={emailForm.content}
-        />
+          <EmailContentForm
+            selectedTemplate={emailForm.selectedTemplate}
+            handleTemplateChange={emailForm.handleTemplateChange}
+            subject={emailForm.subject}
+            setSubject={emailForm.setSubject}
+            content={emailForm.content}
+            setContent={emailForm.setContent}
+          />
+        </EmailComposerLayout>
       </form>
-    </div>
+    </>
   )
 }
 
