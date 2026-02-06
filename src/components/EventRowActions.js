@@ -55,7 +55,7 @@ export default function EventRowActions({ eventId, eventTitle }) {
           aria-label="Event actions"
         >
           <svg className="w-4 h-4" fill="currentColor" viewBox="0 0 20 20">
-            <path d="M10 6a1.5 1.5 0 110-3 1.5 1.5 0 010 3zM10 11.5a1.5 1.5 0 110-3 1.5 1.5 0 010 3zM10 17a1.5 1.5 0 110-3 1.5 1.5 0 010 3z" />
+            <path d="M10 6a1.75 1.75 0 110-3.5 1.75 1.75 0 010 3.5zM10 11.75a1.75 1.75 0 110-3.5 1.75 1.75 0 010 3.5zM10 17.5a1.75 1.75 0 110-3.5 1.75 1.75 0 010 3.5z" />
           </svg>
         </button>
 
