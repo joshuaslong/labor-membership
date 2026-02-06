@@ -5,13 +5,25 @@ export default function SenderSection({
   senderName,
   setSenderName,
   replyTo,
-  setReplyTo
+  setReplyTo,
+  onOpenSettings
 }) {
   return (
     <div className="space-y-3">
-      <h3 className="text-xs font-semibold text-gray-500 uppercase tracking-wide">
-        Sender Details
-      </h3>
+      <div className="flex items-center justify-between">
+        <h3 className="text-xs font-semibold text-gray-500 uppercase tracking-wide">
+          Sender Details
+        </h3>
+        {onOpenSettings && (
+          <button
+            type="button"
+            onClick={onOpenSettings}
+            className="text-xs text-gray-500 hover:text-labor-red"
+          >
+            Edit defaults
+          </button>
+        )}
+      </div>
 
       <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
         <div>
