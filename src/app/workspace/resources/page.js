@@ -11,7 +11,6 @@ export default async function WorkspaceResourcesPage() {
   const isTopAdmin = hasRole(roles, ['super_admin', 'national_admin'])
   const isMediaRole = hasRole(roles, ['communications_lead', 'content_creator'])
 
-  // Determine allowed buckets based on role
   const allowedBuckets = ['public']
 
   if (teamMember.chapter_id || isTopAdmin) {
