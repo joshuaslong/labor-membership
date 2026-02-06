@@ -2,6 +2,7 @@ import Link from 'next/link'
 import { notFound, redirect } from 'next/navigation'
 import { createAdminClient } from '@/lib/supabase/server'
 import { getCurrentTeamMember } from '@/lib/teamMember'
+import { isAdmin } from '@/lib/permissions'
 
 export const dynamic = 'force-dynamic'
 
@@ -17,6 +18,11 @@ const LEVEL_LABELS = {
   county: 'County',
   city: 'City',
 }
+const NEXT_LEVEL = {
+  national: 'state',
+  state: 'county',
+  county: 'city',
+}
 
 export default async function WorkspaceChapterDetailPage({ params }) {
   const teamMember = await getCurrentTeamMember()
@@ -24,6 +30,7 @@ export default async function WorkspaceChapterDetailPage({ params }) {
 
   const { id } = await params
   const supabase = createAdminClient()
+  const userIsAdmin = isAdmin(teamMember.roles)
 
   const { data: chapter } = await supabase
     .from('chapters')
@@ -76,7 +83,25 @@ export default async function WorkspaceChapterDetailPage({ params }) {
     .order('start_date', { ascending: true })
     .limit(5)
 
+  // Get active polls for this chapter
+  const { data: polls } = await supabase
+    .from('polls')
+    .select('id, title, status, closes_at, created_at')
+    .eq('chapter_id', id)
+    .in('status', ['active', 'closed'])
+    .order('created_at', { ascending: false })
+    .limit(5)
+
+  // Get recent resources/files for this chapter
+  const { data: resources } = await supabase
+    .from('files')
+    .select('id, name, file_type, created_at')
+    .eq('chapter_id', id)
+    .order('created_at', { ascending: false })
+    .limit(5)
+
   const hasChildren = children && children.length > 0
+  const canCreateSubChapter = userIsAdmin && chapter.level !== 'city'
 
   return (
     <div className="max-w-7xl mx-auto px-4 sm:px-6 py-6">
@@ -98,11 +123,27 @@ export default async function WorkspaceChapterDetailPage({ params }) {
       </div>
 
       {/* Header */}
-      <div className="mb-6 flex items-center gap-3">
-        <span className={`px-2 py-0.5 rounded text-xs font-medium ${LEVEL_COLORS[chapter.level]}`}>
-          {LEVEL_LABELS[chapter.level]}
-        </span>
-        <h1 className="text-xl font-semibold text-gray-900 tracking-tight">{chapter.name}</h1>
+      <div className="mb-6 flex items-center justify-between">
+        <div className="flex items-center gap-3">
+          <span className={`px-2 py-0.5 rounded text-xs font-medium ${LEVEL_COLORS[chapter.level]}`}>
+            {LEVEL_LABELS[chapter.level]}
+          </span>
+          <h1 className="text-xl font-semibold text-gray-900 tracking-tight">{chapter.name}</h1>
+        </div>
+
+        {/* Admin Actions */}
+        {userIsAdmin && (
+          <div className="flex items-center gap-2">
+            {canCreateSubChapter && (
+              <Link
+                href={`/workspace/chapters/new?parent=${id}`}
+                className="px-3 py-1.5 text-sm font-medium text-gray-700 bg-white border border-stone-200 rounded hover:bg-stone-50 transition-colors"
+              >
+                + Sub-Chapter
+              </Link>
+            )}
+          </div>
+        )}
       </div>
 
       <div className="grid lg:grid-cols-3 gap-6">
@@ -175,7 +216,7 @@ export default async function WorkspaceChapterDetailPage({ params }) {
                         <p className="text-sm font-medium text-gray-900 truncate">{event.title}</p>
                         <p className="text-xs text-gray-500">
                           {new Date(event.start_date).toLocaleDateString('en-US', { weekday: 'short', month: 'short', day: 'numeric' })}
-                          {event.location_name && ` \u00b7 ${event.location_name}`}
+                          {event.location_name && ` · ${event.location_name}`}
                         </p>
                       </div>
                       <span className={`inline-flex items-center px-2 py-0.5 rounded text-xs font-medium shrink-0 ml-4 ${
@@ -191,6 +232,41 @@ export default async function WorkspaceChapterDetailPage({ params }) {
               </ul>
             ) : (
               <div className="px-4 py-8 text-center text-sm text-gray-500">No upcoming events</div>
+            )}
+          </div>
+
+          {/* Polls */}
+          <div className="bg-white border border-stone-200 rounded">
+            <div className="px-4 py-3 border-b border-stone-200 flex items-center justify-between">
+              <h2 className="text-sm font-semibold text-gray-900 uppercase tracking-wide">Polls</h2>
+              <Link href="/workspace/polls" className="text-xs text-gray-500 hover:text-gray-700">View all</Link>
+            </div>
+            {polls && polls.length > 0 ? (
+              <ul className="divide-y divide-stone-100">
+                {polls.map(poll => (
+                  <li key={poll.id}>
+                    <Link href={`/workspace/polls/${poll.id}`} className="flex items-center justify-between px-4 py-3 hover:bg-stone-50">
+                      <div className="min-w-0">
+                        <p className="text-sm font-medium text-gray-900 truncate">{poll.title}</p>
+                        <p className="text-xs text-gray-500">
+                          {poll.closes_at
+                            ? `Closes ${new Date(poll.closes_at).toLocaleDateString('en-US', { month: 'short', day: 'numeric' })}`
+                            : 'No deadline'}
+                        </p>
+                      </div>
+                      <span className={`inline-flex items-center px-2 py-0.5 rounded text-xs font-medium shrink-0 ml-4 ${
+                        poll.status === 'active' ? 'bg-green-50 text-green-700' :
+                        poll.status === 'closed' ? 'bg-gray-50 text-gray-600' :
+                        'bg-amber-50 text-amber-700'
+                      }`}>
+                        {poll.status}
+                      </span>
+                    </Link>
+                  </li>
+                ))}
+              </ul>
+            ) : (
+              <div className="px-4 py-8 text-center text-sm text-gray-500">No polls for this chapter</div>
             )}
           </div>
         </div>
@@ -222,10 +298,32 @@ export default async function WorkspaceChapterDetailPage({ params }) {
               {chapter.contact_email && (
                 <div className="flex justify-between">
                   <span className="text-gray-500">Contact</span>
-                  <span className="text-gray-900">{chapter.contact_email}</span>
+                  <a href={`mailto:${chapter.contact_email}`} className="text-gray-900 hover:text-labor-red">{chapter.contact_email}</a>
                 </div>
               )}
             </div>
+          </div>
+
+          {/* Resources */}
+          <div className="bg-white border border-stone-200 rounded">
+            <div className="px-4 py-3 border-b border-stone-200 flex items-center justify-between">
+              <h2 className="text-sm font-semibold text-gray-900 uppercase tracking-wide">Resources</h2>
+              <Link href="/workspace/resources" className="text-xs text-gray-500 hover:text-gray-700">View all</Link>
+            </div>
+            {resources && resources.length > 0 ? (
+              <ul className="divide-y divide-stone-100">
+                {resources.map(resource => (
+                  <li key={resource.id}>
+                    <Link href={`/workspace/resources?file=${resource.id}`} className="flex items-center gap-3 px-4 py-2.5 hover:bg-stone-50">
+                      <span className="text-xs text-gray-400 uppercase font-medium w-8">{resource.file_type?.split('/')[1]?.slice(0, 4) || 'file'}</span>
+                      <span className="text-sm text-gray-900 truncate">{resource.name}</span>
+                    </Link>
+                  </li>
+                ))}
+              </ul>
+            ) : (
+              <div className="px-4 py-6 text-center text-sm text-gray-500">No resources</div>
+            )}
           </div>
 
           {/* Sub-Chapters */}

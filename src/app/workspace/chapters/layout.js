@@ -1,7 +1,7 @@
 import ContextualSidebar from '@/components/ContextualSidebar'
 import { getCurrentTeamMember } from '@/lib/teamMember'
 import { redirect } from 'next/navigation'
-import { canAccessSection } from '@/lib/permissions'
+import { canAccessSection, isAdmin } from '@/lib/permissions'
 
 export default async function ChaptersLayout({ children }) {
   const teamMember = await getCurrentTeamMember()
@@ -11,7 +11,13 @@ export default async function ChaptersLayout({ children }) {
   }
 
   const myChapter = teamMember.chapters
+  const canCreateChapter = isAdmin(teamMember.roles)
+
   const sidebarItems = [
+    ...(canCreateChapter ? [
+      { type: 'link', label: 'Create Chapter', href: '/workspace/chapters/new', variant: 'primary' },
+      { type: 'divider' },
+    ] : []),
     ...(myChapter ? [
       { type: 'link', label: myChapter.name, href: `/workspace/chapters/${myChapter.id}` },
       { type: 'divider' },
