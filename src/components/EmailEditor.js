@@ -237,21 +237,15 @@ export default function EmailEditor({ value, onChange, placeholder = 'Enter your
     return () => clearTimeout(timer)
   }, [onChange])
 
-  // Custom toolbar configuration matching the Slate.js example
+  // Simplified toolbar for email composition
   const modules = useMemo(() => ({
     toolbar: {
       container: [
-        [{ 'font': [] }, { 'size': ['small', false, 'large', 'huge'] }],
-        ['bold', 'italic', 'underline', 'strike'],
-        [{ 'color': [] }, { 'background': [] }],
-        [{ 'script': 'sub' }, { 'script': 'super' }],
-        [{ 'header': '1' }, { 'header': '2' }, { 'header': '3' }, 'blockquote'],
+        ['bold', 'italic', 'underline'],
+        [{ 'header': 1 }, { 'header': 2 }],
         [{ 'list': 'ordered' }, { 'list': 'bullet' }],
-        [{ 'align': [] }],
-        ['link', 'image', 'video'],
-        ['code-block'],
-        ['clean'],
-        ['insert-variable']  // Custom button
+        ['link', 'image'],
+        ['insert-variable']
       ],
       handlers: {
         'insert-variable': function() {
@@ -267,15 +261,10 @@ export default function EmailEditor({ value, onChange, placeholder = 'Enter your
   }), [])
 
   const formats = [
-    'font', 'size',
-    'bold', 'italic', 'underline', 'strike',
-    'color', 'background',
-    'script',
-    'header', 'blockquote',
+    'bold', 'italic', 'underline',
+    'header',
     'list',
-    'align',
-    'link', 'image', 'video',
-    'code-block'
+    'link', 'image'
   ]
 
   // Track when value changes externally (e.g., template change or signature update)
