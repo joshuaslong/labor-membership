@@ -5,18 +5,34 @@ import { useParams, useRouter } from 'next/navigation'
 import Link from 'next/link'
 import { createClient } from '@/lib/supabase/client'
 
-const STATUS_BADGES = {
-  pending: 'bg-yellow-100 text-yellow-800',
-  active: 'bg-green-100 text-green-800',
-  lapsed: 'bg-orange-100 text-orange-800',
-  cancelled: 'bg-red-100 text-red-800',
+const statusBadgeColor = {
+  pending: 'text-amber-700 bg-amber-50 border-amber-200',
+  active: 'text-green-700 bg-green-50 border-green-200',
+  lapsed: 'text-orange-700 bg-orange-50 border-orange-200',
+  cancelled: 'text-red-700 bg-red-50 border-red-200',
 }
 
-const LEVEL_COLORS = {
-  national: 'bg-labor-red text-white',
-  state: 'bg-blue-600 text-white',
-  county: 'bg-green-600 text-white',
-  city: 'bg-purple-600 text-white',
+const levelBadgeColor = {
+  national: 'text-red-700 bg-red-50 border-red-200',
+  state: 'text-blue-700 bg-blue-50 border-blue-200',
+  county: 'text-green-700 bg-green-50 border-green-200',
+  city: 'text-amber-700 bg-amber-50 border-amber-200',
+}
+
+const roleBadgeColor = {
+  super_admin: 'text-purple-700 bg-purple-50 border-purple-200',
+  national_admin: 'text-red-700 bg-red-50 border-red-200',
+  state_admin: 'text-blue-700 bg-blue-50 border-blue-200',
+  county_admin: 'text-green-700 bg-green-50 border-green-200',
+  city_admin: 'text-amber-700 bg-amber-50 border-amber-200',
+}
+
+const ROLE_LABELS = {
+  super_admin: 'Super Admin',
+  national_admin: 'National Admin',
+  state_admin: 'State Admin',
+  county_admin: 'County Admin',
+  city_admin: 'City Admin',
 }
 
 export default function MemberDetailPage() {
@@ -39,7 +55,6 @@ export default function MemberDetailPage() {
   const [showAdminChapterDropdown, setShowAdminChapterDropdown] = useState(false)
   const adminChapterDropdownRef = useRef(null)
 
-  // Close admin chapter dropdown when clicking outside
   useEffect(() => {
     function handleClickOutside(event) {
       if (adminChapterDropdownRef.current && !adminChapterDropdownRef.current.contains(event.target)) {
@@ -60,7 +75,6 @@ export default function MemberDetailPage() {
         return
       }
 
-      // Check if current user is admin - get all records and use highest privilege
       const { data: adminUsers } = await supabase
         .from('admin_users')
         .select('role, chapter_id')
@@ -71,11 +85,9 @@ export default function MemberDetailPage() {
         return
       }
 
-      // Store all user's admin roles for permission checking
       setIsAdmin(true)
       setCurrentUserRoles(adminUsers.map(a => a.role))
 
-      // Load member details
       const { data: memberData, error: memberError } = await supabase
         .from('members')
         .select('*, chapters(id, name, level)')
@@ -91,7 +103,6 @@ export default function MemberDetailPage() {
       setMember(memberData)
       setSelectedChapter(memberData.chapter_id || '')
 
-      // Load all chapters for the dropdown
       const { data: chaptersData } = await supabase
         .from('chapters')
         .select('id, name, level, parent_id')
@@ -100,7 +111,6 @@ export default function MemberDetailPage() {
 
       setChapters(chaptersData || [])
 
-      // Load member's chapter memberships from junction table
       const { data: mcData } = await supabase
         .from('member_chapters')
         .select('chapter_id, is_primary, chapters(id, name, level)')
@@ -108,7 +118,6 @@ export default function MemberDetailPage() {
 
       setMemberChapters(mcData || [])
 
-      // Check if this member is an admin (can have multiple admin records)
       if (memberData.user_id) {
         const { data: memberAdmins } = await supabase
           .from('admin_users')
@@ -134,7 +143,6 @@ export default function MemberDetailPage() {
     setError(null)
     setSuccess(null)
 
-    // Use API to update chapter (handles member_chapters junction table)
     const res = await fetch(`/api/members/${member.id}/chapter`, {
       method: 'PUT',
       headers: { 'Content-Type': 'application/json' },
@@ -148,7 +156,6 @@ export default function MemberDetailPage() {
       return
     }
 
-    // Reload member chapters
     const supabase = createClient()
     const { data: mcData } = await supabase
       .from('member_chapters')
@@ -157,8 +164,9 @@ export default function MemberDetailPage() {
 
     setMemberChapters(mcData || [])
     setMember({ ...member, chapter_id: selectedChapter })
-    setSuccess('Chapter updated successfully')
+    setSuccess('Chapter updated')
     setSaving(false)
+    setTimeout(() => setSuccess(null), 3000)
   }
 
   const handleStatusChange = async (newStatus) => {
@@ -176,14 +184,15 @@ export default function MemberDetailPage() {
       setError(updateError.message)
     } else {
       setMember({ ...member, status: newStatus })
-      setSuccess('Status updated successfully')
+      setSuccess('Status updated')
+      setTimeout(() => setSuccess(null), 3000)
     }
     setSaving(false)
   }
 
   const handleMakeAdmin = async () => {
     if (!selectedAdminChapter) {
-      setError('Please select a chapter for admin access')
+      setError('Please select a chapter')
       return
     }
 
@@ -192,7 +201,6 @@ export default function MemberDetailPage() {
     setSuccess(null)
 
     try {
-      // Derive role from chapter level
       const selectedChapterData = chapters.find(c => c.id === selectedAdminChapter)
       const levelToRole = {
         national: 'national_admin',
@@ -213,12 +221,8 @@ export default function MemberDetailPage() {
       })
 
       const data = await res.json()
+      if (!res.ok) throw new Error(data.error || 'Failed to grant access')
 
-      if (!res.ok) {
-        throw new Error(data.error || 'Failed to make admin')
-      }
-
-      // Reload admin records
       const supabase = createClient()
       const { data: memberAdmins } = await supabase
         .from('admin_users')
@@ -228,7 +232,8 @@ export default function MemberDetailPage() {
 
       setMemberAdminRecords(memberAdmins || [])
       setSelectedAdminChapter('')
-      setSuccess('Admin access granted successfully')
+      setSuccess('Admin access granted')
+      setTimeout(() => setSuccess(null), 3000)
     } catch (err) {
       setError(err.message)
     }
@@ -249,12 +254,8 @@ export default function MemberDetailPage() {
       })
 
       const data = await res.json()
+      if (!res.ok) throw new Error(data.error || 'Failed to remove admin')
 
-      if (!res.ok) {
-        throw new Error(data.error || 'Failed to remove admin')
-      }
-
-      // Reload admin records
       const supabase = createClient()
       const { data: memberAdmins } = await supabase
         .from('admin_users')
@@ -263,7 +264,8 @@ export default function MemberDetailPage() {
         .order('created_at', { ascending: false })
 
       setMemberAdminRecords(memberAdmins || [])
-      setSuccess('Admin access removed successfully')
+      setSuccess('Admin access removed')
+      setTimeout(() => setSuccess(null), 3000)
     } catch (err) {
       setError(err.message)
     }
@@ -272,105 +274,108 @@ export default function MemberDetailPage() {
   }
 
   const handleDeleteMember = async () => {
-    if (!confirm('Are you sure you want to permanently delete this member? This action cannot be undone.')) {
-      return
-    }
+    if (!confirm('Are you sure you want to permanently delete this member? This cannot be undone.')) return
 
     setDeleting(true)
     setError(null)
 
     try {
-      const res = await fetch(`/api/members/${member.id}`, {
-        method: 'DELETE',
-      })
-
+      const res = await fetch(`/api/members/${member.id}`, { method: 'DELETE' })
       const data = await res.json()
-
-      if (!res.ok) {
-        throw new Error(data.error || 'Failed to delete member')
-      }
-
-      router.push('/members?message=Member deleted successfully')
+      if (!res.ok) throw new Error(data.error || 'Failed to delete')
+      router.push('/workspace/members')
     } catch (err) {
       setError(err.message)
       setDeleting(false)
     }
   }
 
-  // Determine if current user can manage a given admin role
-  // Checks ALL of user's roles, not just highest - so National + State Admin can still manage state admins
   const canManageAdminRole = (targetRole) => {
     if (!currentUserRoles || currentUserRoles.length === 0) return false
-
-    // Super admin can manage all roles
     if (currentUserRoles.includes('super_admin')) return true
-
-    // Can't manage super_admin or national_admin unless you're super_admin
     if (['super_admin', 'national_admin'].includes(targetRole)) return false
 
-    // Check if ANY of the user's roles can manage the target role
     const roleHierarchy = ['super_admin', 'national_admin', 'state_admin', 'county_admin', 'city_admin']
     const targetIndex = roleHierarchy.indexOf(targetRole)
 
-    // For each role the user has, check if it can manage the target
     for (const role of currentUserRoles) {
-      // Skip national_admin as it can't manage admins
       if (role === 'national_admin') continue
-
       const roleIndex = roleHierarchy.indexOf(role)
-      // Can manage if target role is at same level or below
       if (targetIndex >= roleIndex) return true
     }
-
     return false
   }
 
-  // Group chapters by level for easier selection
   const groupedChapters = chapters.reduce((acc, c) => {
     if (!acc[c.level]) acc[c.level] = []
     acc[c.level].push(c)
     return acc
   }, {})
 
+  const inputClass = "w-full px-3 py-2 text-sm border border-stone-200 rounded bg-white text-gray-900 placeholder:text-gray-400 focus:outline-none focus:ring-1 focus:ring-labor-red focus:border-labor-red"
+
   if (loading) {
-    return <div className="max-w-4xl mx-auto px-4 py-12 text-center">Loading...</div>
+    return (
+      <div className="max-w-4xl mx-auto px-4 sm:px-6 py-6">
+        <div className="animate-pulse space-y-4">
+          <div className="h-4 bg-gray-200 rounded w-24" />
+          <div className="h-32 bg-gray-100 rounded" />
+          <div className="h-32 bg-gray-100 rounded" />
+        </div>
+      </div>
+    )
   }
 
   if (error && !member) {
     return (
-      <div className="max-w-4xl mx-auto px-4 py-12 text-center">
-        <p className="text-red-600 mb-4">{error}</p>
-        <Link href="/members" className="text-labor-red hover:underline">Back to Members</Link>
+      <div className="max-w-4xl mx-auto px-4 sm:px-6 py-6 text-center">
+        <p className="text-sm text-red-600 mb-3">{error}</p>
+        <Link href="/workspace/members" className="text-sm text-labor-red hover:underline">Back to Members</Link>
       </div>
     )
   }
 
   return (
-    <div className="max-w-4xl mx-auto px-4 py-8">
-      <Link href="/members" className="text-gray-500 hover:text-gray-700 text-sm mb-4 inline-block">
-        &larr; Back to Members
-      </Link>
+    <div className="max-w-4xl mx-auto px-4 sm:px-6 py-6">
+      {/* Breadcrumb */}
+      <div className="flex items-center gap-1.5 text-xs text-gray-400 mb-4">
+        <Link href="/workspace/members" className="hover:text-gray-600">Members</Link>
+        <span>/</span>
+        <span className="text-gray-600">{member.first_name} {member.last_name}</span>
+      </div>
 
-      {error && <div className="bg-red-50 text-red-700 p-4 rounded-lg mb-6">{error}</div>}
-      {success && <div className="bg-green-50 text-green-700 p-4 rounded-lg mb-6">{success}</div>}
+      {/* Alerts */}
+      {error && (
+        <div className="bg-red-50 border border-red-200 text-red-700 px-4 py-2.5 rounded mb-4 text-sm flex items-center justify-between">
+          {error}
+          <button onClick={() => setError(null)} className="text-xs underline ml-2">Dismiss</button>
+        </div>
+      )}
+      {success && (
+        <div className="bg-green-50 border border-green-200 text-green-700 px-4 py-2.5 rounded mb-4 text-sm">
+          {success}
+        </div>
+      )}
 
-      <div className="card mb-6">
-        <div className="flex justify-between items-start mb-6">
-          <div>
-            <div className="flex items-center gap-3">
-              <h1 className="text-2xl text-gray-900">
-                {member.first_name} {member.last_name}
-              </h1>
+      {/* Header */}
+      <div className="bg-white border border-stone-200 rounded mb-4">
+        <div className="px-5 py-4">
+          <div className="flex items-start justify-between">
+            <div>
+              <div className="flex items-center gap-2.5">
+                <h1 className="text-lg font-semibold text-gray-900">
+                  {member.first_name} {member.last_name}
+                </h1>
+                <span className={`inline-flex items-center px-2 py-0.5 rounded text-xs font-medium border ${statusBadgeColor[member.status]}`}>
+                  {member.status}
+                </span>
+              </div>
+              <p className="text-sm text-gray-500 mt-0.5">{member.email}</p>
               {memberAdminRecords.length > 0 && (
-                <div className="flex flex-wrap gap-1">
+                <div className="flex flex-wrap gap-1 mt-2">
                   {memberAdminRecords.map(record => (
-                    <span key={record.id} className="px-2 py-1 bg-purple-100 text-purple-800 text-xs font-semibold rounded">
-                      {record.role === 'super_admin' ? 'Super Admin' :
-                       record.role === 'national_admin' ? 'National Admin' :
-                       record.role === 'state_admin' ? 'State Admin' :
-                       record.role === 'county_admin' ? 'County Admin' :
-                       record.role === 'city_admin' ? 'City Admin' :
-                       'Admin'}
+                    <span key={record.id} className={`inline-flex items-center px-1.5 py-0.5 rounded text-xs font-medium border ${roleBadgeColor[record.role] || 'text-gray-700 bg-stone-50 border-stone-200'}`}>
+                      {ROLE_LABELS[record.role] || 'Admin'}
                       {record.chapters && !['super_admin', 'national_admin'].includes(record.role) && (
                         <span className="ml-1 opacity-75">({record.chapters.name})</span>
                       )}
@@ -379,288 +384,279 @@ export default function MemberDetailPage() {
                 </div>
               )}
             </div>
-            <p className="text-gray-600">{member.email}</p>
-          </div>
-          <span className={`px-3 py-1 rounded-full text-sm font-medium ${STATUS_BADGES[member.status]}`}>
-            {member.status}
-          </span>
-        </div>
-
-        <div className="grid md:grid-cols-2 gap-6">
-          <div>
-            <h3 className="font-medium text-gray-900 mb-3">Contact Information</h3>
-            <dl className="space-y-2 text-sm">
-              <div className="flex">
-                <dt className="w-24 text-gray-500">Phone:</dt>
-                <dd className="text-gray-900">{member.phone || '-'}</dd>
-              </div>
-              <div className="flex">
-                <dt className="w-24 text-gray-500">Address:</dt>
-                <dd className="text-gray-900">{member.address_line1 || '-'}</dd>
-              </div>
-              <div className="flex">
-                <dt className="w-24 text-gray-500">City:</dt>
-                <dd className="text-gray-900">{member.city || '-'}</dd>
-              </div>
-              <div className="flex">
-                <dt className="w-24 text-gray-500">State:</dt>
-                <dd className="text-gray-900">{member.state || '-'}</dd>
-              </div>
-              <div className="flex">
-                <dt className="w-24 text-gray-500">ZIP:</dt>
-                <dd className="text-gray-900">{member.zip_code || '-'}</dd>
-              </div>
-            </dl>
-          </div>
-
-          <div>
-            <h3 className="font-medium text-gray-900 mb-3">Membership Details</h3>
-            <dl className="space-y-2 text-sm">
-              <div className="flex">
-                <dt className="w-24 text-gray-500">Joined:</dt>
-                <dd className="text-gray-900">{new Date(member.joined_date).toLocaleDateString()}</dd>
-              </div>
-              {member.bio && (
-                <div className="flex">
-                  <dt className="w-24 text-gray-500">Bio:</dt>
-                  <dd className="text-gray-900">{member.bio}</dd>
-                </div>
-              )}
-              <div className="flex">
-                <dt className="w-24 text-gray-500">Volunteer:</dt>
-                <dd className="text-gray-900">{member.wants_to_volunteer ? 'Yes' : 'No'}</dd>
-              </div>
-              {member.volunteer_details && (
-                <div className="flex">
-                  <dt className="w-24 text-gray-500">Details:</dt>
-                  <dd className="text-gray-900">{member.volunteer_details}</dd>
-                </div>
-              )}
-              <div className="flex">
-                <dt className="w-24 text-gray-500">Mailing:</dt>
-                <dd className="text-gray-900">{member.mailing_list_opted_in ? 'Opted In' : 'Opted Out'}</dd>
-              </div>
-            </dl>
           </div>
         </div>
       </div>
 
-      {/* Chapter Assignment */}
-      <div className="card mb-6">
-        <h2 className="text-lg font-medium text-gray-900 mb-4">Chapter Assignment</h2>
-
-        <div className="mb-4">
-          <label className="block text-sm font-medium text-gray-700 mb-2">Primary Chapter</label>
-          <div className="flex gap-3">
-            <select
-              value={selectedChapter}
-              onChange={(e) => setSelectedChapter(e.target.value)}
-              className="input-field flex-1"
-            >
-              <option value="">No chapter assigned</option>
-              {['national', 'state', 'county', 'city'].map(level => (
-                groupedChapters[level]?.length > 0 && (
-                  <optgroup key={level} label={level.charAt(0).toUpperCase() + level.slice(1)}>
-                    {groupedChapters[level].map(c => (
-                      <option key={c.id} value={c.id}>{c.name}</option>
-                    ))}
-                  </optgroup>
-                )
-              ))}
-            </select>
-            <button
-              onClick={handleChapterChange}
-              disabled={saving || selectedChapter === member.chapter_id}
-              className="btn-primary"
-            >
-              {saving ? 'Saving...' : 'Update'}
-            </button>
-          </div>
-          <p className="text-xs text-gray-500 mt-2">
-            Changing the primary chapter will automatically update all inherited chapter memberships.
-          </p>
-        </div>
-
-        {memberChapters.length > 0 && (
-          <div>
-            <h3 className="text-sm font-medium text-gray-700 mb-2">All Chapter Memberships</h3>
-            <div className="flex flex-wrap gap-2">
-              {memberChapters
-                .sort((a, b) => {
-                  const order = ['national', 'state', 'county', 'city']
-                  return order.indexOf(a.chapters?.level) - order.indexOf(b.chapters?.level)
-                })
-                .map(mc => (
-                  <span
-                    key={mc.chapter_id}
-                    className={`px-3 py-1 rounded text-sm ${LEVEL_COLORS[mc.chapters?.level] || 'bg-gray-200'}`}
-                  >
-                    {mc.chapters?.name}
-                    {mc.is_primary && <span className="ml-1 opacity-75">(primary)</span>}
-                  </span>
-                ))}
+      <div className="grid lg:grid-cols-3 gap-4">
+        {/* Main content - 2/3 */}
+        <div className="lg:col-span-2 space-y-4">
+          {/* Contact Information */}
+          <div className="bg-white border border-stone-200 rounded">
+            <div className="px-4 py-3 border-b border-stone-200">
+              <h2 className="text-sm font-semibold text-gray-900">Contact Information</h2>
+            </div>
+            <div className="p-4 grid grid-cols-2 gap-x-6 gap-y-2">
+              <DetailRow label="Phone" value={member.phone || '-'} />
+              <DetailRow label="Joined" value={new Date(member.joined_date).toLocaleDateString()} />
+              <DetailRow label="Address" value={member.address_line1 || '-'} />
+              <DetailRow label="Volunteer" value={member.wants_to_volunteer ? 'Yes' : 'No'} />
+              <DetailRow label="City" value={member.city || '-'} />
+              <DetailRow label="Mailing" value={member.mailing_list_opted_in ? 'Opted In' : 'Opted Out'} />
+              <DetailRow label="State" value={member.state || '-'} />
+              {member.bio && <DetailRow label="Bio" value={member.bio} />}
+              <DetailRow label="ZIP" value={member.zip_code || '-'} />
+              {member.volunteer_details && <DetailRow label="Vol. Details" value={member.volunteer_details} />}
             </div>
           </div>
-        )}
-      </div>
 
-      {/* Status Management */}
-      <div className="card mb-6">
-        <h2 className="text-lg font-medium text-gray-900 mb-4">Status Management</h2>
-        <div className="flex flex-wrap gap-2">
-          {['pending', 'active', 'lapsed', 'cancelled'].map(status => (
-            <button
-              key={status}
-              onClick={() => handleStatusChange(status)}
-              disabled={saving || member.status === status}
-              className={`px-4 py-2 rounded-lg text-sm font-medium transition-colors ${
-                member.status === status
-                  ? STATUS_BADGES[status]
-                  : 'bg-gray-100 text-gray-700 hover:bg-gray-200'
-              } disabled:opacity-50`}
-            >
-              {status.charAt(0).toUpperCase() + status.slice(1)}
-            </button>
-          ))}
-        </div>
-      </div>
+          {/* Chapter Assignment */}
+          <div className="bg-white border border-stone-200 rounded">
+            <div className="px-4 py-3 border-b border-stone-200">
+              <h2 className="text-sm font-semibold text-gray-900">Chapter Assignment</h2>
+            </div>
+            <div className="p-4 space-y-4">
+              <div>
+                <label className="block text-xs font-medium text-gray-500 uppercase tracking-wide mb-1">Primary Chapter</label>
+                <div className="flex gap-2">
+                  <select
+                    value={selectedChapter}
+                    onChange={(e) => setSelectedChapter(e.target.value)}
+                    className={`${inputClass} flex-1`}
+                  >
+                    <option value="">No chapter assigned</option>
+                    {['national', 'state', 'county', 'city'].map(level => (
+                      groupedChapters[level]?.length > 0 && (
+                        <optgroup key={level} label={level.charAt(0).toUpperCase() + level.slice(1)}>
+                          {groupedChapters[level].map(c => (
+                            <option key={c.id} value={c.id}>{c.name}</option>
+                          ))}
+                        </optgroup>
+                      )
+                    ))}
+                  </select>
+                  <button
+                    onClick={handleChapterChange}
+                    disabled={saving || selectedChapter === member.chapter_id}
+                    className="px-3 py-2 text-sm font-medium text-white bg-labor-red rounded hover:bg-red-700 disabled:opacity-50 transition-colors"
+                  >
+                    Update
+                  </button>
+                </div>
+                <p className="text-xs text-gray-400 mt-1">
+                  Changing the primary chapter updates all inherited memberships.
+                </p>
+              </div>
 
-      {/* Admin Access Management */}
-      <div className="card mb-6">
-        <h2 className="text-lg font-medium text-gray-900 mb-4">Admin Access</h2>
-
-        {/* Display existing admin roles */}
-        {memberAdminRecords.length > 0 && (
-          <div className="space-y-3 mb-6">
-            {memberAdminRecords.map(record => (
-              <div key={record.id} className="flex items-center gap-3 p-4 bg-purple-50 rounded-lg">
-                <div className="flex-1">
-                  <div className="font-medium text-purple-900">
-                    {record.role === 'super_admin' ? 'Super Admin' :
-                     record.role === 'national_admin' ? 'National Admin' :
-                     record.role === 'state_admin' ? 'State Admin' :
-                     record.role === 'county_admin' ? 'County Admin' :
-                     record.role === 'city_admin' ? 'City Admin' :
-                     'Chapter Admin'}
+              {memberChapters.length > 0 && (
+                <div>
+                  <label className="block text-xs font-medium text-gray-500 uppercase tracking-wide mb-1.5">All Memberships</label>
+                  <div className="flex flex-wrap gap-1.5">
+                    {memberChapters
+                      .sort((a, b) => {
+                        const order = ['national', 'state', 'county', 'city']
+                        return order.indexOf(a.chapters?.level) - order.indexOf(b.chapters?.level)
+                      })
+                      .map(mc => (
+                        <span
+                          key={mc.chapter_id}
+                          className={`inline-flex items-center px-2 py-0.5 rounded text-xs font-medium border ${levelBadgeColor[mc.chapters?.level] || 'text-gray-700 bg-stone-50 border-stone-200'}`}
+                        >
+                          {mc.chapters?.name}
+                          {mc.is_primary && <span className="ml-1 opacity-60">(primary)</span>}
+                        </span>
+                      ))}
                   </div>
-                  {record.chapters && (
-                    <div className="text-sm text-purple-700">
-                      {record.chapters.name}
+                </div>
+              )}
+            </div>
+          </div>
+
+          {/* Admin Access */}
+          <div className="bg-white border border-stone-200 rounded">
+            <div className="px-4 py-3 border-b border-stone-200">
+              <h2 className="text-sm font-semibold text-gray-900">Admin Access</h2>
+            </div>
+            <div className="p-4 space-y-4">
+              {/* Existing admin roles */}
+              {memberAdminRecords.length > 0 && (
+                <div className="space-y-2">
+                  {memberAdminRecords.map(record => (
+                    <div key={record.id} className="flex items-center justify-between p-3 border border-stone-200 rounded">
+                      <div>
+                        <div className="text-sm font-medium text-gray-900">
+                          {ROLE_LABELS[record.role] || 'Admin'}
+                        </div>
+                        {record.chapters && (
+                          <div className="text-xs text-gray-400">{record.chapters.name}</div>
+                        )}
+                      </div>
+                      {canManageAdminRole(record.role) && (
+                        <button
+                          onClick={() => handleRemoveAdmin(record.id)}
+                          disabled={saving}
+                          className="px-2.5 py-1 text-xs font-medium text-red-700 bg-red-50 border border-red-200 rounded hover:bg-red-100 disabled:opacity-50 transition-colors"
+                        >
+                          Remove
+                        </button>
+                      )}
+                    </div>
+                  ))}
+                </div>
+              )}
+
+              {/* Grant access form */}
+              <div className={memberAdminRecords.length > 0 ? 'pt-2 border-t border-stone-200' : ''}>
+                <label className="block text-xs font-medium text-gray-500 uppercase tracking-wide mb-1">
+                  {memberAdminRecords.length > 0 ? 'Add Role' : 'Grant Admin Access'}
+                </label>
+                <div className="relative" ref={adminChapterDropdownRef}>
+                  <input
+                    type="text"
+                    value={showAdminChapterDropdown ? adminChapterSearch : (chapters.find(c => c.id === selectedAdminChapter)?.name || '')}
+                    onChange={(e) => {
+                      setAdminChapterSearch(e.target.value)
+                      if (!showAdminChapterDropdown) setShowAdminChapterDropdown(true)
+                    }}
+                    onFocus={() => {
+                      setShowAdminChapterDropdown(true)
+                      setAdminChapterSearch('')
+                    }}
+                    placeholder="Search chapters..."
+                    className={inputClass}
+                  />
+                  {showAdminChapterDropdown && (
+                    <div className="absolute z-10 w-full mt-1 bg-white border border-stone-200 rounded shadow-lg max-h-48 overflow-y-auto">
+                      {['national', 'state', 'county', 'city'].map(level => {
+                        const levelChapters = (groupedChapters[level] || []).filter(c =>
+                          c.name.toLowerCase().includes(adminChapterSearch.toLowerCase())
+                        )
+                        if (levelChapters.length === 0) return null
+                        return (
+                          <div key={level}>
+                            <div className="px-3 py-1.5 text-xs font-medium text-gray-400 uppercase tracking-wide bg-stone-50 border-b border-stone-100">
+                              {level}
+                            </div>
+                            {levelChapters.map(c => (
+                              <button
+                                key={c.id}
+                                type="button"
+                                onClick={() => {
+                                  setSelectedAdminChapter(c.id)
+                                  setAdminChapterSearch('')
+                                  setShowAdminChapterDropdown(false)
+                                }}
+                                className="w-full px-3 py-2 text-left text-sm text-gray-900 hover:bg-gray-50 transition-colors"
+                              >
+                                {c.name}
+                              </button>
+                            ))}
+                          </div>
+                        )
+                      })}
                     </div>
                   )}
                 </div>
-{canManageAdminRole(record.role) && (
-                  <button
-                    onClick={() => handleRemoveAdmin(record.id)}
-                    disabled={saving}
-                    className="px-4 py-2 bg-red-100 text-red-700 rounded-lg text-sm font-medium hover:bg-red-200 disabled:opacity-50"
-                  >
-                    Remove
-                  </button>
+                {selectedAdminChapter && (
+                  <p className="text-xs text-gray-400 mt-1">
+                    Will grant <span className="font-medium text-gray-600">
+                      {chapters.find(c => c.id === selectedAdminChapter)?.level} admin
+                    </span> access.
+                  </p>
                 )}
+                <button
+                  onClick={handleMakeAdmin}
+                  disabled={saving || !selectedAdminChapter}
+                  className="mt-2 px-3 py-1.5 text-sm font-medium text-white bg-labor-red rounded hover:bg-red-700 disabled:opacity-50 transition-colors"
+                >
+                  {saving ? 'Granting...' : 'Grant Access'}
+                </button>
               </div>
-            ))}
-          </div>
-        )}
-
-        {/* Add new admin role */}
-        <div className={memberAdminRecords.length > 0 ? 'border-t pt-4' : ''}>
-          <h3 className="font-medium text-gray-700 mb-4">
-            {memberAdminRecords.length > 0 ? 'Add Another Admin Role' : 'Grant Admin Access'}
-          </h3>
-          <div className="space-y-4">
-            <div>
-              <label className="block text-sm font-medium text-gray-700 mb-2">Chapter</label>
-              <div className="relative" ref={adminChapterDropdownRef}>
-                <input
-                  type="text"
-                  value={showAdminChapterDropdown ? adminChapterSearch : (chapters.find(c => c.id === selectedAdminChapter)?.name || '')}
-                  onChange={(e) => {
-                    setAdminChapterSearch(e.target.value)
-                    if (!showAdminChapterDropdown) setShowAdminChapterDropdown(true)
-                  }}
-                  onFocus={() => {
-                    setShowAdminChapterDropdown(true)
-                    setAdminChapterSearch('')
-                  }}
-                  placeholder="Select a chapter..."
-                  className="input-field w-full"
-                />
-                {showAdminChapterDropdown && (
-                  <div className="absolute z-10 w-full mt-1 bg-white border border-gray-300 rounded-lg shadow-lg max-h-60 overflow-y-auto">
-                    {['national', 'state', 'county', 'city'].map(level => {
-                      const levelChapters = (groupedChapters[level] || []).filter(c =>
-                        c.name.toLowerCase().includes(adminChapterSearch.toLowerCase())
-                      )
-                      if (levelChapters.length === 0) return null
-                      return (
-                        <div key={level}>
-                          <div className="px-3 py-2 text-xs font-semibold text-gray-500 bg-gray-50">
-                            {level.charAt(0).toUpperCase() + level.slice(1)}
-                          </div>
-                          {levelChapters.map(c => (
-                            <button
-                              key={c.id}
-                              type="button"
-                              onClick={() => {
-                                setSelectedAdminChapter(c.id)
-                                setAdminChapterSearch('')
-                                setShowAdminChapterDropdown(false)
-                              }}
-                              className="w-full px-4 py-2 text-left hover:bg-gray-100 text-sm"
-                            >
-                              {c.name}
-                            </button>
-                          ))}
-                        </div>
-                      )
-                    })}
-                  </div>
-                )}
-              </div>
-              {selectedAdminChapter && (
-                <p className="text-xs text-gray-500 mt-1">
-                  Will be granted <span className="font-medium">
-                    {chapters.find(c => c.id === selectedAdminChapter)?.level === 'national' ? 'National' :
-                     chapters.find(c => c.id === selectedAdminChapter)?.level === 'state' ? 'State' :
-                     chapters.find(c => c.id === selectedAdminChapter)?.level === 'county' ? 'County' :
-                     'City'} Admin
-                  </span> access to this chapter and all its sub-chapters.
-                </p>
-              )}
-              {!selectedAdminChapter && (
-                <p className="text-xs text-gray-500 mt-1">
-                  Select a chapter to grant admin access. The role will match the chapter level.
-                </p>
-              )}
             </div>
-            <button
-              onClick={handleMakeAdmin}
-              disabled={saving || !selectedAdminChapter}
-              className="btn-primary"
-            >
-              {saving ? 'Granting Access...' : memberAdminRecords.length > 0 ? 'Add Admin Role' : 'Grant Admin Access'}
-            </button>
           </div>
+        </div>
+
+        {/* Sidebar - 1/3 */}
+        <div className="space-y-4">
+          {/* Status */}
+          <div className="bg-white border border-stone-200 rounded">
+            <div className="px-4 py-3 border-b border-stone-200">
+              <h2 className="text-sm font-semibold text-gray-900">Status</h2>
+            </div>
+            <div className="p-4">
+              <div className="flex flex-wrap gap-1.5">
+                {['pending', 'active', 'lapsed', 'cancelled'].map(status => (
+                  <button
+                    key={status}
+                    onClick={() => handleStatusChange(status)}
+                    disabled={saving || member.status === status}
+                    className={`px-2.5 py-1 rounded text-xs font-medium transition-colors ${
+                      member.status === status
+                        ? 'bg-gray-900 text-white'
+                        : 'bg-stone-50 text-gray-600 border border-stone-200 hover:bg-stone-100'
+                    } disabled:opacity-50`}
+                  >
+                    {status.charAt(0).toUpperCase() + status.slice(1)}
+                  </button>
+                ))}
+              </div>
+            </div>
+          </div>
+
+          {/* Quick Info */}
+          <div className="bg-white border border-stone-200 rounded">
+            <div className="px-4 py-3 border-b border-stone-200">
+              <h2 className="text-sm font-semibold text-gray-900">Details</h2>
+            </div>
+            <div className="p-4 space-y-2.5">
+              <SidebarRow label="Joined" value={new Date(member.joined_date).toLocaleDateString()} />
+              <SidebarRow label="Status" value={member.status} />
+              <SidebarRow label="Chapter" value={chapters.find(c => c.id === member.chapter_id)?.name || 'None'} />
+              <SidebarRow label="Volunteer" value={member.wants_to_volunteer ? 'Yes' : 'No'} />
+              <SidebarRow label="Mailing" value={member.mailing_list_opted_in ? 'Opted In' : 'Opted Out'} />
+            </div>
+          </div>
+
+          {/* Danger Zone - Super Admin Only */}
+          {currentUserRoles.includes('super_admin') && (
+            <div className="bg-white border border-red-200 rounded">
+              <div className="px-4 py-3 border-b border-red-200">
+                <h2 className="text-sm font-semibold text-red-700">Danger Zone</h2>
+              </div>
+              <div className="p-4">
+                <p className="text-xs text-gray-500 mb-3">
+                  Permanently deletes this member, their chapter memberships, admin access, and auth account.
+                </p>
+                <button
+                  onClick={handleDeleteMember}
+                  disabled={deleting}
+                  className="w-full px-3 py-1.5 text-sm font-medium text-red-700 bg-red-50 border border-red-200 rounded hover:bg-red-100 disabled:opacity-50 transition-colors"
+                >
+                  {deleting ? 'Deleting...' : 'Delete Member Permanently'}
+                </button>
+              </div>
+            </div>
+          )}
         </div>
       </div>
+    </div>
+  )
+}
 
-      {/* Danger Zone - Super Admin Only */}
-      {currentUserRoles.includes('super_admin') && (
-        <div className="card border-red-200 bg-red-50">
-          <h2 className="text-lg font-medium text-red-900 mb-4">Danger Zone</h2>
-          <p className="text-sm text-red-700 mb-4">
-            Deleting a member is permanent and cannot be undone. This will remove all their data including chapter memberships, admin access, and their authentication account.
-          </p>
-          <button
-            onClick={handleDeleteMember}
-            disabled={deleting}
-            className="px-4 py-2 bg-red-600 text-white rounded-lg text-sm font-medium hover:bg-red-700 disabled:opacity-50"
-          >
-            {deleting ? 'Deleting...' : 'Delete Member Permanently'}
-          </button>
-        </div>
-      )}
+function DetailRow({ label, value }) {
+  return (
+    <div className="flex items-baseline gap-2 py-1">
+      <span className="text-xs text-gray-400 w-20 flex-shrink-0">{label}</span>
+      <span className="text-sm text-gray-900">{value}</span>
+    </div>
+  )
+}
+
+function SidebarRow({ label, value }) {
+  return (
+    <div className="flex items-center justify-between">
+      <span className="text-xs text-gray-400">{label}</span>
+      <span className="text-xs text-gray-700">{value}</span>
     </div>
   )
 }
