@@ -200,75 +200,6 @@ export default async function WorkspaceChapterDetailPage({ params }) {
               <div className="px-4 py-8 text-center text-sm text-gray-500">No members in this chapter</div>
             )}
           </div>
-
-          {/* Upcoming Events */}
-          <div className="bg-white border border-stone-200 rounded">
-            <div className="px-4 py-3 border-b border-stone-200 flex items-center justify-between">
-              <h2 className="text-sm font-semibold text-gray-900 uppercase tracking-wide">Upcoming Events</h2>
-              <Link href={`/workspace/events?chapter=${id}`} className="text-xs text-gray-500 hover:text-gray-700">View all</Link>
-            </div>
-            {events && events.length > 0 ? (
-              <ul className="divide-y divide-stone-100">
-                {events.map(event => (
-                  <li key={event.id}>
-                    <Link href={`/workspace/events/${event.id}`} className="flex items-center justify-between px-4 py-3 hover:bg-stone-50">
-                      <div className="min-w-0">
-                        <p className="text-sm font-medium text-gray-900 truncate">{event.title}</p>
-                        <p className="text-xs text-gray-500">
-                          {new Date(event.start_date).toLocaleDateString('en-US', { weekday: 'short', month: 'short', day: 'numeric' })}
-                          {event.location_name && ` · ${event.location_name}`}
-                        </p>
-                      </div>
-                      <span className={`inline-flex items-center px-2 py-0.5 rounded text-xs font-medium shrink-0 ml-4 ${
-                        event.status === 'published' ? 'bg-green-50 text-green-700' :
-                        event.status === 'draft' ? 'bg-gray-50 text-gray-600' :
-                        'bg-red-50 text-red-700'
-                      }`}>
-                        {event.status}
-                      </span>
-                    </Link>
-                  </li>
-                ))}
-              </ul>
-            ) : (
-              <div className="px-4 py-8 text-center text-sm text-gray-500">No upcoming events</div>
-            )}
-          </div>
-
-          {/* Polls */}
-          <div className="bg-white border border-stone-200 rounded">
-            <div className="px-4 py-3 border-b border-stone-200 flex items-center justify-between">
-              <h2 className="text-sm font-semibold text-gray-900 uppercase tracking-wide">Polls</h2>
-              <Link href="/workspace/polls" className="text-xs text-gray-500 hover:text-gray-700">View all</Link>
-            </div>
-            {polls && polls.length > 0 ? (
-              <ul className="divide-y divide-stone-100">
-                {polls.map(poll => (
-                  <li key={poll.id}>
-                    <Link href={`/workspace/polls/${poll.id}`} className="flex items-center justify-between px-4 py-3 hover:bg-stone-50">
-                      <div className="min-w-0">
-                        <p className="text-sm font-medium text-gray-900 truncate">{poll.title}</p>
-                        <p className="text-xs text-gray-500">
-                          {poll.closes_at
-                            ? `Closes ${new Date(poll.closes_at).toLocaleDateString('en-US', { month: 'short', day: 'numeric' })}`
-                            : 'No deadline'}
-                        </p>
-                      </div>
-                      <span className={`inline-flex items-center px-2 py-0.5 rounded text-xs font-medium shrink-0 ml-4 ${
-                        poll.status === 'active' ? 'bg-green-50 text-green-700' :
-                        poll.status === 'closed' ? 'bg-gray-50 text-gray-600' :
-                        'bg-amber-50 text-amber-700'
-                      }`}>
-                        {poll.status}
-                      </span>
-                    </Link>
-                  </li>
-                ))}
-              </ul>
-            ) : (
-              <div className="px-4 py-8 text-center text-sm text-gray-500">No polls for this chapter</div>
-            )}
-          </div>
         </div>
 
         {/* Sidebar - 1/3 */}
@@ -302,6 +233,56 @@ export default async function WorkspaceChapterDetailPage({ params }) {
                 </div>
               )}
             </div>
+          </div>
+
+          {/* Upcoming Events */}
+          <div className="bg-white border border-stone-200 rounded">
+            <div className="px-4 py-3 border-b border-stone-200 flex items-center justify-between">
+              <h2 className="text-sm font-semibold text-gray-900 uppercase tracking-wide">Events</h2>
+              <Link href={`/workspace/events?chapter=${id}`} className="text-xs text-gray-500 hover:text-gray-700">View all</Link>
+            </div>
+            {events && events.length > 0 ? (
+              <ul className="divide-y divide-stone-100">
+                {events.map(event => (
+                  <li key={event.id}>
+                    <Link href={`/workspace/events/${event.id}`} className="block px-4 py-2.5 hover:bg-stone-50">
+                      <p className="text-sm font-medium text-gray-900 truncate">{event.title}</p>
+                      <p className="text-xs text-gray-500">
+                        {new Date(event.start_date).toLocaleDateString('en-US', { month: 'short', day: 'numeric' })}
+                      </p>
+                    </Link>
+                  </li>
+                ))}
+              </ul>
+            ) : (
+              <div className="px-4 py-6 text-center text-sm text-gray-500">No upcoming events</div>
+            )}
+          </div>
+
+          {/* Polls */}
+          <div className="bg-white border border-stone-200 rounded">
+            <div className="px-4 py-3 border-b border-stone-200 flex items-center justify-between">
+              <h2 className="text-sm font-semibold text-gray-900 uppercase tracking-wide">Polls</h2>
+              <Link href="/workspace/polls" className="text-xs text-gray-500 hover:text-gray-700">View all</Link>
+            </div>
+            {polls && polls.length > 0 ? (
+              <ul className="divide-y divide-stone-100">
+                {polls.map(poll => (
+                  <li key={poll.id}>
+                    <Link href={`/workspace/polls/${poll.id}`} className="flex items-center justify-between px-4 py-2.5 hover:bg-stone-50">
+                      <p className="text-sm font-medium text-gray-900 truncate">{poll.title}</p>
+                      <span className={`inline-flex items-center px-1.5 py-0.5 rounded text-xs font-medium shrink-0 ml-2 ${
+                        poll.status === 'active' ? 'bg-green-50 text-green-700' : 'bg-gray-50 text-gray-600'
+                      }`}>
+                        {poll.status}
+                      </span>
+                    </Link>
+                  </li>
+                ))}
+              </ul>
+            ) : (
+              <div className="px-4 py-6 text-center text-sm text-gray-500">No polls</div>
+            )}
           </div>
 
           {/* Resources */}
