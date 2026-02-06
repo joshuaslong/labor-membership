@@ -31,17 +31,17 @@ export default function RecipientSelector({
   ]
 
   return (
-    <div className="space-y-4">
-      <h3 className="text-sm font-semibold text-gray-900 uppercase tracking-wide">
+    <div className="space-y-3">
+      <h3 className="text-xs font-semibold text-gray-500 uppercase tracking-wide">
         Recipients
       </h3>
 
-      <div className="space-y-3">
+      <div className="space-y-2">
         {/* Main recipient type selector */}
         <select
           value={recipientType}
           onChange={(e) => setRecipientType(e.target.value)}
-          className="input-field"
+          className="input-field text-sm"
         >
           {options.map((opt) => (
             <option key={opt.value} value={opt.value}>
@@ -72,9 +72,9 @@ export default function RecipientSelector({
             />
             {groupChapterId && (
               groupsLoading ? (
-                <p className="text-sm text-gray-500">Loading groups...</p>
+                <p className="text-xs text-gray-500">Loading groups...</p>
               ) : groups.length === 0 ? (
-                <p className="text-sm text-gray-500">
+                <p className="text-xs text-gray-500">
                   No groups in this chapter.{' '}
                   <Link href="/admin/groups" className="text-labor-red hover:underline">
                     Create one
@@ -84,7 +84,7 @@ export default function RecipientSelector({
                 <select
                   value={selectedGroupId}
                   onChange={(e) => setSelectedGroupId(e.target.value)}
-                  className="input-field"
+                  className="input-field text-sm"
                 >
                   <option value="">Select group...</option>
                   {groups.map(g => (

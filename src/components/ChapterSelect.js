@@ -38,14 +38,17 @@ export default function ChapterSelect({ chapters, value, onChange, required = fa
       <div className="relative">
         <input
           type="text"
-          value={search}
+          value={isOpen ? search : (selectedChapter ? selectedChapter.name : '')}
           onChange={(e) => {
             setSearch(e.target.value)
             setIsOpen(true)
           }}
-          onFocus={() => setIsOpen(true)}
-          placeholder={selectedChapter ? selectedChapter.name : 'Search chapters...'}
-          className="input-field pr-8"
+          onFocus={() => {
+            setIsOpen(true)
+            setSearch('')
+          }}
+          placeholder="Select chapter..."
+          className="input-field pr-8 text-sm"
         />
         <button
           type="button"

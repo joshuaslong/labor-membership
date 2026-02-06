@@ -12,7 +12,7 @@ export default function EmailActions({
   content
 }) {
   return (
-    <div className="space-y-4">
+    <div className="space-y-3">
       {/* Test Email */}
       <div className="flex items-center gap-2">
         <input
@@ -20,7 +20,7 @@ export default function EmailActions({
           value={testEmail}
           onChange={(e) => setTestEmail(e.target.value)}
           placeholder="Test email address..."
-          className="input-field flex-1 text-sm"
+          className="flex-1 text-sm px-3 py-2 bg-white text-gray-900 border border-stone-300 rounded placeholder:text-gray-500 focus:outline-none focus:border-labor-red focus:ring-1 focus:ring-labor-red"
         />
         <button
           type="button"
