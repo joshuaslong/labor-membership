@@ -28,7 +28,7 @@ export async function POST(request, { params }) {
     // Verify event exists and is published
     const { data: event, error: eventError } = await supabase
       .from('events')
-      .select('id, title, start_date, status, location')
+      .select('id, title, start_date, status, location_name')
       .eq('id', id)
       .eq('status', 'published')
       .single()
@@ -99,7 +99,7 @@ export async function POST(request, { params }) {
           event_name: event.title,
           event_date: formatEmailDate(event.start_date),
           event_time: formatEmailTime(event.start_date),
-          event_location: event.location || 'TBD',
+          event_location: event.location_name || 'TBD',
           rsvp_status: 'confirmed',
         },
         recipientType: 'guest',

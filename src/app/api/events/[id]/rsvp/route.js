@@ -29,7 +29,7 @@ export async function POST(request, { params }) {
     // Check if event exists and is published
     const { data: event } = await adminClient
       .from('events')
-      .select('id, title, status, max_attendees, rsvp_deadline, start_date, location')
+      .select('id, title, status, max_attendees, rsvp_deadline, start_date, location_name')
       .eq('id', id)
       .single()
 
@@ -111,7 +111,7 @@ export async function POST(request, { params }) {
             event_name: event.title,
             event_date: formatEmailDate(event.start_date),
             event_time: formatEmailTime(event.start_date),
-            event_location: event.location || 'TBD',
+            event_location: event.location_name || 'TBD',
             rsvp_status: rsvpStatusText,
           },
           recipientType: 'member',
