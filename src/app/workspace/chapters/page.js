@@ -1,4 +1,5 @@
 import { redirect } from 'next/navigation'
+import { Suspense } from 'react'
 import { createAdminClient } from '@/lib/supabase/server'
 import { getCurrentTeamMember } from '@/lib/teamMember'
 import ChapterBrowser from './ChapterBrowser'
@@ -41,9 +42,20 @@ export default async function WorkspaceChaptersPage() {
   const myChapter = teamMember.chapters || null
 
   return (
-    <ChapterBrowser
-      chapters={chaptersWithCounts}
-      myChapter={myChapter}
-    />
+    <Suspense fallback={
+      <div className="max-w-7xl mx-auto px-4 sm:px-6 py-6">
+        <div className="mb-4">
+          <h1 className="text-sm font-semibold text-gray-900 uppercase tracking-wide">Chapters</h1>
+        </div>
+        <div className="bg-white border border-stone-200 rounded p-8 text-center text-gray-500">
+          Loading chapters...
+        </div>
+      </div>
+    }>
+      <ChapterBrowser
+        chapters={chaptersWithCounts}
+        myChapter={myChapter}
+      />
+    </Suspense>
   )
 }
