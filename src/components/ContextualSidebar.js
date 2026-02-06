@@ -73,15 +73,18 @@ function ContextualSidebar({ items = [] }) {
           }
 
           const isLinkActive = isActive(item.href)
+          const isPrimary = item.variant === 'primary'
 
           return (
             <Link
               key={key}
               href={item.href}
               className={`block px-3 py-1.5 text-sm rounded ${
-                isLinkActive
-                  ? 'bg-stone-100 text-gray-900 font-medium'
-                  : 'text-gray-700 hover:bg-stone-50'
+                isPrimary
+                  ? 'bg-labor-red text-white font-medium hover:bg-labor-red/90'
+                  : isLinkActive
+                    ? 'bg-stone-100 text-gray-900 font-medium'
+                    : 'text-gray-700 hover:bg-stone-50'
               }`}
               aria-current={isLinkActive ? 'page' : undefined}
             >
@@ -101,7 +104,8 @@ ContextualSidebar.propTypes = {
     PropTypes.shape({
       type: PropTypes.oneOf(['header', 'divider', 'link']).isRequired,
       label: PropTypes.string,
-      href: PropTypes.string
+      href: PropTypes.string,
+      variant: PropTypes.oneOf(['primary'])
     })
   )
 }

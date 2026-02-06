@@ -4,6 +4,7 @@ import { getChapterScope } from '@/lib/permissions'
 import { redirect } from 'next/navigation'
 import Link from 'next/link'
 import EventsToolbar from '@/components/EventsToolbar'
+import EventRowActions from '@/components/EventRowActions'
 
 const PAGE_SIZE = 50
 
@@ -231,20 +232,7 @@ export default async function EventsPage({ searchParams: searchParamsPromise }) 
                       </span>
                     </td>
                     <td className="px-4 py-3 text-sm">
-                      <div className="flex gap-2">
-                        <Link
-                          href={`/workspace/events/${event.id}`}
-                          className="text-gray-500 hover:text-gray-700"
-                        >
-                          Edit
-                        </Link>
-                        <Link
-                          href={`/workspace/events/${event.id}/rsvps`}
-                          className="text-gray-500 hover:text-gray-700"
-                        >
-                          RSVPs
-                        </Link>
-                      </div>
+                      <EventRowActions eventId={event.id} eventTitle={event.title} />
                     </td>
                   </tr>
                 )

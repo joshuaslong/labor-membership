@@ -11,7 +11,7 @@ export default async function EventsLayout({ children }) {
   }
 
   const sidebarItems = [
-    { type: 'link', label: 'Create Event', href: '/workspace/events/new' },
+    { type: 'link', label: 'Create Event', href: '/workspace/events/new', variant: 'primary' },
     { type: 'divider' },
     { type: 'link', label: 'All Events', href: '/workspace/events' },
     { type: 'link', label: 'Upcoming', href: '/workspace/events?time=upcoming' },
