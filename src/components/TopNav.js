@@ -39,7 +39,7 @@ function TopNav({ sections = [] }) {
                 priority
               />
             </Link>
-            <nav aria-label="Main navigation" className="flex gap-4">
+            <nav aria-label="Main navigation" className="flex gap-4 mt-1">
               {sections.map(section => (
                 <Link
                   key={section}
