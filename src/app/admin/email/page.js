@@ -11,7 +11,6 @@ import { useEmailDraft } from './hooks/useEmailDraft'
 import { EMAIL_TEMPLATES } from './utils/emailTemplates'
 
 import EmailComposerLayout from '@/components/EmailComposerLayout'
-import SignatureModal from './components/SignatureModal'
 import PreferencesModal from './components/PreferencesModal'
 import RecipientSelector from './components/RecipientSelector'
 import SenderSection from './components/SenderSection'
@@ -146,14 +145,6 @@ export default function EmailComposePage() {
         emailSentInfo={actions.emailSentInfo}
         onClose={() => actions.setEmailSentInfo(null)}
       />
-      <SignatureModal
-        show={emailPrefs.showSignatureModal}
-        signature={emailPrefs.modalSignature}
-        setSignature={emailPrefs.setModalSignature}
-        onSave={emailPrefs.handleSaveSignature}
-        onClose={() => emailPrefs.setShowSignatureModal(false)}
-        saving={emailPrefs.savingPreferences}
-      />
       <PreferencesModal
         show={showPreferencesModal}
         onClose={() => setShowPreferencesModal(false)}
@@ -161,10 +152,6 @@ export default function EmailComposePage() {
         setPreferences={emailPrefs.setPreferences}
         onSave={emailPrefs.handleSavePreferences}
         saving={emailPrefs.savingPreferences}
-        onEditSignature={() => {
-          setShowPreferencesModal(false)
-          emailPrefs.handleOpenSignatureModal()
-        }}
       />
 
       <form onSubmit={handleSubmit}>

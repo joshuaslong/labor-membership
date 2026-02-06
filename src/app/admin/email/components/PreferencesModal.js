@@ -1,5 +1,7 @@
+import { useState, useEffect } from 'react'
+
 /**
- * Email preferences modal
+ * Email preferences modal - reply-to and signature in one place
  */
 export default function PreferencesModal({
   show,
@@ -7,16 +9,34 @@ export default function PreferencesModal({
   preferences,
   setPreferences,
   onSave,
-  saving,
-  onEditSignature
+  saving
 }) {
+  const [localSignature, setLocalSignature] = useState('')
+
+  // Sync signature when modal opens or preferences change
+  useEffect(() => {
+    if (show) {
+      setLocalSignature(preferences.default_signature || '')
+    }
+  }, [show, preferences.default_signature])
+
   if (!show) return null
+
+  const handleSave = async () => {
+    const updatedPrefs = {
+      ...preferences,
+      default_signature: localSignature
+    }
+    setPreferences(updatedPrefs)
+    await onSave(updatedPrefs)
+    onClose()
+  }
 
   return (
     <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50 p-4">
-      <div className="bg-white rounded-lg shadow-2xl max-w-md w-full">
+      <div className="bg-white rounded-lg shadow-2xl max-w-lg w-full">
         <div className="flex items-center justify-between p-4 border-b border-stone-200">
-          <h2 className="text-lg font-semibold text-gray-900">Email Preferences</h2>
+          <h2 className="text-base font-semibold text-gray-900">Email Settings</h2>
           <button
             type="button"
             onClick={onClose}
@@ -30,7 +50,7 @@ export default function PreferencesModal({
 
         <div className="p-4 space-y-4">
           <div>
-            <label className="block text-sm font-medium text-gray-700 mb-1.5">
+            <label className="block text-xs font-medium text-gray-600 mb-1">
               Default Reply-To Email
             </label>
             <input
@@ -38,50 +58,44 @@ export default function PreferencesModal({
               value={preferences.default_reply_to || ''}
               onChange={(e) => setPreferences({ ...preferences, default_reply_to: e.target.value })}
               placeholder="your-email@example.com"
-              className="input-field"
+              className="input-field text-sm"
             />
-            <p className="text-xs text-gray-500 mt-1">
+            <p className="text-xs text-gray-400 mt-1">
               Pre-filled when you compose emails
             </p>
           </div>
 
           <div>
-            <label className="block text-sm font-medium text-gray-700 mb-1.5">
-              Default Signature
+            <label className="block text-xs font-medium text-gray-600 mb-1">
+              Email Signature
             </label>
-            {preferences.default_signature ? (
-              <div className="mb-2 p-3 bg-stone-50 border border-stone-200 rounded text-sm text-gray-700 whitespace-pre-wrap">
-                {preferences.default_signature}
-              </div>
-            ) : (
-              <p className="text-sm text-gray-500 mb-2">No signature set</p>
-            )}
-            <button
-              type="button"
-              onClick={onEditSignature}
-              className="text-sm text-labor-red hover:underline"
-            >
-              {preferences.default_signature ? 'Edit signature' : 'Add signature'}
-            </button>
+            <textarea
+              value={localSignature}
+              onChange={(e) => setLocalSignature(e.target.value)}
+              placeholder="In solidarity,&#10;Your Name"
+              rows={4}
+              className="input-field text-sm font-mono"
+              style={{ resize: 'vertical' }}
+            />
+            <p className="text-xs text-gray-400 mt-1">
+              Added to the end of your emails. Use HTML for formatting.
+            </p>
           </div>
         </div>
 
-        <div className="flex justify-end gap-3 p-4 border-t border-stone-200 bg-stone-50 rounded-b-lg">
+        <div className="flex justify-end gap-2 p-4 border-t border-stone-200 bg-stone-50 rounded-b-lg">
           <button
             type="button"
             onClick={onClose}
-            className="btn-secondary"
+            className="btn-secondary text-sm px-3 py-1.5"
           >
             Cancel
           </button>
           <button
             type="button"
-            onClick={() => {
-              onSave()
-              onClose()
-            }}
+            onClick={handleSave}
             disabled={saving}
-            className="btn-primary"
+            className="btn-primary text-sm px-3 py-1.5"
           >
             {saving ? 'Saving...' : 'Save'}
           </button>

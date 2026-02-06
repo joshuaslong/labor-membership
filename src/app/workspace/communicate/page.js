@@ -11,7 +11,6 @@ import { useEmailDraft } from '@/app/admin/email/hooks/useEmailDraft'
 import { EMAIL_TEMPLATES } from '@/app/admin/email/utils/emailTemplates'
 
 import EmailComposerLayout from '@/components/EmailComposerLayout'
-import SignatureModal from '@/app/admin/email/components/SignatureModal'
 import PreferencesModal from '@/app/admin/email/components/PreferencesModal'
 import RecipientSelector from '@/app/admin/email/components/RecipientSelector'
 import SenderSection from '@/app/admin/email/components/SenderSection'
@@ -152,14 +151,6 @@ function CommunicateContent() {
         emailSentInfo={actions.emailSentInfo}
         onClose={() => actions.setEmailSentInfo(null)}
       />
-      <SignatureModal
-        show={emailPrefs.showSignatureModal}
-        signature={emailPrefs.modalSignature}
-        setSignature={emailPrefs.setModalSignature}
-        onSave={emailPrefs.handleSaveSignature}
-        onClose={() => emailPrefs.setShowSignatureModal(false)}
-        saving={emailPrefs.savingPreferences}
-      />
       <PreferencesModal
         show={showPreferencesModal}
         onClose={() => setShowPreferencesModal(false)}
@@ -167,10 +158,6 @@ function CommunicateContent() {
         setPreferences={emailPrefs.setPreferences}
         onSave={emailPrefs.handleSavePreferences}
         saving={emailPrefs.savingPreferences}
-        onEditSignature={() => {
-          setShowPreferencesModal(false)
-          emailPrefs.handleOpenSignatureModal()
-        }}
       />
 
       <form onSubmit={handleSubmit}>
