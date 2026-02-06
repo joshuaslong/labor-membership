@@ -14,35 +14,41 @@ export default function EmailContentForm({
 }) {
   return (
     <div className="space-y-3">
-      <div className="flex items-center justify-between">
-        <h3 className="text-xs font-semibold text-gray-500 uppercase tracking-wide">
-          Content
-        </h3>
-        <select
-          value={selectedTemplate}
-          onChange={(e) => handleTemplateChange(e.target.value)}
-          className="text-xs border border-stone-200 rounded py-1 pl-2 pr-6 text-gray-600 focus:border-labor-red focus:ring-1 focus:ring-labor-red bg-white hover:border-stone-300"
-        >
-          {EMAIL_TEMPLATES.map((template) => (
-            <option key={template.id} value={template.id}>
-              {template.name}
-            </option>
-          ))}
-        </select>
-      </div>
+      <h3 className="text-xs font-semibold text-gray-500 uppercase tracking-wide">
+        Content
+      </h3>
 
-      <div>
-        <label className="block text-xs font-medium text-gray-600 mb-1">
-          Subject Line
-        </label>
-        <input
-          type="text"
-          value={subject}
-          onChange={(e) => setSubject(e.target.value)}
-          placeholder="Enter email subject..."
-          className="input-field text-sm"
-          required
-        />
+      <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
+        <div>
+          <label className="block text-xs font-medium text-gray-600 mb-1">
+            Template
+          </label>
+          <select
+            value={selectedTemplate}
+            onChange={(e) => handleTemplateChange(e.target.value)}
+            className="input-field text-sm"
+          >
+            {EMAIL_TEMPLATES.map((template) => (
+              <option key={template.id} value={template.id}>
+                {template.name}
+              </option>
+            ))}
+          </select>
+        </div>
+
+        <div>
+          <label className="block text-xs font-medium text-gray-600 mb-1">
+            Subject Line
+          </label>
+          <input
+            type="text"
+            value={subject}
+            onChange={(e) => setSubject(e.target.value)}
+            placeholder="Enter email subject..."
+            className="input-field text-sm"
+            required
+          />
+        </div>
       </div>
 
       <div>
