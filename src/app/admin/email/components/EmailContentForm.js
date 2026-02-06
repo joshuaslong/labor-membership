@@ -55,13 +55,11 @@ export default function EmailContentForm({
         <label className="block text-xs font-medium text-gray-600 mb-1">
           Message
         </label>
-        <div className="border border-stone-200 rounded-lg overflow-hidden bg-white">
-          <EmailEditor
-            value={content}
-            onChange={setContent}
-            placeholder="Write your email..."
-          />
-        </div>
+        <EmailEditor
+          value={content}
+          onChange={setContent}
+          placeholder="Write your email..."
+        />
         <p className="text-xs text-gray-400 mt-1.5">
           Use <code className="bg-stone-100 px-1 py-0.5 rounded text-labor-red">{'{$name}'}</code> to personalize
         </p>
