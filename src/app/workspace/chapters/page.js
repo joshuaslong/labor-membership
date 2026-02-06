@@ -1,6 +1,6 @@
-import { createClient } from '@/lib/supabase/server'
-import { getCurrentTeamMember } from '@/lib/teamMember'
-import { redirect } from 'next/navigation'
+'use client'
+
+import { useState, useEffect, useMemo } from 'react'
 import Link from 'next/link'
 
 const LEVEL_ORDER = ['national', 'state', 'county', 'city']
@@ -17,266 +17,319 @@ const LEVEL_LABELS = {
   city: 'City',
 }
 
-export default async function WorkspaceChaptersPage() {
-  const teamMember = await getCurrentTeamMember()
-  if (!teamMember) redirect('/login')
+export default function WorkspaceChaptersPage() {
+  const [chapters, setChapters] = useState([])
+  const [loading, setLoading] = useState(true)
+  const [search, setSearch] = useState('')
+  const [levelFilter, setLevelFilter] = useState('all')
+  const [expandedStates, setExpandedStates] = useState(new Set())
 
-  const supabase = await createClient()
-
-  // Get team member's chapter
-  const { data: myChapter } = await supabase
-    .from('chapters')
-    .select('*')
-    .eq('id', teamMember.chapter_id)
-    .single()
-
-  // Get all chapters for building hierarchy
-  const { data: allChapters } = await supabase
-    .from('chapters')
-    .select('*')
-    .order('level')
-    .order('name')
-
-  // Get member counts per chapter
-  const { data: memberCounts } = await supabase
-    .from('member_chapters')
-    .select('chapter_id, is_primary, members!inner(status)')
-    .eq('members.status', 'active')
-
-  const countMap = {}
-  memberCounts?.forEach(mc => {
-    countMap[mc.chapter_id] = (countMap[mc.chapter_id] || 0) + 1
-  })
-
-  // Build chapter hierarchy
-  const chapterMap = {}
-  allChapters?.forEach(c => {
-    chapterMap[c.id] = { ...c, memberCount: countMap[c.id] || 0, children: [] }
-  })
-
-  // Build parent-child relationships
-  allChapters?.forEach(c => {
-    if (c.parent_id && chapterMap[c.parent_id]) {
-      chapterMap[c.parent_id].children.push(chapterMap[c.id])
+  useEffect(() => {
+    const loadChapters = async () => {
+      const res = await fetch('/api/chapters')
+      const data = await res.json()
+      setChapters(data.chapters || [])
+      setLoading(false)
     }
-  })
+    loadChapters()
+  }, [])
 
-  // Sort children by name
-  Object.values(chapterMap).forEach(chapter => {
-    chapter.children.sort((a, b) => a.name.localeCompare(b.name))
-  })
-
-  // Get my chapter with enriched data
-  const myChapterEnriched = myChapter ? chapterMap[myChapter.id] : null
-
-  // Get parent chain (breadcrumb)
-  const parentChain = []
-  if (myChapterEnriched) {
-    let current = myChapterEnriched
-    while (current.parent_id && chapterMap[current.parent_id]) {
-      parentChain.unshift(chapterMap[current.parent_id])
-      current = chapterMap[current.parent_id]
-    }
-  }
-
-  // Get sibling chapters (same parent)
-  const siblingChapters = myChapterEnriched?.parent_id
-    ? chapterMap[myChapterEnriched.parent_id]?.children.filter(c => c.id !== myChapterEnriched.id) || []
-    : []
-
-  // Calculate total members in my chapter's subtree
-  const calculateSubtreeMembers = (chapter) => {
-    let total = chapter.memberCount || 0
-    chapter.children?.forEach(child => {
-      total += calculateSubtreeMembers(child)
+  // Build hierarchy and apply filters
+  const { hierarchy, filteredFlat, counts } = useMemo(() => {
+    // Count chapters by level
+    const counts = { all: chapters.length }
+    chapters.forEach(c => {
+      counts[c.level] = (counts[c.level] || 0) + 1
     })
-    return total
+
+    // Build a map for hierarchy
+    const chapterMap = {}
+    chapters.forEach(c => {
+      chapterMap[c.id] = { ...c, children: [] }
+    })
+
+    // Build parent-child relationships
+    const roots = []
+    chapters.forEach(c => {
+      if (c.parent_id && chapterMap[c.parent_id]) {
+        chapterMap[c.parent_id].children.push(chapterMap[c.id])
+      } else if (!c.parent_id) {
+        roots.push(chapterMap[c.id])
+      }
+    })
+
+    // Sort children by name
+    const sortChildren = (node) => {
+      node.children.sort((a, b) => a.name.localeCompare(b.name))
+      node.children.forEach(sortChildren)
+    }
+    roots.forEach(sortChildren)
+
+    // Filter chapters
+    const searchLower = search.toLowerCase()
+    const filtered = chapters.filter(c => {
+      const matchesSearch = !search || c.name.toLowerCase().includes(searchLower)
+      const matchesLevel = levelFilter === 'all' || c.level === levelFilter
+      return matchesSearch && matchesLevel
+    })
+
+    return { hierarchy: roots, filteredFlat: filtered, counts }
+  }, [chapters, search, levelFilter])
+
+  const toggleState = (stateId) => {
+    setExpandedStates(prev => {
+      const next = new Set(prev)
+      if (next.has(stateId)) {
+        next.delete(stateId)
+      } else {
+        next.add(stateId)
+      }
+      return next
+    })
   }
 
-  const totalSubtreeMembers = myChapterEnriched ? calculateSubtreeMembers(myChapterEnriched) : 0
+  const expandAll = () => {
+    const allStateIds = chapters.filter(c => c.level === 'state').map(c => c.id)
+    setExpandedStates(new Set(allStateIds))
+  }
+
+  const collapseAll = () => {
+    setExpandedStates(new Set())
+  }
+
+  // When filtering by level or search, show flat list
+  const showFlatList = levelFilter !== 'all' || search
+
+  if (loading) {
+    return (
+      <div className="max-w-7xl mx-auto px-4 sm:px-6 py-6">
+        <div className="mb-6">
+          <h1 className="text-sm font-semibold text-gray-900 uppercase tracking-wide">Chapters</h1>
+        </div>
+        <div className="bg-white border border-stone-200 rounded-lg p-8 text-center text-gray-500">
+          Loading chapters...
+        </div>
+      </div>
+    )
+  }
 
   return (
     <div className="max-w-7xl mx-auto px-4 sm:px-6 py-6">
       {/* Header */}
-      <div className="mb-6">
+      <div className="mb-4 flex items-center justify-between">
         <h1 className="text-sm font-semibold text-gray-900 uppercase tracking-wide">Chapters</h1>
+        <span className="text-xs text-gray-400 tabular-nums">
+          {chapters.length} chapter{chapters.length !== 1 ? 's' : ''}
+        </span>
       </div>
 
-      {myChapterEnriched ? (
-        <div className="space-y-6">
-          {/* My Chapter Card */}
-          <div className="bg-white border border-stone-200 rounded-lg overflow-hidden">
-            <div className="px-4 py-3 border-b border-stone-200 bg-stone-50">
-              <h2 className="text-xs font-semibold text-gray-500 uppercase tracking-wide">Your Chapter</h2>
-            </div>
-            <div className="p-4">
-              {/* Breadcrumb */}
-              {parentChain.length > 0 && (
-                <div className="flex items-center gap-1 text-xs text-gray-500 mb-3">
-                  {parentChain.map((parent, idx) => (
-                    <span key={parent.id} className="flex items-center gap-1">
-                      <Link href={`/chapters/${parent.id}`} className="hover:text-labor-red">
-                        {parent.name}
-                      </Link>
-                      <svg className="w-3 h-3" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                        <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 5l7 7-7 7" />
-                      </svg>
-                    </span>
-                  ))}
-                </div>
-              )}
-
-              <div className="flex items-start justify-between">
-                <div className="flex items-center gap-3">
-                  <span className={`px-2 py-1 rounded text-xs font-medium ${LEVEL_COLORS[myChapterEnriched.level]}`}>
-                    {LEVEL_LABELS[myChapterEnriched.level]}
-                  </span>
-                  <div>
-                    <h3 className="text-lg font-semibold text-gray-900">{myChapterEnriched.name}</h3>
-                    {myChapterEnriched.contact_email && (
-                      <p className="text-sm text-gray-500">{myChapterEnriched.contact_email}</p>
-                    )}
-                  </div>
-                </div>
-                <Link
-                  href={`/chapters/${myChapterEnriched.id}`}
-                  className="text-sm text-labor-red hover:underline"
-                >
-                  View Details
-                </Link>
-              </div>
-
-              {/* Stats Row */}
-              <div className="mt-4 grid grid-cols-3 gap-4">
-                <div className="text-center p-3 bg-stone-50 rounded">
-                  <div className="text-xl font-semibold text-gray-900">{myChapterEnriched.memberCount}</div>
-                  <div className="text-xs text-gray-500">Direct Members</div>
-                </div>
-                <div className="text-center p-3 bg-stone-50 rounded">
-                  <div className="text-xl font-semibold text-gray-900">{totalSubtreeMembers}</div>
-                  <div className="text-xs text-gray-500">Total Members</div>
-                </div>
-                <div className="text-center p-3 bg-stone-50 rounded">
-                  <div className="text-xl font-semibold text-gray-900">{myChapterEnriched.children.length}</div>
-                  <div className="text-xs text-gray-500">Sub-Chapters</div>
-                </div>
-              </div>
-            </div>
+      {/* Search and Filters */}
+      <div className="bg-white border border-stone-200 rounded-lg p-4 mb-4">
+        <div className="flex flex-col sm:flex-row gap-3">
+          <div className="flex-1">
+            <input
+              type="text"
+              placeholder="Search chapters..."
+              value={search}
+              onChange={(e) => setSearch(e.target.value)}
+              className="input-field text-sm"
+            />
           </div>
-
-          {/* Two Column Layout */}
-          <div className="grid lg:grid-cols-2 gap-6">
-            {/* Sub-Chapters */}
-            <div className="bg-white border border-stone-200 rounded-lg overflow-hidden">
-              <div className="px-4 py-3 border-b border-stone-200 bg-stone-50 flex items-center justify-between">
-                <h2 className="text-xs font-semibold text-gray-500 uppercase tracking-wide">
-                  Sub-Chapters
-                </h2>
-                <span className="text-xs text-gray-400">{myChapterEnriched.children.length}</span>
-              </div>
-              <div className="divide-y divide-stone-100">
-                {myChapterEnriched.children.length > 0 ? (
-                  myChapterEnriched.children.map(child => (
-                    <Link
-                      key={child.id}
-                      href={`/chapters/${child.id}`}
-                      className="flex items-center justify-between px-4 py-3 hover:bg-stone-50 transition-colors"
-                    >
-                      <div className="flex items-center gap-3">
-                        <span className={`px-1.5 py-0.5 rounded text-xs font-medium ${LEVEL_COLORS[child.level]}`}>
-                          {LEVEL_LABELS[child.level]?.charAt(0)}
-                        </span>
-                        <span className="text-sm font-medium text-gray-900">{child.name}</span>
-                      </div>
-                      <div className="flex items-center gap-3">
-                        <span className="text-xs text-gray-500">{child.memberCount} members</span>
-                        <svg className="w-4 h-4 text-gray-400" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                          <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 5l7 7-7 7" />
-                        </svg>
-                      </div>
-                    </Link>
-                  ))
-                ) : (
-                  <div className="px-4 py-8 text-center text-sm text-gray-500">
-                    No sub-chapters
-                  </div>
-                )}
-              </div>
-            </div>
-
-            {/* Sibling Chapters */}
-            <div className="bg-white border border-stone-200 rounded-lg overflow-hidden">
-              <div className="px-4 py-3 border-b border-stone-200 bg-stone-50 flex items-center justify-between">
-                <h2 className="text-xs font-semibold text-gray-500 uppercase tracking-wide">
-                  Related Chapters
-                </h2>
-                <span className="text-xs text-gray-400">{siblingChapters.length}</span>
-              </div>
-              <div className="divide-y divide-stone-100">
-                {siblingChapters.length > 0 ? (
-                  siblingChapters.slice(0, 10).map(sibling => (
-                    <Link
-                      key={sibling.id}
-                      href={`/chapters/${sibling.id}`}
-                      className="flex items-center justify-between px-4 py-3 hover:bg-stone-50 transition-colors"
-                    >
-                      <div className="flex items-center gap-3">
-                        <span className={`px-1.5 py-0.5 rounded text-xs font-medium ${LEVEL_COLORS[sibling.level]}`}>
-                          {LEVEL_LABELS[sibling.level]?.charAt(0)}
-                        </span>
-                        <span className="text-sm font-medium text-gray-900">{sibling.name}</span>
-                      </div>
-                      <div className="flex items-center gap-3">
-                        <span className="text-xs text-gray-500">{sibling.memberCount} members</span>
-                        <svg className="w-4 h-4 text-gray-400" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                          <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 5l7 7-7 7" />
-                        </svg>
-                      </div>
-                    </Link>
-                  ))
-                ) : (
-                  <div className="px-4 py-8 text-center text-sm text-gray-500">
-                    No sibling chapters
-                  </div>
-                )}
-                {siblingChapters.length > 10 && (
-                  <div className="px-4 py-2 text-center">
-                    <Link href="/chapters" className="text-xs text-labor-red hover:underline">
-                      View all {siblingChapters.length} chapters
-                    </Link>
-                  </div>
-                )}
-              </div>
-            </div>
-          </div>
-
-          {/* Browse All Link */}
-          <div className="text-center">
-            <Link
-              href="/chapters"
-              className="inline-flex items-center gap-2 text-sm text-gray-600 hover:text-labor-red"
-            >
-              <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M19 11H5m14 0a2 2 0 012 2v6a2 2 0 01-2 2H5a2 2 0 01-2-2v-6a2 2 0 012-2m14 0V9a2 2 0 00-2-2M5 11V9a2 2 0 012-2m0 0V5a2 2 0 012-2h6a2 2 0 012 2v2M7 7h10" />
-              </svg>
-              Browse All Chapters
-            </Link>
+          <div className="flex gap-1.5 flex-wrap">
+            {['all', ...LEVEL_ORDER].map(level => (
+              <button
+                key={level}
+                onClick={() => setLevelFilter(level)}
+                className={`px-3 py-1.5 rounded text-xs font-medium transition-colors ${
+                  levelFilter === level
+                    ? (level === 'all' ? 'bg-gray-800 text-white' : LEVEL_COLORS[level])
+                    : 'bg-stone-100 text-gray-600 hover:bg-stone-200'
+                }`}
+              >
+                {level === 'all' ? 'All' : LEVEL_LABELS[level]}
+                <span className="ml-1 opacity-75">({counts[level] || 0})</span>
+              </button>
+            ))}
           </div>
         </div>
-      ) : (
-        <div className="bg-white border border-stone-200 rounded-lg p-8 text-center">
-          <svg className="w-12 h-12 mx-auto mb-4 text-gray-300" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-            <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={1.5} d="M19 21V5a2 2 0 00-2-2H7a2 2 0 00-2 2v16m14 0h2m-2 0h-5m-9 0H3m2 0h5M9 7h1m-1 4h1m4-4h1m-1 4h1m-5 10v-5a1 1 0 011-1h2a1 1 0 011 1v5m-4 0h4" />
-          </svg>
-          <h2 className="text-lg font-semibold text-gray-900 mb-2">No Chapter Assigned</h2>
-          <p className="text-sm text-gray-500 mb-4">
-            You haven't been assigned to a chapter yet.
-          </p>
-          <Link href="/chapters" className="btn-primary">
-            Browse Chapters
-          </Link>
+      </div>
+
+      {/* Expand/Collapse controls for hierarchy view */}
+      {!showFlatList && hierarchy.length > 0 && (
+        <div className="flex gap-2 mb-3">
+          <button
+            onClick={expandAll}
+            className="text-xs text-gray-500 hover:text-gray-700"
+          >
+            Expand all
+          </button>
+          <span className="text-gray-300">|</span>
+          <button
+            onClick={collapseAll}
+            className="text-xs text-gray-500 hover:text-gray-700"
+          >
+            Collapse all
+          </button>
         </div>
       )}
+
+      {/* Chapter List */}
+      <div className="bg-white border border-stone-200 rounded-lg overflow-hidden">
+        {showFlatList ? (
+          // Flat filtered list
+          filteredFlat.length > 0 ? (
+            <div className="divide-y divide-stone-100">
+              {filteredFlat.map(chapter => (
+                <ChapterRow key={chapter.id} chapter={chapter} />
+              ))}
+            </div>
+          ) : (
+            <div className="px-4 py-12 text-center text-gray-500">
+              No chapters match your search.
+            </div>
+          )
+        ) : (
+          // Hierarchical view with collapsible states
+          hierarchy.length > 0 ? (
+            <div className="divide-y divide-stone-100">
+              {hierarchy.map(root => (
+                <div key={root.id}>
+                  {/* National chapter */}
+                  <ChapterRow chapter={root} />
+
+                  {/* State chapters as accordions */}
+                  {root.children.map(state => (
+                    <StateAccordion
+                      key={state.id}
+                      state={state}
+                      isExpanded={expandedStates.has(state.id)}
+                      onToggle={() => toggleState(state.id)}
+                    />
+                  ))}
+                </div>
+              ))}
+            </div>
+          ) : (
+            <div className="px-4 py-12 text-center text-gray-500">
+              No chapters found.
+            </div>
+          )
+        )}
+      </div>
+    </div>
+  )
+}
+
+function ChapterRow({ chapter, indent = 0 }) {
+  return (
+    <Link
+      href={`/chapters/${chapter.id}`}
+      className="flex items-center justify-between px-4 py-3 hover:bg-stone-50 transition-colors"
+      style={{ paddingLeft: `${16 + indent * 24}px` }}
+    >
+      <div className="flex items-center gap-3">
+        <span className={`px-2 py-0.5 rounded text-xs font-medium ${LEVEL_COLORS[chapter.level]}`}>
+          {LEVEL_LABELS[chapter.level]}
+        </span>
+        <span className="text-sm font-medium text-gray-900">{chapter.name}</span>
+      </div>
+      <div className="flex items-center gap-4">
+        <span className="text-xs text-gray-500 tabular-nums">
+          {chapter.memberCount || 0} member{(chapter.memberCount || 0) !== 1 ? 's' : ''}
+        </span>
+        <svg className="w-4 h-4 text-gray-400" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+          <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 5l7 7-7 7" />
+        </svg>
+      </div>
+    </Link>
+  )
+}
+
+function StateAccordion({ state, isExpanded, onToggle }) {
+  const hasChildren = state.children.length > 0
+
+  return (
+    <div className="border-t border-stone-100 first:border-t-0">
+      <div className="flex items-center">
+        {hasChildren && (
+          <button
+            type="button"
+            onClick={onToggle}
+            className="p-3 hover:bg-stone-50"
+          >
+            <svg
+              className={`w-4 h-4 text-gray-400 transition-transform ${isExpanded ? 'rotate-90' : ''}`}
+              fill="none"
+              stroke="currentColor"
+              viewBox="0 0 24 24"
+            >
+              <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 5l7 7-7 7" />
+            </svg>
+          </button>
+        )}
+        <Link
+          href={`/chapters/${state.id}`}
+          className={`flex-1 flex items-center justify-between py-3 pr-4 hover:bg-stone-50 transition-colors ${!hasChildren ? 'pl-10' : ''}`}
+        >
+          <div className="flex items-center gap-3">
+            <span className={`px-2 py-0.5 rounded text-xs font-medium ${LEVEL_COLORS[state.level]}`}>
+              {LEVEL_LABELS[state.level]}
+            </span>
+            <span className="text-sm font-medium text-gray-900">{state.name}</span>
+            {hasChildren && (
+              <span className="text-xs text-gray-400">
+                ({state.children.length} sub-chapter{state.children.length !== 1 ? 's' : ''})
+              </span>
+            )}
+          </div>
+          <div className="flex items-center gap-4">
+            <span className="text-xs text-gray-500 tabular-nums">
+              {state.memberCount || 0} member{(state.memberCount || 0) !== 1 ? 's' : ''}
+            </span>
+            <svg className="w-4 h-4 text-gray-400" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+              <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 5l7 7-7 7" />
+            </svg>
+          </div>
+        </Link>
+      </div>
+
+      {isExpanded && hasChildren && (
+        <div className="bg-stone-50 border-t border-stone-100">
+          {state.children.map(child => (
+            <ChapterWithChildren key={child.id} chapter={child} depth={1} />
+          ))}
+        </div>
+      )}
+    </div>
+  )
+}
+
+function ChapterWithChildren({ chapter, depth }) {
+  return (
+    <div>
+      <Link
+        href={`/chapters/${chapter.id}`}
+        className="flex items-center justify-between py-2.5 pr-4 hover:bg-stone-100 transition-colors border-t border-stone-100 first:border-t-0"
+        style={{ paddingLeft: `${40 + depth * 16}px` }}
+      >
+        <div className="flex items-center gap-2">
+          <span className={`px-1.5 py-0.5 rounded text-xs font-medium ${LEVEL_COLORS[chapter.level]}`}>
+            {LEVEL_LABELS[chapter.level]?.charAt(0)}
+          </span>
+          <span className="text-sm text-gray-700">{chapter.name}</span>
+        </div>
+        <div className="flex items-center gap-4">
+          <span className="text-xs text-gray-500 tabular-nums">
+            {chapter.memberCount || 0}
+          </span>
+          <svg className="w-4 h-4 text-gray-400" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+            <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 5l7 7-7 7" />
+          </svg>
+        </div>
+      </Link>
+      {chapter.children?.map(child => (
+        <ChapterWithChildren key={child.id} chapter={child} depth={depth + 1} />
+      ))}
     </div>
   )
 }
