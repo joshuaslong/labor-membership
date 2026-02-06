@@ -21,6 +21,7 @@ function TopNav({ sections = [], availableChapters = [], selectedChapterId = 'al
     communicate: 'Communicate',
     chapters: 'Chapters',
     resources: 'Resources',
+    polls: 'Polls',
     tasks: 'Tasks',
     admin: 'Admin'
   }
