@@ -11,6 +11,8 @@ export default async function TasksLayout({ children }) {
   }
 
   const sidebarItems = [
+    { type: 'link', label: 'Create Task', href: '/workspace/tasks/new', variant: 'primary' },
+    { type: 'divider' },
     { type: 'link', label: 'My Tasks', href: '/workspace/tasks?owner=me' },
     { type: 'link', label: 'All Tasks', href: '/workspace/tasks' },
     { type: 'header', label: 'By Status' },
@@ -23,8 +25,6 @@ export default async function TasksLayout({ children }) {
     { type: 'link', label: 'P1 - Critical', href: '/workspace/tasks?priority=P1' },
     { type: 'link', label: 'P2 - High', href: '/workspace/tasks?priority=P2' },
     { type: 'link', label: 'P3 - Standard', href: '/workspace/tasks?priority=P3' },
-    { type: 'divider' },
-    { type: 'link', label: 'Create Task', href: '/workspace/tasks/new' }
   ]
 
   return (
