@@ -6,10 +6,10 @@ import { getCurrentTeamMember } from '@/lib/teamMember'
 export const dynamic = 'force-dynamic'
 
 const LEVEL_COLORS = {
-  national: 'bg-labor-red text-white',
-  state: 'bg-blue-600 text-white',
-  county: 'bg-green-600 text-white',
-  city: 'bg-purple-600 text-white',
+  national: 'text-labor-red bg-red-50 border border-red-200',
+  state: 'text-blue-700 bg-blue-50 border border-blue-200',
+  county: 'text-green-700 bg-green-50 border border-green-200',
+  city: 'text-purple-700 bg-purple-50 border border-purple-200',
 }
 const LEVEL_LABELS = {
   national: 'National',

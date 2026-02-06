@@ -6,10 +6,10 @@ import Link from 'next/link'
 
 const LEVEL_ORDER = ['national', 'state', 'county', 'city']
 const LEVEL_COLORS = {
-  national: 'bg-labor-red text-white',
-  state: 'bg-blue-600 text-white',
-  county: 'bg-green-600 text-white',
-  city: 'bg-purple-600 text-white',
+  national: 'text-labor-red bg-red-50 border border-red-200',
+  state: 'text-blue-700 bg-blue-50 border border-blue-200',
+  county: 'text-green-700 bg-green-50 border border-green-200',
+  city: 'text-purple-700 bg-purple-50 border border-purple-200',
 }
 const LEVEL_LABELS = {
   national: 'National',
@@ -212,12 +212,12 @@ function StateAccordion({ state, isExpanded, onToggle, myChapterId }) {
     <div className="border-t border-stone-100 first:border-t-0">
       <div className="flex items-center">
         {hasChildren ? (
-          <button type="button" onClick={onToggle} className="pl-3 pr-1 py-3 hover:bg-stone-50">
+          <button type="button" onClick={onToggle} className="w-8 flex items-center justify-center py-3 hover:bg-stone-50">
             <svg
-              className={`w-3.5 h-3.5 text-gray-400 transition-transform ${isExpanded ? 'rotate-90' : ''}`}
+              className={`w-4 h-4 text-gray-400 transition-transform duration-150 ${isExpanded ? 'rotate-180' : ''}`}
               fill="none" stroke="currentColor" viewBox="0 0 24 24"
             >
-              <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 5l7 7-7 7" />
+              <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={1.5} d="M19 9l-7 7-7-7" />
             </svg>
           </button>
         ) : (
