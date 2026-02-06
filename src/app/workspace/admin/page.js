@@ -1,4 +1,4 @@
-import { createClient } from '@/lib/supabase/server'
+import { createClient, createAdminClient } from '@/lib/supabase/server'
 import { getCurrentTeamMember } from '@/lib/teamMember'
 import { redirect } from 'next/navigation'
 import Link from 'next/link'
@@ -8,6 +8,7 @@ export default async function AdminDashboardPage() {
   if (!teamMember) redirect('/login')
 
   const supabase = await createClient()
+  const adminClient = createAdminClient()
 
   // Fetch counts in parallel
   const [
@@ -37,10 +38,31 @@ export default async function AdminDashboardPage() {
       .limit(5),
     supabase
       .from('team_members')
-      .select('id, roles, active, created_at, member:members(first_name, last_name)')
+      .select('id, user_id, roles, active, created_at, member:members(first_name, last_name)')
       .order('created_at', { ascending: false })
       .limit(5),
   ])
+
+  // Backfill names for team members with null member_id
+  let enrichedTeam = recentTeam || []
+  const missingNames = enrichedTeam.filter(tm => !tm.member && tm.user_id)
+  if (missingNames.length > 0) {
+    const { data: membersByUser } = await adminClient
+      .from('members')
+      .select('user_id, first_name, last_name')
+      .in('user_id', missingNames.map(tm => tm.user_id))
+
+    if (membersByUser) {
+      const userMap = new Map(membersByUser.map(m => [m.user_id, m]))
+      enrichedTeam = enrichedTeam.map(tm => {
+        if (!tm.member && tm.user_id && userMap.has(tm.user_id)) {
+          const m = userMap.get(tm.user_id)
+          return { ...tm, member: { first_name: m.first_name, last_name: m.last_name } }
+        }
+        return tm
+      })
+    }
+  }
 
   const stats = [
     { label: 'Total Members', value: totalMembers || 0, href: '/workspace/members' },
@@ -154,7 +176,7 @@ export default async function AdminDashboardPage() {
             </Link>
           </div>
           <div className="divide-y divide-stone-100">
-            {recentTeam?.map(tm => (
+            {enrichedTeam?.map(tm => (
               <Link
                 key={tm.id}
                 href={`/workspace/admin/team/${tm.id}`}
@@ -180,7 +202,7 @@ export default async function AdminDashboardPage() {
                 </div>
               </Link>
             ))}
-            {(!recentTeam || recentTeam.length === 0) && (
+            {(!enrichedTeam || enrichedTeam.length === 0) && (
               <div className="px-4 py-6 text-center text-sm text-gray-400">No team members yet</div>
             )}
           </div>

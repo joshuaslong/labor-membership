@@ -49,6 +49,19 @@ export async function GET(request, { params }) {
 
     if (error) throw error
 
+    // Backfill member info via user_id if member_id is null
+    if (!teamMember.member && teamMember.user_id) {
+      const { data: memberByUser } = await adminClient
+        .from('members')
+        .select('id, first_name, last_name, email')
+        .eq('user_id', teamMember.user_id)
+        .single()
+
+      if (memberByUser) {
+        teamMember.member = memberByUser
+      }
+    }
+
     return NextResponse.json({ teamMember })
   } catch (error) {
     console.error('Error fetching team member:', error)

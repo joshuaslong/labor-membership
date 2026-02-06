@@ -1,4 +1,4 @@
-import { createClient } from '@/lib/supabase/server'
+import { createClient, createAdminClient } from '@/lib/supabase/server'
 import { getCurrentTeamMember } from '@/lib/teamMember'
 import { redirect } from 'next/navigation'
 import Link from 'next/link'
@@ -79,8 +79,30 @@ export default async function TeamPage({ searchParams: searchParamsPromise }) {
     throw new Error(`Failed to fetch team members: ${error.message}`)
   }
 
+  // Backfill names for team members where member_id is null (migrated from admin_users)
+  let enriched = members || []
+  const missingNames = enriched.filter(tm => !tm.member && tm.user_id)
+  if (missingNames.length > 0) {
+    const adminClient = createAdminClient()
+    const { data: membersByUser } = await adminClient
+      .from('members')
+      .select('user_id, id, first_name, last_name, email')
+      .in('user_id', missingNames.map(tm => tm.user_id))
+
+    if (membersByUser) {
+      const userMap = new Map(membersByUser.map(m => [m.user_id, m]))
+      enriched = enriched.map(tm => {
+        if (!tm.member && tm.user_id && userMap.has(tm.user_id)) {
+          const m = userMap.get(tm.user_id)
+          return { ...tm, member: { id: m.id, first_name: m.first_name, last_name: m.last_name, email: m.email } }
+        }
+        return tm
+      })
+    }
+  }
+
   // Client-side search filter (for name search across join)
-  let filtered = members || []
+  let filtered = enriched
   if (searchParams?.search) {
     const term = searchParams.search.toLowerCase()
     filtered = filtered.filter(tm => {
@@ -161,9 +183,6 @@ export default async function TeamPage({ searchParams: searchParamsPromise }) {
               href={`/workspace/admin/team/${tm.id}`}
               className="flex items-center gap-3 px-4 py-3 hover:bg-gray-50 transition-colors"
             >
-              {/* Active indicator */}
-              <div className={`w-2 h-2 rounded-full flex-shrink-0 ${tm.active ? 'bg-green-500' : 'bg-gray-300'}`} />
-
               {/* Info */}
               <div className="min-w-0 flex-1">
                 <div className="text-sm font-medium text-gray-900">
