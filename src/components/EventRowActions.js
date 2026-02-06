@@ -1,6 +1,7 @@
 'use client'
 
 import { useState, useRef, useEffect } from 'react'
+import { createPortal } from 'react-dom'
 import { useRouter } from 'next/navigation'
 import Link from 'next/link'
 
@@ -10,12 +11,30 @@ export default function EventRowActions({ eventId, eventTitle }) {
   const [showDeleteModal, setShowDeleteModal] = useState(false)
   const [deleting, setDeleting] = useState(false)
   const [error, setError] = useState(null)
+  const [menuPosition, setMenuPosition] = useState({ top: 0, left: 0 })
+  const buttonRef = useRef(null)
   const menuRef = useRef(null)
+
+  // Calculate menu position when opening
+  useEffect(() => {
+    if (isOpen && buttonRef.current) {
+      const rect = buttonRef.current.getBoundingClientRect()
+      setMenuPosition({
+        top: rect.bottom + 4,
+        left: rect.right - 144 // 144px = w-36
+      })
+    }
+  }, [isOpen])
 
   // Close dropdown when clicking outside
   useEffect(() => {
     function handleClickOutside(event) {
-      if (menuRef.current && !menuRef.current.contains(event.target)) {
+      if (
+        menuRef.current &&
+        !menuRef.current.contains(event.target) &&
+        buttonRef.current &&
+        !buttonRef.current.contains(event.target)
+      ) {
         setIsOpen(false)
       }
     }
@@ -48,8 +67,9 @@ export default function EventRowActions({ eventId, eventTitle }) {
 
   return (
     <>
-      <div className="relative flex justify-end" ref={menuRef}>
+      <div className="flex justify-end">
         <button
+          ref={buttonRef}
           onClick={() => setIsOpen(!isOpen)}
           className="p-1.5 rounded border border-stone-200 hover:bg-stone-50 text-gray-500 hover:text-gray-700"
           aria-label="Event actions"
@@ -58,35 +78,40 @@ export default function EventRowActions({ eventId, eventTitle }) {
             <path d="M10 6a1.75 1.75 0 110-3.5 1.75 1.75 0 010 3.5zM10 11.75a1.75 1.75 0 110-3.5 1.75 1.75 0 010 3.5zM10 17.5a1.75 1.75 0 110-3.5 1.75 1.75 0 010 3.5z" />
           </svg>
         </button>
-
-        {isOpen && (
-          <div className="absolute top-full right-0 mt-1 w-36 bg-white border border-stone-200 rounded shadow-lg z-50">
-            <Link
-              href={`/events/${eventId}`}
-              className="block px-4 py-2 text-sm text-gray-700 hover:bg-stone-50"
-              onClick={() => setIsOpen(false)}
-            >
-              View
-            </Link>
-            <Link
-              href={`/workspace/events/${eventId}`}
-              className="block px-4 py-2 text-sm text-gray-700 hover:bg-stone-50"
-              onClick={() => setIsOpen(false)}
-            >
-              Edit
-            </Link>
-            <button
-              onClick={() => {
-                setIsOpen(false)
-                setShowDeleteModal(true)
-              }}
-              className="block w-full text-left px-4 py-2 text-sm text-red-600 hover:bg-red-50"
-            >
-              Delete
-            </button>
-          </div>
-        )}
       </div>
+
+      {isOpen && typeof window !== 'undefined' && createPortal(
+        <div
+          ref={menuRef}
+          className="fixed w-36 bg-white border border-stone-200 rounded shadow-lg z-50"
+          style={{ top: menuPosition.top, left: menuPosition.left }}
+        >
+          <Link
+            href={`/events/${eventId}`}
+            className="block px-4 py-2 text-sm text-gray-700 hover:bg-stone-50"
+            onClick={() => setIsOpen(false)}
+          >
+            View
+          </Link>
+          <Link
+            href={`/workspace/events/${eventId}`}
+            className="block px-4 py-2 text-sm text-gray-700 hover:bg-stone-50"
+            onClick={() => setIsOpen(false)}
+          >
+            Edit
+          </Link>
+          <button
+            onClick={() => {
+              setIsOpen(false)
+              setShowDeleteModal(true)
+            }}
+            className="block w-full text-left px-4 py-2 text-sm text-red-600 hover:bg-red-50"
+          >
+            Delete
+          </button>
+        </div>,
+        document.body
+      )}
 
       {/* Delete Confirmation Modal */}
       {showDeleteModal && (
