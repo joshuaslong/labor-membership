@@ -1,5 +1,5 @@
 import { createClient } from '@/lib/supabase/server'
-import { hasRole } from '@/lib/permissions'
+import { hasRole, getChapterScope } from '@/lib/permissions'
 
 /**
  * Get stats for workspace home based on user role
@@ -104,4 +104,35 @@ export async function getWorkspaceStats(teamMember) {
     events: eventResult.count || 0,
     tasks: taskResult.count || 0
   }
+}
+
+/**
+ * Get recent members for workspace home, respecting chapter scope
+ */
+export async function getRecentMembers(teamMember, limit = 5) {
+  if (!teamMember?.roles || !teamMember?.id) {
+    throw new Error('Invalid team member: missing required fields (id, roles)')
+  }
+
+  const supabase = await createClient()
+  const scope = getChapterScope(teamMember.roles, teamMember.chapter_id)
+
+  let query = supabase
+    .from('members')
+    .select('id, first_name, last_name, email, status, joined_date, chapters(name), member_segments(segment)')
+    .order('joined_date', { ascending: false })
+    .limit(limit)
+
+  if (scope && scope.chapterId) {
+    query = query.eq('chapter_id', scope.chapterId)
+  }
+
+  const { data, error } = await query
+
+  if (error) {
+    console.error('Error fetching recent members:', error)
+    return []
+  }
+
+  return data || []
 }

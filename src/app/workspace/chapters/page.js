@@ -1,6 +1,7 @@
 'use client'
 
 import { useState, useEffect, useMemo } from 'react'
+import { useSearchParams } from 'next/navigation'
 import Link from 'next/link'
 
 const LEVEL_ORDER = ['national', 'state', 'county', 'city']
@@ -18,11 +19,20 @@ const LEVEL_LABELS = {
 }
 
 export default function WorkspaceChaptersPage() {
+  const searchParams = useSearchParams()
+  const levelParam = searchParams.get('level')
+
   const [chapters, setChapters] = useState([])
   const [loading, setLoading] = useState(true)
   const [search, setSearch] = useState('')
-  const [levelFilter, setLevelFilter] = useState('all')
+  const [levelFilter, setLevelFilter] = useState(levelParam && LEVEL_ORDER.includes(levelParam) ? levelParam : 'all')
   const [expandedStates, setExpandedStates] = useState(new Set())
+
+  // Sync levelFilter when URL search params change (sidebar navigation)
+  useEffect(() => {
+    const newLevel = levelParam && LEVEL_ORDER.includes(levelParam) ? levelParam : 'all'
+    setLevelFilter(newLevel)
+  }, [levelParam])
 
   useEffect(() => {
     const loadChapters = async () => {
@@ -223,7 +233,7 @@ export default function WorkspaceChaptersPage() {
 function ChapterRow({ chapter, indent = 0 }) {
   return (
     <Link
-      href={`/chapters/${chapter.id}`}
+      href={`/workspace/chapters/${chapter.id}`}
       className="flex items-center justify-between px-4 py-3 hover:bg-stone-50 transition-colors"
       style={{ paddingLeft: `${16 + indent * 24}px` }}
     >
@@ -268,7 +278,7 @@ function StateAccordion({ state, isExpanded, onToggle }) {
           </button>
         )}
         <Link
-          href={`/chapters/${state.id}`}
+          href={`/workspace/chapters/${state.id}`}
           className={`flex-1 flex items-center justify-between py-3 pr-4 hover:bg-stone-50 transition-colors ${!hasChildren ? 'pl-10' : ''}`}
         >
           <div className="flex items-center gap-3">
@@ -308,7 +318,7 @@ function ChapterWithChildren({ chapter, depth }) {
   return (
     <div>
       <Link
-        href={`/chapters/${chapter.id}`}
+        href={`/workspace/chapters/${chapter.id}`}
         className="flex items-center justify-between py-2.5 pr-4 hover:bg-stone-100 transition-colors border-t border-stone-100 first:border-t-0"
         style={{ paddingLeft: `${40 + depth * 16}px` }}
       >
