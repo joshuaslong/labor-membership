@@ -64,7 +64,7 @@ function ContextualSidebar({ items = [] }) {
           }
 
           if (item.type === 'divider') {
-            return <div key={`divider-${index}`} className="border-t border-stone-200 my-2" role="separator" />
+            return <div key={`divider-${index}`} className="border-t border-stone-200 my-4" role="separator" />
           }
 
           // Validate href exists before rendering Link
