@@ -54,7 +54,7 @@ function CommunicateContent() {
     if (templateParam && EMAIL_TEMPLATES.some(t => t.id === templateParam)) {
       emailForm.handleTemplateChange(templateParam)
     }
-  }, [templateParam])
+  }, [templateParam, emailForm.handleTemplateChange])
 
   // Load draft on mount
   useEffect(() => {

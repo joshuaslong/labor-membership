@@ -16,8 +16,9 @@ export default async function CommunicateLayout({ children }) {
     { type: 'link', label: 'Sent Emails', href: '/workspace/communicate/history' },
     { type: 'header', label: 'Templates' },
     { type: 'link', label: 'Announcement', href: '/workspace/communicate?template=announcement' },
-    { type: 'link', label: 'Event Invitation', href: '/workspace/communicate?template=event_invitation' },
-    { type: 'link', label: 'Newsletter', href: '/workspace/communicate?template=newsletter' }
+    { type: 'link', label: 'Event Invitation', href: '/workspace/communicate?template=event' },
+    { type: 'link', label: 'Call to Action', href: '/workspace/communicate?template=action' },
+    { type: 'link', label: 'Blank', href: '/workspace/communicate?template=blank' }
   ]
 
   return (
