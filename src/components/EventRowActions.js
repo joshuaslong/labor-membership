@@ -60,7 +60,7 @@ export default function EventRowActions({ eventId, eventTitle }) {
         </button>
 
         {isOpen && (
-          <div className="absolute right-0 mt-1 w-36 bg-white border border-stone-200 rounded shadow-lg z-10">
+          <div className="absolute top-full right-0 mt-1 w-36 bg-white border border-stone-200 rounded shadow-lg z-50">
             <Link
               href={`/events/${eventId}`}
               className="block px-4 py-2 text-sm text-gray-700 hover:bg-stone-50"
