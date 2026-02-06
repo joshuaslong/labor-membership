@@ -1,6 +1,6 @@
 'use client'
 
-import { useState, useEffect, useCallback } from 'react'
+import { useState, useEffect, useCallback, useRef } from 'react'
 import { useSearchParams } from 'next/navigation'
 import Link from 'next/link'
 
@@ -109,6 +109,145 @@ function ImagePreview({ fileId, filename }) {
   )
 }
 
+function FilePreviewModal({ file, onClose, onDownload, onDelete }) {
+  const overlayRef = useRef(null)
+  const isImage = file?.mime_type?.startsWith('image/')
+  const [imgLoading, setImgLoading] = useState(true)
+  const [imgError, setImgError] = useState(false)
+
+  // Close on Escape
+  useEffect(() => {
+    const handleKey = (e) => {
+      if (e.key === 'Escape') onClose()
+    }
+    document.addEventListener('keydown', handleKey)
+    return () => document.removeEventListener('keydown', handleKey)
+  }, [onClose])
+
+  // Prevent body scroll
+  useEffect(() => {
+    document.body.style.overflow = 'hidden'
+    return () => { document.body.style.overflow = '' }
+  }, [])
+
+  if (!file) return null
+
+  return (
+    <div
+      ref={overlayRef}
+      className="fixed inset-0 z-50 flex items-center justify-center bg-black/60 backdrop-blur-sm"
+      onClick={(e) => { if (e.target === overlayRef.current) onClose() }}
+    >
+      <div className="relative bg-white rounded-lg shadow-xl max-w-3xl w-full mx-4 max-h-[90vh] flex flex-col">
+        {/* Header */}
+        <div className="flex items-center justify-between px-5 py-4 border-b border-stone-200">
+          <div className="min-w-0 flex-1 mr-4">
+            <h2 className="text-sm font-semibold text-gray-900 truncate">{file.original_filename}</h2>
+            <div className="flex items-center gap-2 mt-0.5">
+              <span className="text-xs text-gray-500">{formatFileSize(file.file_size_bytes)}</span>
+              <span className="text-xs text-gray-300">·</span>
+              <span className="text-xs text-gray-500">{formatDate(file.uploaded_at)}</span>
+              {file.uploader_name && file.uploader_name !== 'Unknown' && (
+                <>
+                  <span className="text-xs text-gray-300">·</span>
+                  <span className="text-xs text-gray-400">by {file.uploader_name}</span>
+                </>
+              )}
+            </div>
+          </div>
+          <button
+            onClick={onClose}
+            className="p-1.5 text-gray-400 hover:text-gray-600 hover:bg-gray-100 rounded transition-colors flex-shrink-0"
+          >
+            <svg className="w-5 h-5" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+              <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M6 18L18 6M6 6l12 12" />
+            </svg>
+          </button>
+        </div>
+
+        {/* Body */}
+        <div className="flex-1 overflow-auto">
+          {isImage ? (
+            <div className="flex items-center justify-center p-4 min-h-[300px] bg-stone-50">
+              {imgLoading && !imgError && (
+                <div className="absolute inset-0 flex items-center justify-center">
+                  <div className="w-6 h-6 border-2 border-gray-200 border-t-labor-red rounded-full animate-spin" />
+                </div>
+              )}
+              {imgError ? (
+                <div className="text-center py-12">
+                  <FileTypeIcon mimeType="image/" className="w-12 h-12 mx-auto mb-2" />
+                  <p className="text-sm text-gray-500">Preview unavailable</p>
+                </div>
+              ) : (
+                /* eslint-disable-next-line @next/next/no-img-element */
+                <img
+                  src={`/api/files/preview/${file.id}`}
+                  alt={file.original_filename}
+                  className="max-w-full max-h-[60vh] object-contain rounded"
+                  onLoad={() => setImgLoading(false)}
+                  onError={() => { setImgError(true); setImgLoading(false) }}
+                />
+              )}
+            </div>
+          ) : (
+            <div className="flex flex-col items-center justify-center py-16 px-8 bg-stone-50">
+              <div className="w-16 h-16 bg-white rounded-lg border border-stone-200 flex items-center justify-center mb-4">
+                <FileTypeIcon mimeType={file.mime_type} className="w-8 h-8" />
+              </div>
+              <p className="text-sm text-gray-600 font-medium">{file.original_filename}</p>
+              <p className="text-xs text-gray-400 mt-1">{file.mime_type || 'Unknown type'}</p>
+            </div>
+          )}
+
+          {/* Details */}
+          {(file.description || file.chapters || file.bucket_prefix) && (
+            <div className="px-5 py-3 border-t border-stone-100 space-y-1.5">
+              {file.description && (
+                <p className="text-sm text-gray-600">{file.description}</p>
+              )}
+              <div className="flex items-center gap-2 flex-wrap">
+                {file.bucket_prefix && (
+                  <span className="text-xs text-gray-500 bg-gray-50 px-1.5 py-0.5 rounded border border-gray-100">
+                    {BUCKET_LABELS[file.bucket_prefix] || file.bucket_prefix}
+                  </span>
+                )}
+                {file.chapters && (
+                  <span className="text-xs text-gray-500 bg-gray-50 px-1.5 py-0.5 rounded border border-gray-100">
+                    {file.chapters.name}
+                  </span>
+                )}
+              </div>
+            </div>
+          )}
+        </div>
+
+        {/* Footer */}
+        <div className="flex items-center justify-between px-5 py-3 border-t border-stone-200">
+          <button
+            onClick={() => { onDelete(file); onClose() }}
+            className="inline-flex items-center gap-1.5 px-3 py-1.5 text-sm text-red-600 hover:bg-red-50 rounded transition-colors"
+          >
+            <svg className="w-4 h-4" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+              <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M19 7l-.867 12.142A2 2 0 0116.138 21H7.862a2 2 0 01-1.995-1.858L5 7m5 4v6m4-6v6m1-10V4a1 1 0 00-1-1h-4a1 1 0 00-1 1v3M4 7h16" />
+            </svg>
+            Delete
+          </button>
+          <button
+            onClick={() => onDownload(file)}
+            className="inline-flex items-center gap-1.5 px-4 py-1.5 text-sm font-medium text-white bg-labor-red hover:bg-red-700 rounded transition-colors"
+          >
+            <svg className="w-4 h-4" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+              <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M4 16v1a3 3 0 003 3h10a3 3 0 003-3v-1m-4-4l-4 4m0 0l-4-4m4 4V4" />
+            </svg>
+            Download
+          </button>
+        </div>
+      </div>
+    </div>
+  )
+}
+
 export default function ResourceBrowser({ allowedBuckets = ['public'], chapterId = null }) {
   const searchParams = useSearchParams()
   const bucketParam = searchParams.get('bucket')
@@ -121,6 +260,7 @@ export default function ResourceBrowser({ allowedBuckets = ['public'], chapterId
   const [totalCount, setTotalCount] = useState(0)
   const [search, setSearch] = useState('')
   const [deleting, setDeleting] = useState(null)
+  const [previewFile, setPreviewFile] = useState(null)
 
   const activeBucket = bucketParam && allowedBuckets.includes(bucketParam) ? bucketParam : null
   const pageTitle = activeBucket ? BUCKET_LABELS[activeBucket] || 'Files' : 'All Files'
@@ -289,7 +429,8 @@ export default function ResourceBrowser({ allowedBuckets = ['public'], chapterId
           {files.map(file => (
             <div
               key={file.id}
-              className="flex items-center gap-3 px-4 py-3 hover:bg-gray-50 transition-colors group"
+              className="flex items-center gap-3 px-4 py-3 hover:bg-gray-50 transition-colors group cursor-pointer"
+              onClick={() => setPreviewFile(file)}
             >
               {/* Icon / Preview */}
               {file.mime_type?.startsWith('image/') ? (
@@ -325,7 +466,7 @@ export default function ResourceBrowser({ allowedBuckets = ['public'], chapterId
               </div>
 
               {/* Actions */}
-              <div className="flex items-center gap-1 flex-shrink-0 opacity-0 group-hover:opacity-100 transition-opacity">
+              <div className="flex items-center gap-1 flex-shrink-0 opacity-0 group-hover:opacity-100 transition-opacity" onClick={(e) => e.stopPropagation()}>
                 <button
                   onClick={() => handleDownload(file)}
                   className="p-1.5 text-gray-400 hover:text-gray-700 hover:bg-gray-100 rounded transition-colors"
@@ -376,6 +517,16 @@ export default function ResourceBrowser({ allowedBuckets = ['public'], chapterId
             Next
           </button>
         </div>
+      )}
+
+      {/* Preview Modal */}
+      {previewFile && (
+        <FilePreviewModal
+          file={previewFile}
+          onClose={() => setPreviewFile(null)}
+          onDownload={handleDownload}
+          onDelete={handleDelete}
+        />
       )}
     </div>
   )
