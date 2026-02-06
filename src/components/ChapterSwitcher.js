@@ -3,7 +3,7 @@
 import { useState, useRef, useEffect } from 'react'
 import { useRouter } from 'next/navigation'
 
-const levelIndent = { national: 0, state: 1, county: 2, city: 3 }
+const levelOrder = ['national', 'state', 'county', 'city']
 const levelLabels = { national: 'National', state: 'State', county: 'County', city: 'City' }
 
 export default function ChapterSwitcher({ chapters, selectedChapterId, showAll }) {
@@ -29,6 +29,15 @@ export default function ChapterSwitcher({ chapters, selectedChapterId, showAll }
         c.level.toLowerCase().includes(search.toLowerCase())
       )
     : chapters
+
+  // Group by level
+  const grouped = levelOrder
+    .map(level => ({
+      level,
+      label: levelLabels[level],
+      items: filtered.filter(c => c.level === level)
+    }))
+    .filter(g => g.items.length > 0)
 
   // Close on outside click
   useEffect(() => {
@@ -112,28 +121,29 @@ export default function ChapterSwitcher({ chapters, selectedChapterId, showAll }
               </button>
             )}
 
-            {showAll && !search && filtered.length > 0 && (
-              <div className="border-t border-stone-100 my-1" />
-            )}
-
-            {/* Chapter list */}
+            {/* Grouped chapter list */}
             {filtered.length === 0 ? (
               <div className="px-3 py-2 text-xs text-gray-400">No chapters found</div>
             ) : (
-              filtered.map(chapter => (
-                <button
-                  key={chapter.id}
-                  onClick={() => handleSelect(chapter.id)}
-                  className={`w-full px-3 py-1.5 text-left text-sm hover:bg-stone-50 transition-colors ${
-                    selectedChapterId === chapter.id
-                      ? 'bg-stone-50 text-labor-red font-medium'
-                      : 'text-gray-700'
-                  }`}
-                  style={{ paddingLeft: `${12 + (levelIndent[chapter.level] || 0) * 16}px` }}
-                >
-                  {chapter.name}
-                  <span className="text-gray-400 text-xs ml-1.5">{levelLabels[chapter.level]}</span>
-                </button>
+              grouped.map(group => (
+                <div key={group.level}>
+                  <div className="px-3 pt-2.5 pb-1 text-[10px] font-semibold text-gray-400 uppercase tracking-wider">
+                    {group.label}
+                  </div>
+                  {group.items.map(chapter => (
+                    <button
+                      key={chapter.id}
+                      onClick={() => handleSelect(chapter.id)}
+                      className={`w-full px-3 py-1.5 text-left text-sm hover:bg-stone-50 transition-colors ${
+                        selectedChapterId === chapter.id
+                          ? 'bg-stone-50 text-labor-red font-medium'
+                          : 'text-gray-700'
+                      }`}
+                    >
+                      {chapter.name}
+                    </button>
+                  ))}
+                </div>
               ))
             )}
           </div>
