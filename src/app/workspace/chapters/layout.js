@@ -10,7 +10,12 @@ export default async function ChaptersLayout({ children }) {
     redirect('/workspace')
   }
 
+  const myChapter = teamMember.chapters
   const sidebarItems = [
+    ...(myChapter ? [
+      { type: 'link', label: myChapter.name, href: `/workspace/chapters/${myChapter.id}` },
+      { type: 'divider' },
+    ] : []),
     { type: 'link', label: 'All Chapters', href: '/workspace/chapters' },
     { type: 'header', label: 'By Level' },
     { type: 'link', label: 'National', href: '/workspace/chapters?level=national' },
