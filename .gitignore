@@ -31,3 +31,6 @@ supabase/.temp/
 
 .vercel
 .env*.local
+
+# Sentry Config File
+.env.sentry-build-plugin
