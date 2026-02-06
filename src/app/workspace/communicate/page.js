@@ -1,6 +1,6 @@
 'use client'
 
-import { useEffect, Suspense } from 'react'
+import { useEffect, useState, Suspense } from 'react'
 import { useSearchParams } from 'next/navigation'
 import { useAdminContext } from '@/app/admin/email/hooks/useAdminContext'
 import { useEmailPreferences } from '@/app/admin/email/hooks/useEmailPreferences'
@@ -12,6 +12,7 @@ import { EMAIL_TEMPLATES } from '@/app/admin/email/utils/emailTemplates'
 
 import EmailComposerLayout from '@/components/EmailComposerLayout'
 import SignatureModal from '@/app/admin/email/components/SignatureModal'
+import PreferencesModal from '@/app/admin/email/components/PreferencesModal'
 import RecipientSelector from '@/app/admin/email/components/RecipientSelector'
 import SenderSection from '@/app/admin/email/components/SenderSection'
 import EmailContentForm from '@/app/admin/email/components/EmailContentForm'
@@ -22,6 +23,7 @@ import EmailSentModal from '@/app/admin/email/components/EmailSentModal'
 function CommunicateContent() {
   const searchParams = useSearchParams()
   const templateParam = searchParams.get('template')
+  const [showPreferencesModal, setShowPreferencesModal] = useState(false)
 
   // Initialize hooks
   const adminContext = useAdminContext()
@@ -158,6 +160,18 @@ function CommunicateContent() {
         onClose={() => emailPrefs.setShowSignatureModal(false)}
         saving={emailPrefs.savingPreferences}
       />
+      <PreferencesModal
+        show={showPreferencesModal}
+        onClose={() => setShowPreferencesModal(false)}
+        preferences={emailPrefs.preferences}
+        setPreferences={emailPrefs.setPreferences}
+        onSave={emailPrefs.handleSavePreferences}
+        saving={emailPrefs.savingPreferences}
+        onEditSignature={() => {
+          setShowPreferencesModal(false)
+          emailPrefs.handleOpenSignatureModal()
+        }}
+      />
 
       <form onSubmit={handleSubmit}>
         <EmailComposerLayout
@@ -256,7 +270,7 @@ function CommunicateContent() {
             setSenderName={emailForm.setSenderName}
             replyTo={emailForm.replyTo}
             setReplyTo={emailForm.setReplyTo}
-            defaultReplyTo={emailPrefs.preferences.default_reply_to}
+            onOpenPreferences={() => setShowPreferencesModal(true)}
           />
 
           <EmailContentForm
