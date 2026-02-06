@@ -78,7 +78,7 @@ export default async function TasksPage({ searchParams: searchParamsPromise }) {
       phase,
       time_estimate_min,
       skill_type,
-      owner:team_members(id, member:members(first_name, last_name))
+      owner:team_members!tasks_owner_fkey(id, member:members(first_name, last_name))
     `, { count: 'exact' })
     .order('deadline', { ascending: true })
     .range(from, to)
