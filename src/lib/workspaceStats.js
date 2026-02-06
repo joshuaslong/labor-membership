@@ -1,8 +1,8 @@
 import { createClient } from '@/lib/supabase/server'
-import { hasRole, getChapterScope } from '@/lib/permissions'
+import { getEffectiveChapterScope, applyChapterFilter } from '@/lib/chapterScope'
 
 /**
- * Get stats for workspace home based on user role
+ * Get stats for workspace home based on user role and selected chapter
  *
  * @param {Object} teamMember - The team member object with roles and chapter_id
  * @param {string} teamMember.id - The team member's ID
@@ -12,63 +12,31 @@ import { hasRole, getChapterScope } from '@/lib/permissions'
  * @throws {Error} If teamMember is invalid or missing required fields
  */
 export async function getWorkspaceStats(teamMember) {
-  // Input validation
   if (!teamMember?.roles || !teamMember?.id) {
     throw new Error('Invalid team member: missing required fields (id, roles)')
   }
 
   const supabase = await createClient()
-  const roles = teamMember.roles
+  const scope = await getEffectiveChapterScope(teamMember)
 
-  // Determine if user has full access
-  const hasFullAccess = hasRole(roles, ['super_admin', 'national_admin'])
-
-  // Build chapter filter
-  let chapterFilter = null
-  if (!hasFullAccess && teamMember.chapter_id) {
-    // For geographic admins, get chapter + descendants
-    if (hasRole(roles, ['state_admin', 'county_admin', 'city_admin'])) {
-      const { data: descendants, error: descendantsError } = await supabase
-        .rpc('get_chapter_descendants', { chapter_uuid: teamMember.chapter_id })
-
-      if (descendantsError) {
-        console.error('Error fetching chapter descendants:', descendantsError)
-        // Fallback to just the team member's chapter
-        chapterFilter = [teamMember.chapter_id]
-      } else {
-        chapterFilter = descendants?.map(d => d.id) || [teamMember.chapter_id]
-      }
-    } else {
-      // For team members, just their chapter
-      chapterFilter = [teamMember.chapter_id]
-    }
-  }
-
-  // Format date for event query (YYYY-MM-DD format for date field)
+  // Format date for event query
   const startOfMonth = new Date()
   startOfMonth.setDate(1)
   startOfMonth.setHours(0, 0, 0, 0)
   const startOfMonthDate = `${startOfMonth.getFullYear()}-${String(startOfMonth.getMonth() + 1).padStart(2, '0')}-01`
 
-  // Build queries for parallel execution
-  let memberQuery = supabase.from('members').select('id, chapter_id', { count: 'exact', head: true })
-  if (chapterFilter) {
-    memberQuery = memberQuery.in('chapter_id', chapterFilter)
-  }
+  // Build queries, applying chapter filter to each
+  let memberQuery = supabase.from('members').select('id', { count: 'exact', head: true })
+  memberQuery = await applyChapterFilter(memberQuery, scope, supabase)
 
-  // NOTE: Using 'status' field which may be deprecated in favor of segments in future schema updates
   let pendingQuery = supabase.from('members').select('id', { count: 'exact', head: true }).eq('status', 'pending')
-  if (chapterFilter) {
-    pendingQuery = pendingQuery.in('chapter_id', chapterFilter)
-  }
+  pendingQuery = await applyChapterFilter(pendingQuery, scope, supabase)
 
   let eventQuery = supabase
     .from('events')
     .select('id', { count: 'exact', head: true })
-    .gte('start_date', startOfMonthDate) // Fixed: use start_date (date field) instead of start_time
-  if (chapterFilter) {
-    eventQuery = eventQuery.in('chapter_id', chapterFilter)
-  }
+    .gte('start_date', startOfMonthDate)
+  eventQuery = await applyChapterFilter(eventQuery, scope, supabase)
 
   const taskQuery = supabase
     .from('tasks')
@@ -76,7 +44,7 @@ export async function getWorkspaceStats(teamMember) {
     .eq('owner', teamMember.id)
     .neq('status', 'DONE')
 
-  // Execute queries in parallel for better performance
+  // Execute queries in parallel
   const [memberResult, pendingResult, eventResult, taskResult] = await Promise.all([
     memberQuery,
     pendingQuery,
@@ -84,19 +52,10 @@ export async function getWorkspaceStats(teamMember) {
     taskQuery
   ])
 
-  // Error handling for each query
-  if (memberResult.error) {
-    console.error('Error fetching member count:', memberResult.error)
-  }
-  if (pendingResult.error) {
-    console.error('Error fetching pending member count:', pendingResult.error)
-  }
-  if (eventResult.error) {
-    console.error('Error fetching event count:', eventResult.error)
-  }
-  if (taskResult.error) {
-    console.error('Error fetching task count:', taskResult.error)
-  }
+  if (memberResult.error) console.error('Error fetching member count:', memberResult.error)
+  if (pendingResult.error) console.error('Error fetching pending member count:', pendingResult.error)
+  if (eventResult.error) console.error('Error fetching event count:', eventResult.error)
+  if (taskResult.error) console.error('Error fetching task count:', taskResult.error)
 
   return {
     members: memberResult.count || 0,
@@ -115,7 +74,7 @@ export async function getRecentMembers(teamMember, limit = 5) {
   }
 
   const supabase = await createClient()
-  const scope = getChapterScope(teamMember.roles, teamMember.chapter_id)
+  const scope = await getEffectiveChapterScope(teamMember)
 
   let query = supabase
     .from('members')
@@ -123,9 +82,7 @@ export async function getRecentMembers(teamMember, limit = 5) {
     .order('joined_date', { ascending: false })
     .limit(limit)
 
-  if (scope && scope.chapterId) {
-    query = query.eq('chapter_id', scope.chapterId)
-  }
+  query = await applyChapterFilter(query, scope, supabase)
 
   const { data, error } = await query
 

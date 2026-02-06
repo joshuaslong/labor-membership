@@ -4,8 +4,9 @@ import Link from 'next/link'
 import Image from 'next/image'
 import { usePathname } from 'next/navigation'
 import PropTypes from 'prop-types'
+import ChapterSwitcher from '@/components/ChapterSwitcher'
 
-function TopNav({ sections = [] }) {
+function TopNav({ sections = [], availableChapters = [], selectedChapterId = 'all', showAllOption = false }) {
   const pathname = usePathname()
 
   const isActive = (section) => {
@@ -55,7 +56,14 @@ function TopNav({ sections = [] }) {
               ))}
             </nav>
           </div>
-          <div>
+          <div className="flex items-center gap-4">
+            {availableChapters.length > 1 && (
+              <ChapterSwitcher
+                chapters={availableChapters}
+                selectedChapterId={selectedChapterId}
+                showAll={showAllOption}
+              />
+            )}
             <Link
               href="/api/auth/logout"
               className="text-sm text-gray-700 hover:text-gray-900"
@@ -73,7 +81,10 @@ function TopNav({ sections = [] }) {
 TopNav.displayName = 'TopNav'
 
 TopNav.propTypes = {
-  sections: PropTypes.arrayOf(PropTypes.string)
+  sections: PropTypes.arrayOf(PropTypes.string),
+  availableChapters: PropTypes.array,
+  selectedChapterId: PropTypes.string,
+  showAllOption: PropTypes.bool
 }
 
 export default TopNav

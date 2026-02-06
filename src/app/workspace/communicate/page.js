@@ -55,7 +55,7 @@ function CommunicateContent() {
     }
   }, [templateParam, emailForm.handleTemplateChange])
 
-  // Load draft on mount
+  // Load draft on mount, or pre-populate from chapter switcher cookie
   useEffect(() => {
     if (!draft.isDraftLoaded || !adminContext.adminEmail) return
 
@@ -72,6 +72,14 @@ function CommunicateContent() {
       recipients.setSelectedGroupId(savedDraft.selectedGroupId || '')
       if (savedDraft.groupChapterId) {
         recipients.handleGroupChapterChange(savedDraft.groupChapterId)
+      }
+    } else {
+      // No draft — pre-populate from chapter switcher if a chapter is selected
+      const cookieMatch = document.cookie.match(/chapter_scope=([^;]+)/)
+      const selectedChapter = cookieMatch?.[1]
+      if (selectedChapter && selectedChapter !== 'all') {
+        recipients.setRecipientType('specific_chapter')
+        recipients.setSelectedChapterId(selectedChapter)
       }
     }
     // eslint-disable-next-line react-hooks/exhaustive-deps

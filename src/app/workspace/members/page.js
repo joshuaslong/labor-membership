@@ -1,6 +1,6 @@
 import { createClient } from '@/lib/supabase/server'
 import { getCurrentTeamMember } from '@/lib/teamMember'
-import { getChapterScope } from '@/lib/permissions'
+import { getEffectiveChapterScope, applyChapterFilter } from '@/lib/chapterScope'
 import { redirect } from 'next/navigation'
 import Link from 'next/link'
 import SegmentBadge from '@/components/SegmentBadge'
@@ -19,12 +19,11 @@ export default async function MembersPage({ searchParams: searchParamsPromise })
   const from = (page - 1) * PAGE_SIZE
   const to = from + PAGE_SIZE - 1
 
+  const scope = await getEffectiveChapterScope(teamMember)
+
   // Apply shared filters (chapter scope, search, status)
-  function applyFilters(q) {
-    const scope = getChapterScope(teamMember.roles, teamMember.chapter_id)
-    if (scope && scope.chapterId) {
-      q = q.eq('chapter_id', scope.chapterId)
-    }
+  async function applyFilters(q) {
+    q = await applyChapterFilter(q, scope, supabase)
     if (searchParams?.search) {
       const term = `%${searchParams.search}%`
       q = q.or(`first_name.ilike.${term},last_name.ilike.${term},email.ilike.${term}`)
@@ -42,7 +41,7 @@ export default async function MembersPage({ searchParams: searchParamsPromise })
   let countQuery = searchParams?.segment
     ? supabase.from('members').select('id, member_segments(segment)', { count: 'exact', head: true })
     : supabase.from('members').select('id', { count: 'exact', head: true })
-  countQuery = applyFilters(countQuery)
+  countQuery = await applyFilters(countQuery)
   const { count: totalCount } = await countQuery
 
   // Get page of data
@@ -62,7 +61,7 @@ export default async function MembersPage({ searchParams: searchParamsPromise })
     .order('joined_date', { ascending: false })
     .range(from, to)
 
-  query = applyFilters(query)
+  query = await applyFilters(query)
 
   const { data: members, error } = await query
 

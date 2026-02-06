@@ -1,6 +1,7 @@
 import { redirect } from 'next/navigation'
 import { getCurrentTeamMember } from '@/lib/teamMember'
 import { hasRole } from '@/lib/permissions'
+import { getEffectiveChapterScope } from '@/lib/chapterScope'
 import ResourceBrowser from './ResourceBrowser'
 
 export default async function WorkspaceResourcesPage() {
@@ -23,10 +24,14 @@ export default async function WorkspaceResourcesPage() {
     allowedBuckets.push('internal-docs')
   }
 
+  // Use selected chapter from switcher, fall back to team member's chapter
+  const scope = await getEffectiveChapterScope(teamMember)
+  const effectiveChapterId = scope?.chapterId || null
+
   return (
     <ResourceBrowser
       allowedBuckets={allowedBuckets}
-      chapterId={isTopAdmin ? null : teamMember.chapter_id}
+      chapterId={effectiveChapterId}
     />
   )
 }
