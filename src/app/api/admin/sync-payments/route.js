@@ -2,6 +2,26 @@ import { createClient, createAdminClient } from '@/lib/supabase/server'
 import { NextResponse } from 'next/server'
 import { stripe } from '@/lib/stripe'
 
+async function getAdminRoles(adminClient, userId) {
+  // Check team_members first, then fall back to admin_users
+  const { data: teamMember } = await adminClient
+    .from('team_members')
+    .select('roles')
+    .eq('user_id', userId)
+    .eq('active', true)
+    .single()
+
+  if (teamMember?.roles?.length) return teamMember.roles
+
+  const { data: adminUser } = await adminClient
+    .from('admin_users')
+    .select('role')
+    .eq('user_id', userId)
+    .single()
+
+  return adminUser ? [adminUser.role] : []
+}
+
 // POST - Sync all Stripe payments to database
 export async function POST(request) {
   try {
@@ -14,14 +34,8 @@ export async function POST(request) {
 
     const adminClient = createAdminClient()
 
-    // Check if user is super_admin or national_admin
-    const { data: adminUser } = await adminClient
-      .from('admin_users')
-      .select('role')
-      .eq('user_id', user.id)
-      .single()
-
-    if (!adminUser || !['super_admin', 'national_admin'].includes(adminUser.role)) {
+    const roles = await getAdminRoles(adminClient, user.id)
+    if (!roles.some(r => ['super_admin', 'national_admin'].includes(r))) {
       return NextResponse.json({ error: 'Admin access required' }, { status: 403 })
     }
 
@@ -250,14 +264,8 @@ export async function DELETE(request) {
 
     const adminClient = createAdminClient()
 
-    // Check if user is super_admin
-    const { data: adminUser } = await adminClient
-      .from('admin_users')
-      .select('role')
-      .eq('user_id', user.id)
-      .single()
-
-    if (!adminUser || adminUser.role !== 'super_admin') {
+    const roles = await getAdminRoles(adminClient, user.id)
+    if (!roles.includes('super_admin')) {
       return NextResponse.json({ error: 'Super admin access required' }, { status: 403 })
     }
 
@@ -343,14 +351,8 @@ export async function PATCH(request) {
 
     const adminClient = createAdminClient()
 
-    // Check if user is super_admin or national_admin
-    const { data: adminUser } = await adminClient
-      .from('admin_users')
-      .select('role')
-      .eq('user_id', user.id)
-      .single()
-
-    if (!adminUser || !['super_admin', 'national_admin'].includes(adminUser.role)) {
+    const roles = await getAdminRoles(adminClient, user.id)
+    if (!roles.some(r => ['super_admin', 'national_admin'].includes(r))) {
       return NextResponse.json({ error: 'Admin access required' }, { status: 403 })
     }
 
@@ -426,14 +428,8 @@ export async function GET(request) {
 
     const adminClient = createAdminClient()
 
-    // Check if user is admin
-    const { data: adminUser } = await adminClient
-      .from('admin_users')
-      .select('role')
-      .eq('user_id', user.id)
-      .single()
-
-    if (!adminUser) {
+    const roles = await getAdminRoles(adminClient, user.id)
+    if (roles.length === 0) {
       return NextResponse.json({ error: 'Admin access required' }, { status: 403 })
     }
 

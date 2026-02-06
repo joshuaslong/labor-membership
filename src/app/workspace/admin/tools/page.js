@@ -159,7 +159,7 @@ function SyncPaymentsTool() {
 
   const loadStats = async () => {
     try {
-      const res = await fetch('/api/admin/sync-payments?action=stats')
+      const res = await fetch('/api/admin/sync-payments')
       const data = await res.json()
       setStats(data)
     } catch (err) {
@@ -169,6 +169,8 @@ function SyncPaymentsTool() {
     }
   }
 
+  const methodForAction = { sync: 'POST', dedup: 'DELETE', 'fix-types': 'PATCH' }
+
   const runSync = async (action) => {
     setSyncing(action)
     setResult(null)
@@ -176,9 +178,7 @@ function SyncPaymentsTool() {
 
     try {
       const res = await fetch('/api/admin/sync-payments', {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ action }),
+        method: methodForAction[action] || 'POST',
       })
 
       const data = await res.json()
@@ -209,8 +209,8 @@ function SyncPaymentsTool() {
             <div className="grid grid-cols-2 sm:grid-cols-4 gap-3">
               <ResultStat label="Total Payments" value={stats.total || 0} />
               <ResultStat label="Succeeded" value={stats.succeeded || 0} color="text-green-700" />
-              <ResultStat label="Total Revenue" value={`$${((stats.revenue || 0) / 100).toLocaleString()}`} color="text-green-700" />
-              <ResultStat label="Failed/Pending" value={stats.failed || 0} color="text-red-700" />
+              <ResultStat label="Total Revenue" value={`$${(stats.totalRevenue || 0).toLocaleString()}`} color="text-green-700" />
+              <ResultStat label="Failed/Pending" value={(stats.failed || 0) + (stats.pending || 0)} color="text-red-700" />
             </div>
           ) : (
             <p className="text-sm text-gray-400">Could not load payment stats</p>
@@ -257,15 +257,30 @@ function SyncPaymentsTool() {
           <div className="px-4 py-3 border-b border-stone-200">
             <h2 className="text-sm font-semibold text-gray-900">Sync Results</h2>
           </div>
-          <div className="p-4">
+          <div className="p-4 space-y-4">
             <div className="grid grid-cols-2 sm:grid-cols-4 gap-3">
-              {result.total != null && <ResultStat label="Total Found" value={result.total} />}
-              {result.added != null && <ResultStat label="New Added" value={result.added} color="text-green-700" />}
-              {result.existing != null && <ResultStat label="Already Existed" value={result.existing} />}
-              {result.removed != null && <ResultStat label="Removed" value={result.removed} color="text-amber-700" />}
+              {/* POST sync results */}
+              {result.results?.totalCharges != null && <ResultStat label="Total Charges" value={result.results.totalCharges} />}
+              {result.results?.newPayments != null && <ResultStat label="New Payments" value={result.results.newPayments} color="text-green-700" />}
+              {result.results?.updatedPayments != null && <ResultStat label="Already Existed" value={result.results.updatedPayments} />}
+              {result.results?.unmatchedPayments != null && <ResultStat label="Unmatched" value={result.results.unmatchedPayments} color="text-gray-500" />}
+              {/* DELETE dedup results */}
+              {result.duplicatesFound != null && <ResultStat label="Duplicates Found" value={result.duplicatesFound} />}
+              {result.deleted != null && <ResultStat label="Removed" value={result.deleted} color="text-amber-700" />}
+              {/* PATCH fix-types results */}
+              {result.paymentsChecked != null && <ResultStat label="Checked" value={result.paymentsChecked} />}
               {result.fixed != null && <ResultStat label="Fixed" value={result.fixed} color="text-blue-700" />}
-              {result.unmatched != null && <ResultStat label="Unmatched" value={result.unmatched} color="text-gray-500" />}
             </div>
+            {result.results?.errors?.length > 0 && (
+              <div>
+                <h3 className="text-xs font-medium text-gray-500 uppercase tracking-wide mb-1">Unmatched Charges</h3>
+                <div className="max-h-40 overflow-y-auto text-xs text-gray-500 space-y-0.5">
+                  {result.results.errors.map((err, i) => (
+                    <p key={i}>{err.email} — ${err.amount} — {err.error}</p>
+                  ))}
+                </div>
+              </div>
+            )}
           </div>
         </div>
       )}
