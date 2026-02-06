@@ -30,17 +30,8 @@ export default async function WorkspaceLayout({ children }) {
     showAllOption = true
   } else if (hasRole(teamMember.roles, ['state_admin', 'county_admin'])) {
     const supabase = await createClient()
-
-    const [{ data: ownChapter }, { data: descendants }] = await Promise.all([
-      supabase
-        .from('chapters')
-        .select('id, name, level')
-        .eq('id', teamMember.chapter_id)
-        .single(),
-      supabase.rpc('get_chapter_descendants', { chapter_uuid: teamMember.chapter_id })
-    ])
-
-    availableChapters = [ownChapter, ...(descendants || [])].filter(Boolean)
+    const { data: descendants } = await supabase.rpc('get_chapter_descendants', { chapter_uuid: teamMember.chapter_id })
+    availableChapters = (descendants || []).map(d => ({ id: d.id, name: d.name, level: d.level }))
     showAllOption = availableChapters.length > 1
   }
   // city_admin and specialist roles: no switcher needed
