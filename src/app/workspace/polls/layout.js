@@ -11,8 +11,9 @@ export default async function PollsLayout({ children }) {
   }
 
   const sidebarItems = [
-    { type: 'link', label: 'All Polls', href: '/workspace/polls' },
+    { type: 'link', label: 'Create Poll', href: '/workspace/polls/new', variant: 'primary' },
     { type: 'divider' },
+    { type: 'link', label: 'All Polls', href: '/workspace/polls' },
     { type: 'header', label: 'Filter' },
     { type: 'link', label: 'Needs Vote', href: '/workspace/polls?filter=needs_vote' },
     { type: 'link', label: 'Voted', href: '/workspace/polls?filter=voted' },
