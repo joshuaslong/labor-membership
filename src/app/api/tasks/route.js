@@ -1,5 +1,6 @@
 import { createClient } from '@/lib/supabase/server'
 import { NextResponse } from 'next/server'
+import { sendNewTaskNotification } from '@/lib/task-notifications'
 
 // POST - Create a new task
 export async function POST(request) {
@@ -61,6 +62,13 @@ export async function POST(request) {
       .single()
 
     if (error) throw error
+
+    // Send notification to assigned owner
+    if (task.owner) {
+      sendNewTaskNotification(task).catch(err => {
+        console.error('Error sending new task notification:', err)
+      })
+    }
 
     return NextResponse.json({ task }, { status: 201 })
   } catch (error) {

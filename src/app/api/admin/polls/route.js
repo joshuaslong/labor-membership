@@ -1,5 +1,6 @@
 import { createClient, createAdminClient } from '@/lib/supabase/server'
 import { NextResponse } from 'next/server'
+import { sendNewPollNotifications } from '@/lib/poll-notifications'
 
 function getHighestAdmin(adminRecords) {
   const roleHierarchy = ['super_admin', 'national_admin', 'state_admin', 'county_admin', 'city_admin']
@@ -211,6 +212,13 @@ export async function POST(request) {
         .insert(optionRows)
 
       if (optError) throw optError
+    }
+
+    // Send notifications if poll is active
+    if (poll.status === 'active') {
+      sendNewPollNotifications(poll).catch(err => {
+        console.error('Error sending new poll notifications:', err)
+      })
     }
 
     return NextResponse.json({ poll }, { status: 201 })

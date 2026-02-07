@@ -1,5 +1,7 @@
 import { createClient, createAdminClient } from '@/lib/supabase/server'
 import { NextResponse } from 'next/server'
+import { sendNewPollNotifications } from '@/lib/poll-notifications'
+import { hasReminderBeenSent } from '@/lib/email-templates'
 
 async function verifyPollAccess(user, adminClient, pollId) {
   const { data: adminRecords } = await adminClient
@@ -207,6 +209,13 @@ export async function PUT(request, { params }) {
       .select('*, chapters(name, level), chapter_groups(name)')
       .eq('id', id)
       .single()
+
+    // Send notifications if poll was just activated
+    if (status === 'active' && result.poll.status !== 'active' && updatedPoll) {
+      sendNewPollNotifications(updatedPoll).catch(err => {
+        console.error('Error sending new poll notifications:', err)
+      })
+    }
 
     return NextResponse.json({ poll: updatedPoll })
 
