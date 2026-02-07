@@ -10,6 +10,9 @@ Sentry.init({
   // Add optional integrations for additional features
   integrations: [Sentry.replayIntegration()],
 
+  // Ignore errors from privacy browsers blocking Performance APIs
+  ignoreErrors: [/feature named '.*' was not found/],
+
   // Define how likely traces are sampled. Adjust this value in production, or use tracesSampler for greater control.
   tracesSampleRate: 0.2,
   // Enable logs to be sent to Sentry
