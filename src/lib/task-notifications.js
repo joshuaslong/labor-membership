@@ -1,6 +1,15 @@
 import { createAdminClient } from '@/lib/supabase/server'
 import { sendAutomatedEmail, formatEmailDate } from '@/lib/email-templates'
 
+function formatTimeEstimate(minutes) {
+  if (!minutes) return ''
+  if (minutes < 60) return `${minutes} minutes`
+  const hours = Math.floor(minutes / 60)
+  const mins = minutes % 60
+  if (mins === 0) return hours === 1 ? '1 hour' : `${hours} hours`
+  return `${hours}h ${mins}m`
+}
+
 /**
  * Send a notification email to the assigned owner of a new task
  */
@@ -64,6 +73,21 @@ export async function sendNewTaskNotification(task) {
   const priorityLabels = { P1: 'Critical', P2: 'High', P3: 'Standard' }
   const priority = priorityLabels[task.priority] || task.priority
 
+  // Format time estimate
+  const timeEstimate = formatTimeEstimate(task.time_estimate_min)
+
+  // Skill type labels
+  const skillLabels = {
+    WRITING: 'Writing', DESIGN: 'Design', VIDEO: 'Video',
+    TECHNICAL: 'Technical', RESEARCH: 'Research', COORDINATION: 'Coordination',
+  }
+  const skillType = task.skill_type ? skillLabels[task.skill_type] || task.skill_type : ''
+
+  // Build notes section HTML (empty string if no notes)
+  const notesSection = task.notes
+    ? `<div style="background: #f9fafb; padding: 12px 16px; border-radius: 6px; border-left: 3px solid #E25555; margin: 16px 0; font-size: 14px;"><strong>Notes:</strong> ${task.notes}</div>`
+    : ''
+
   try {
     const result = await sendAutomatedEmail({
       templateKey: 'new_task',
@@ -75,6 +99,11 @@ export async function sendNewTaskNotification(task) {
         task_project: task.project || '',
         task_deadline: deadline,
         task_priority: priority,
+        task_time_estimate: timeEstimate,
+        task_skill_row: skillType
+          ? `<tr><td style="padding: 6px 12px 6px 0; color: #6b7280; vertical-align: top; white-space: nowrap;"><strong>Type:</strong></td><td style="padding: 6px 0;">${skillType}</td></tr>`
+          : '',
+        task_notes_section: notesSection,
         task_url: taskUrl,
       },
       recipientType: 'team_member',

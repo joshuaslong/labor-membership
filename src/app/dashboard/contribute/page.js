@@ -7,6 +7,14 @@ import { createClient } from '@/lib/supabase/client'
 
 const PRESET_AMOUNTS = [5, 10, 25, 50, 100, 250]
 
+// FEC compliance attestation requirements
+const FEC_ATTESTATIONS = [
+  { id: 'us_citizen', label: 'I am a U.S. citizen or lawfully admitted permanent resident (green card holder).' },
+  { id: 'personal_funds', label: 'This contribution is made from my own funds, not from the general treasury funds of a corporation, labor organization, or national bank.' },
+  { id: 'own_behalf', label: 'This contribution is not made on behalf of any other person or entity, and I have not been reimbursed for this contribution.' },
+  { id: 'not_contractor', label: 'I am not a federal contractor, and this contribution is not made in the name of a federal contractor.' },
+]
+
 // Helper to safely format dates - returns null if invalid
 function formatDate(dateString, options = {}) {
   if (!dateString) return null
@@ -61,6 +69,16 @@ function ContributePageContent() {
   const [updatingSubscription, setUpdatingSubscription] = useState(false)
   const [newAmount, setNewAmount] = useState('')
 
+  // FEC compliance fields
+  const [employer, setEmployer] = useState('')
+  const [occupation, setOccupation] = useState('')
+  const [attestations, setAttestations] = useState({
+    us_citizen: false,
+    personal_funds: false,
+    own_behalf: false,
+    not_contractor: false,
+  })
+
   useEffect(() => {
     const loadSubscription = async () => {
       const supabase = createClient()
@@ -104,6 +122,12 @@ function ContributePageContent() {
     return selectedAmount
   }
 
+  const handleAttestationChange = (id) => {
+    setAttestations(prev => ({ ...prev, [id]: !prev[id] }))
+  }
+
+  const allAttestationsChecked = Object.values(attestations).every(v => v)
+
   const handleSubmit = async (e) => {
     e.preventDefault()
     setLoading(true)
@@ -116,11 +140,30 @@ function ContributePageContent() {
       return
     }
 
+    // FEC compliance validation
+    if (!allAttestationsChecked) {
+      setError('Please confirm all FEC compliance attestations to proceed.')
+      setLoading(false)
+      return
+    }
+
+    if (!employer.trim() || !occupation.trim()) {
+      setError('Employer and occupation are required for FEC compliance.')
+      setLoading(false)
+      return
+    }
+
     try {
       const res = await fetch('/api/stripe/create-checkout', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ amount, isRecurring }),
+        body: JSON.stringify({
+          amount,
+          isRecurring,
+          employer: employer.trim(),
+          occupation: occupation.trim(),
+          fec_attestations: attestations,
+        }),
       })
 
       const data = await res.json()
@@ -505,6 +548,62 @@ function ContributePageContent() {
           <p className="text-xs text-gray-500 mt-1">Minimum $1, maximum $5,000</p>
         </div>
 
+        {/* FEC Compliance - Employer/Occupation */}
+        <div className="border-t border-gray-200 pt-6 mb-6">
+          <h3 className="text-sm font-semibold text-gray-900 mb-1">FEC Compliance Information</h3>
+          <p className="text-xs text-gray-500 mb-4">
+            Federal law requires political committees to collect and report this information.
+          </p>
+
+          <div className="space-y-4">
+            <div>
+              <label className="block text-sm font-medium text-gray-700 mb-1">
+                Employer <span className="text-labor-red">*</span>
+              </label>
+              <input
+                type="text"
+                value={employer}
+                onChange={(e) => setEmployer(e.target.value)}
+                placeholder="Enter your employer (or 'Self-employed', 'Retired', 'Not employed')"
+                className="input-field"
+                required
+              />
+            </div>
+
+            <div>
+              <label className="block text-sm font-medium text-gray-700 mb-1">
+                Occupation <span className="text-labor-red">*</span>
+              </label>
+              <input
+                type="text"
+                value={occupation}
+                onChange={(e) => setOccupation(e.target.value)}
+                placeholder="Enter your occupation (or 'Retired', 'Not employed')"
+                className="input-field"
+                required
+              />
+            </div>
+          </div>
+        </div>
+
+        {/* FEC Attestations */}
+        <div className="border-t border-gray-200 pt-6 mb-6">
+          <h3 className="text-sm font-semibold text-gray-900 mb-3">Required Certifications</h3>
+          <div className="space-y-3">
+            {FEC_ATTESTATIONS.map((attestation) => (
+              <label key={attestation.id} className="flex items-start gap-3 cursor-pointer">
+                <input
+                  type="checkbox"
+                  checked={attestations[attestation.id]}
+                  onChange={() => handleAttestationChange(attestation.id)}
+                  className="mt-0.5 w-4 h-4 text-labor-red border-gray-300 rounded focus:ring-labor-red"
+                />
+                <span className="text-sm text-gray-600">{attestation.label}</span>
+              </label>
+            ))}
+          </div>
+        </div>
+
         {/* Summary */}
         <div className="bg-gray-50 rounded-lg p-4 mb-6">
           <div className="flex justify-between items-center">
@@ -520,8 +619,8 @@ function ContributePageContent() {
 
         <button
           type="submit"
-          disabled={loading}
-          className="w-full btn-primary py-3 text-lg"
+          disabled={loading || !allAttestationsChecked || !employer.trim() || !occupation.trim()}
+          className="w-full btn-primary py-3 text-lg disabled:opacity-50 disabled:cursor-not-allowed"
         >
           {loading ? 'Processing...' : `Contribute $${getAmount().toFixed(2)}${isRecurring ? '/month' : ''}`}
         </button>

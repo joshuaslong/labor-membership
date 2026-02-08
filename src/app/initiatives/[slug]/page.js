@@ -1,9 +1,8 @@
 'use client'
 
-import { useState } from 'react'
+import { useState, useEffect } from 'react'
+import { useParams } from 'next/navigation'
 import Link from 'next/link'
-
-const PRESET_AMOUNTS = [10, 25, 50, 100, 250, 500]
 
 // FEC compliance attestation requirements
 const FEC_ATTESTATIONS = [
@@ -13,21 +12,22 @@ const FEC_ATTESTATIONS = [
   { id: 'not_contractor', label: 'I am not a federal contractor, and this contribution is not made in the name of a federal contractor.' },
 ]
 
-const CARE_PACKAGE_INFO = [
-  { amount: 25, description: 'Provides water, snacks, and basic supplies for 5 protestors' },
-  { amount: 50, description: 'Supplies a full day of hydration and nutrition for 10 protestors' },
-  { amount: 100, description: 'Funds a complete care station setup for a protest site' },
-  { amount: 250, description: 'Sponsors care packages for an entire weekend of protests' },
-]
+export default function InitiativePage() {
+  const params = useParams()
+  const slug = params.slug
 
-export default function CarePackagesPage() {
+  const [initiative, setInitiative] = useState(null)
+  const [loading, setLoading] = useState(true)
+  const [notFound, setNotFound] = useState(false)
+
+  // Donation form state
   const [selectedAmount, setSelectedAmount] = useState(25)
   const [customAmount, setCustomAmount] = useState('')
   const [isCustom, setIsCustom] = useState(false)
-  const [loading, setLoading] = useState(false)
+  const [submitting, setSubmitting] = useState(false)
   const [error, setError] = useState(null)
 
-  // Required fields
+  // Required donor info
   const [email, setEmail] = useState('')
   const [firstName, setFirstName] = useState('')
   const [lastName, setLastName] = useState('')
@@ -48,6 +48,33 @@ export default function CarePackagesPage() {
     not_contractor: false,
   })
 
+  useEffect(() => {
+    const fetchInitiative = async () => {
+      try {
+        const res = await fetch(`/api/initiatives/${slug}`)
+        if (res.status === 404) {
+          setNotFound(true)
+          return
+        }
+        if (!res.ok) throw new Error('Failed to fetch initiative')
+        const data = await res.json()
+        setInitiative(data.initiative)
+        // Set default amount from suggested amounts
+        if (data.initiative?.suggested_amounts?.length > 0) {
+          setSelectedAmount(data.initiative.suggested_amounts[0])
+        }
+      } catch (err) {
+        setError(err.message)
+      } finally {
+        setLoading(false)
+      }
+    }
+
+    if (slug) {
+      fetchInitiative()
+    }
+  }, [slug])
+
   const handleAttestationChange = (id) => {
     setAttestations(prev => ({ ...prev, [id]: !prev[id] }))
   }
@@ -63,49 +90,49 @@ export default function CarePackagesPage() {
 
   const handleSubmit = async (e) => {
     e.preventDefault()
-    setLoading(true)
+    setSubmitting(true)
     setError(null)
 
     const amount = getAmount()
-    if (amount < 1 || amount > 10000) {
-      setError('Amount must be between $1 and $10,000')
-      setLoading(false)
+    if (amount < (initiative?.min_amount || 1) || amount > 10000) {
+      setError(`Amount must be between $${initiative?.min_amount || 1} and $10,000`)
+      setSubmitting(false)
       return
     }
 
     if (!email) {
       setError('Email is required for donation receipt')
-      setLoading(false)
+      setSubmitting(false)
       return
     }
 
     // FEC compliance validation
     if (!firstName.trim() || !lastName.trim()) {
       setError('Full name is required for FEC compliance.')
-      setLoading(false)
+      setSubmitting(false)
       return
     }
 
     if (!streetAddress.trim() || !city.trim() || !state.trim() || !zipCode.trim()) {
       setError('Complete mailing address is required for FEC compliance.')
-      setLoading(false)
+      setSubmitting(false)
       return
     }
 
     if (!employer.trim() || !occupation.trim()) {
       setError('Employer and occupation are required for FEC compliance.')
-      setLoading(false)
+      setSubmitting(false)
       return
     }
 
     if (!allAttestationsChecked) {
       setError('Please confirm all FEC compliance attestations to proceed.')
-      setLoading(false)
+      setSubmitting(false)
       return
     }
 
     try {
-      const res = await fetch('/api/initiatives/care-packages/checkout', {
+      const res = await fetch(`/api/initiatives/${slug}/checkout`, {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({
@@ -134,13 +161,41 @@ export default function CarePackagesPage() {
       window.location.href = data.url
     } catch (err) {
       setError(err.message)
-      setLoading(false)
+      setSubmitting(false)
     }
   }
 
+  if (loading) {
+    return (
+      <div className="min-h-[calc(100vh-64px)] flex items-center justify-center">
+        <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-labor-red"></div>
+      </div>
+    )
+  }
+
+  if (notFound) {
+    return (
+      <div className="min-h-[calc(100vh-64px)] flex items-center justify-center">
+        <div className="text-center">
+          <h1 className="text-2xl font-semibold text-gray-900 mb-2">Initiative Not Found</h1>
+          <p className="text-gray-500 mb-4">This initiative doesn't exist or is no longer active.</p>
+          <Link href="/initiatives" className="btn-primary">
+            View All Initiatives
+          </Link>
+        </div>
+      </div>
+    )
+  }
+
+  if (!initiative) {
+    return null
+  }
+
+  const suggestedAmounts = initiative.suggested_amounts || [10, 25, 50, 100]
+
   return (
     <div className="min-h-[calc(100vh-64px)]">
-      {/* Hero Section - Matching landing page style */}
+      {/* Hero Section */}
       <section className="relative overflow-hidden bg-gradient-to-b from-gray-50 to-white">
         <div className="absolute inset-0 bg-[radial-gradient(circle_at_top_right,_rgba(226,85,85,0.06)_0%,_transparent_50%)]" />
 
@@ -157,19 +212,19 @@ export default function CarePackagesPage() {
 
           <div className="text-center">
             <div className="inline-flex items-center gap-2 px-3 py-1 rounded-full bg-labor-red-50 text-labor-red-600 text-sm font-medium mb-8">
-            <span className="w-2 h-2 rounded-full bg-labor-red animate-pulse" />
-            Active Campaign
-          </div>
+              <span className="w-2 h-2 rounded-full bg-labor-red animate-pulse" />
+              {initiative.status === 'active' ? 'Active Campaign' : 'Completed'}
+            </div>
 
-          <h1 className="text-4xl md:text-5xl font-bold text-gray-900 tracking-tight leading-tight">
-            Care Packages for
-            <span className="block text-labor-red">ICE Protestors</span>
-          </h1>
+            <h1 className="text-4xl md:text-5xl font-bold text-gray-900 tracking-tight leading-tight">
+              {initiative.title}
+            </h1>
 
-          <p className="mt-6 text-xl text-gray-600 max-w-2xl mx-auto leading-relaxed">
-            Support the brave people standing up against ICE raids in our communities.
-            Your donation provides water, food, first aid supplies, and other essentials.
-          </p>
+            {initiative.description && (
+              <p className="mt-6 text-xl text-gray-600 max-w-2xl mx-auto leading-relaxed">
+                {initiative.description}
+              </p>
+            )}
           </div>
         </div>
       </section>
@@ -178,51 +233,17 @@ export default function CarePackagesPage() {
       <section className="py-12 bg-white border-t border-gray-100">
         <div className="max-w-5xl mx-auto px-6">
           <div className="grid lg:grid-cols-2 gap-12">
-            {/* Left Column - Info */}
+            {/* Left Column - Description */}
             <div>
-              <h2 className="text-2xl font-semibold text-gray-900 tracking-tight mb-6">
-                What Your Donation Provides
-              </h2>
+              {initiative.long_description && (
+                <div className="prose prose-gray max-w-none mb-8">
+                  <p className="whitespace-pre-wrap">{initiative.long_description}</p>
+                </div>
+              )}
 
-              <div className="space-y-4 mb-8">
-                {CARE_PACKAGE_INFO.map((item) => (
-                  <div key={item.amount} className="flex gap-4 items-start">
-                    <div className="flex-shrink-0 w-14 h-14 rounded-lg bg-labor-red-50 flex items-center justify-center">
-                      <span className="text-labor-red font-bold">${item.amount}</span>
-                    </div>
-                    <div className="pt-2">
-                      <p className="text-gray-600 text-sm leading-relaxed">{item.description}</p>
-                    </div>
-                  </div>
-                ))}
-              </div>
-
-              <div className="card">
-                <h3 className="font-semibold text-gray-900 mb-4">Care Package Contents</h3>
-                <ul className="grid grid-cols-2 gap-3 text-sm text-gray-600">
-                  {[
-                    'Bottled water',
-                    'Energy bars & snacks',
-                    'First aid supplies',
-                    'Sunscreen',
-                    'Hand sanitizer',
-                    'Phone charging banks',
-                    'Know-your-rights cards',
-                    'Emergency contacts',
-                  ].map((item) => (
-                    <li key={item} className="flex items-center gap-2">
-                      <svg className="w-4 h-4 text-labor-red flex-shrink-0" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-                        <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M5 13l4 4L19 7" />
-                      </svg>
-                      {item}
-                    </li>
-                  ))}
-                </ul>
-              </div>
-
-              <div className="mt-6 p-4 bg-labor-red-50 rounded-lg border border-labor-red-100">
+              <div className="p-4 bg-labor-red-50 rounded-lg border border-labor-red-100">
                 <p className="text-sm text-labor-red-700">
-                  <strong>100% of donations</strong> go directly to purchasing supplies.
+                  <strong>100% of donations</strong> go directly to the cause.
                   The Labor Party covers all administrative costs.
                 </p>
               </div>
@@ -250,7 +271,7 @@ export default function CarePackagesPage() {
                     Select an amount
                   </label>
                   <div className="grid grid-cols-3 gap-3">
-                    {PRESET_AMOUNTS.map((amount) => (
+                    {suggestedAmounts.map((amount) => (
                       <button
                         key={amount}
                         type="button"
@@ -272,30 +293,35 @@ export default function CarePackagesPage() {
                 </div>
 
                 {/* Custom Amount */}
-                <div className="mb-6">
-                  <label className="block text-sm font-medium text-gray-700 mb-2">
-                    Or enter a custom amount
-                  </label>
-                  <div className="relative">
-                    <span className="absolute left-3 top-1/2 -translate-y-1/2 text-gray-500">$</span>
-                    <input
-                      type="number"
-                      min="1"
-                      max="10000"
-                      step="1"
-                      placeholder="Custom amount"
-                      value={customAmount}
-                      onChange={(e) => {
-                        setCustomAmount(e.target.value)
-                        setIsCustom(true)
-                      }}
-                      onFocus={() => setIsCustom(true)}
-                      className={`input-field pl-7 ${
-                        isCustom ? 'border-labor-red ring-2 ring-labor-red-100' : ''
-                      }`}
-                    />
+                {initiative.allow_custom_amount !== false && (
+                  <div className="mb-6">
+                    <label className="block text-sm font-medium text-gray-700 mb-2">
+                      Or enter a custom amount
+                    </label>
+                    <div className="relative">
+                      <span className="absolute left-3 top-1/2 -translate-y-1/2 text-gray-500">$</span>
+                      <input
+                        type="number"
+                        min={initiative.min_amount || 1}
+                        max="10000"
+                        step="1"
+                        placeholder="Custom amount"
+                        value={customAmount}
+                        onChange={(e) => {
+                          setCustomAmount(e.target.value)
+                          setIsCustom(true)
+                        }}
+                        onFocus={() => setIsCustom(true)}
+                        className={`input-field pl-7 ${
+                          isCustom ? 'border-labor-red ring-2 ring-labor-red-100' : ''
+                        }`}
+                      />
+                    </div>
+                    <p className="text-xs text-gray-500 mt-1">
+                      Minimum ${initiative.min_amount || 1}
+                    </p>
                   </div>
-                </div>
+                )}
 
                 {/* Donor Info - FEC Required */}
                 <div className="border-t border-gray-100 pt-6 mb-6">
@@ -500,10 +526,10 @@ export default function CarePackagesPage() {
 
                 <button
                   type="submit"
-                  disabled={loading || !allAttestationsChecked || !firstName.trim() || !lastName.trim() || !streetAddress.trim() || !city.trim() || !state.trim() || !zipCode.trim() || !employer.trim() || !occupation.trim()}
+                  disabled={submitting || !allAttestationsChecked || !firstName.trim() || !lastName.trim() || !streetAddress.trim() || !city.trim() || !state.trim() || !zipCode.trim() || !employer.trim() || !occupation.trim()}
                   className="btn-primary w-full py-4 text-lg disabled:opacity-50 disabled:cursor-not-allowed"
                 >
-                  {loading ? 'Processing...' : `Donate $${getAmount().toFixed(2)}`}
+                  {submitting ? 'Processing...' : `Donate $${getAmount().toFixed(2)}`}
                 </button>
 
                 <p className="text-xs text-gray-500 text-center mt-4">
@@ -523,7 +549,7 @@ export default function CarePackagesPage() {
         </div>
       </section>
 
-      {/* Footer CTA - Matching landing page dark section */}
+      {/* Footer CTA */}
       <section className="py-16 bg-gray-900 relative overflow-hidden">
         <div className="absolute inset-0 opacity-[0.03]" style={{
           backgroundImage: `url("data:image/svg+xml,%3Csvg width='60' height='60' viewBox='0 0 60 60' xmlns='http://www.w3.org/2000/svg'%3E%3Cg fill='none' fill-rule='evenodd'%3E%3Cg fill='%23ffffff' fill-opacity='1'%3E%3Cpath d='M36 34v-4h-2v4h-4v2h4v4h2v-4h4v-2h-4zm0-30V0h-2v4h-4v2h4v4h2V6h4V4h-4zM6 34v-4H4v4H0v2h4v4h2v-4h4v-2H6zM6 4V0H4v4H0v2h4v4h2V6h4V4H6z'/%3E%3C/g%3E%3C/g%3E%3C/svg%3E")`

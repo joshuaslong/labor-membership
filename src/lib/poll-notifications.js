@@ -1,5 +1,5 @@
 import { createAdminClient } from '@/lib/supabase/server'
-import { sendAutomatedEmail } from '@/lib/email-templates'
+import { sendAutomatedEmail, formatEmailDate } from '@/lib/email-templates'
 
 /**
  * Send new poll notification emails to eligible members
@@ -21,9 +21,29 @@ export async function sendNewPollNotifications(poll) {
     return { success: false, error: 'Chapter not found' }
   }
 
+  // Get question count for this poll
+  const { count: questionCount } = await supabase
+    .from('poll_questions')
+    .select('*', { count: 'exact', head: true })
+    .eq('poll_id', poll.id)
+
+  // Format deadline
+  const pollDeadline = poll.closes_at
+    ? formatEmailDate(poll.closes_at)
+    : 'Open-ended'
+
   let allMemberIds = []
+  let groupName = ''
 
   if (poll.target_type === 'group' && poll.group_id) {
+    // Get group name
+    const { data: group } = await supabase
+      .from('chapter_groups')
+      .select('name')
+      .eq('id', poll.group_id)
+      .single()
+    groupName = group?.name || ''
+
     // Get members in the specific group
     const { data: groupAssignments } = await supabase
       .from('member_group_assignments')
@@ -78,7 +98,14 @@ export async function sendNewPollNotifications(poll) {
   let errorCount = 0
   const results = []
 
-  for (const member of members) {
+  for (let i = 0; i < members.length; i++) {
+    const member = members[i]
+
+    // Rate limit: Resend allows 2 req/sec, space out sends by 600ms
+    if (i > 0) {
+      await new Promise(resolve => setTimeout(resolve, 600))
+    }
+
     try {
       const result = await sendAutomatedEmail({
         templateKey: 'new_poll',
@@ -88,6 +115,11 @@ export async function sendNewPollNotifications(poll) {
           poll_title: poll.title,
           poll_description: poll.description || '',
           chapter_name: chapter.name,
+          poll_group_row: groupName
+            ? `<tr><td style="padding: 6px 12px 6px 0; color: #6b7280; vertical-align: top; white-space: nowrap;"><strong>Group:</strong></td><td style="padding: 6px 0;">${groupName}</td></tr>`
+            : '',
+          question_count: questionCount || 0,
+          poll_deadline: pollDeadline,
           poll_url: pollUrl,
         },
         recipientType: 'member',

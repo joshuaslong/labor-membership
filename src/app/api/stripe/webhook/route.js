@@ -45,6 +45,13 @@ export async function POST(request) {
         // Check if this is an initiative donation (has initiative field in metadata)
         if (session.metadata?.initiative) {
           console.log('Initiative donation detected:', session.metadata.initiative)
+          console.log('FEC Data:', {
+            name: `${session.metadata.first_name} ${session.metadata.last_name}`,
+            address: `${session.metadata.street_address}, ${session.metadata.city}, ${session.metadata.state} ${session.metadata.zip_code}`,
+            employer: session.metadata.employer,
+            occupation: session.metadata.occupation,
+            fec_attested_at: session.metadata.fec_attested_at,
+          })
 
           // Handle mailing list signup if opted in
           if (session.metadata.join_mailing_list === 'true') {
@@ -60,8 +67,26 @@ export async function POST(request) {
             })
           }
 
-          // Store initiative donation (optional - could create initiative_donations table)
-          // For now, we can track via Stripe metadata
+          // Store initiative donation with FEC compliance data
+          // If member exists, create payment record
+          if (session.metadata.member_id) {
+            await supabase.from('payments').insert({
+              member_id: session.metadata.member_id,
+              stripe_checkout_session_id: session.id,
+              stripe_payment_intent_id: session.payment_intent,
+              amount_cents: session.amount_total,
+              status: 'succeeded',
+              payment_type: 'initiative',
+              employer: session.metadata.employer || null,
+              occupation: session.metadata.occupation || null,
+              street_address: session.metadata.street_address || null,
+              city: session.metadata.city || null,
+              state: session.metadata.state || null,
+              zip_code: session.metadata.zip_code || null,
+              fec_attested_at: session.metadata.fec_attested_at || null,
+            })
+          }
+
           break
         }
 
@@ -79,8 +104,15 @@ export async function POST(request) {
           .eq('id', memberId)
           .single()
 
+        // Extract FEC compliance data from metadata
+        const fecData = {
+          employer: session.metadata?.employer || null,
+          occupation: session.metadata?.occupation || null,
+          fec_attested_at: session.metadata?.fec_attested_at || null,
+        }
+
         if (session.mode === 'subscription') {
-          // Subscription payment - create subscription record
+          // Subscription payment - create subscription record with FEC data
           const subscription = await stripe.subscriptions.retrieve(session.subscription)
 
           await supabase.from('member_subscriptions').upsert({
@@ -91,11 +123,14 @@ export async function POST(request) {
             status: 'active',
             current_period_start: new Date(subscription.current_period_start * 1000).toISOString(),
             current_period_end: new Date(subscription.current_period_end * 1000).toISOString(),
+            employer: fecData.employer,
+            occupation: fecData.occupation,
+            fec_attested_at: fecData.fec_attested_at,
           }, {
             onConflict: 'stripe_subscription_id',
           })
 
-          // Also create a payment record for the initial payment
+          // Also create a payment record for the initial payment with FEC data
           await supabase.from('payments').insert({
             member_id: memberId,
             stripe_checkout_session_id: session.id,
@@ -103,6 +138,9 @@ export async function POST(request) {
             amount_cents: session.amount_total,
             status: 'succeeded',
             payment_type: 'recurring',
+            employer: fecData.employer,
+            occupation: fecData.occupation,
+            fec_attested_at: fecData.fec_attested_at,
           })
 
           // Send payment receipt email
@@ -126,7 +164,7 @@ export async function POST(request) {
             }
           }
         } else {
-          // One-time payment
+          // One-time payment with FEC data
           await supabase.from('payments').insert({
             member_id: memberId,
             stripe_checkout_session_id: session.id,
@@ -134,6 +172,9 @@ export async function POST(request) {
             amount_cents: session.amount_total,
             status: 'succeeded',
             payment_type: 'one_time',
+            employer: fecData.employer,
+            occupation: fecData.occupation,
+            fec_attested_at: fecData.fec_attested_at,
           })
 
           // Send payment receipt email

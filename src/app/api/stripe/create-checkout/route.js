@@ -12,7 +12,23 @@ export async function POST(request) {
     }
 
     const body = await request.json()
-    const { amount, isRecurring } = body
+    const { amount, isRecurring, employer, occupation, fec_attestations } = body
+
+    // Validate FEC compliance data
+    if (!employer || !occupation) {
+      return NextResponse.json(
+        { error: 'Employer and occupation are required for FEC compliance' },
+        { status: 400 }
+      )
+    }
+
+    if (!fec_attestations || !fec_attestations.us_citizen || !fec_attestations.personal_funds ||
+        !fec_attestations.own_behalf || !fec_attestations.not_contractor) {
+      return NextResponse.json(
+        { error: 'All FEC attestations are required' },
+        { status: 400 }
+      )
+    }
 
     // Validate amount
     const amountCents = Math.round(parseFloat(amount) * 100)
@@ -63,7 +79,17 @@ export async function POST(request) {
 
     console.log('Stripe checkout URLs:', { successUrl, cancelUrl })
 
-    // Build checkout session config
+    // Build checkout session config with FEC compliance data
+    const fecMetadata = {
+      employer: employer,
+      occupation: occupation,
+      fec_us_citizen: 'true',
+      fec_personal_funds: 'true',
+      fec_own_behalf: 'true',
+      fec_not_contractor: 'true',
+      fec_attested_at: new Date().toISOString(),
+    }
+
     const sessionConfig = {
       customer: stripeCustomerId,
       customer_email: undefined, // Don't set if customer is set
@@ -72,6 +98,7 @@ export async function POST(request) {
       metadata: {
         member_id: member.id,
         payment_type: isRecurring ? 'recurring' : 'one_time',
+        ...fecMetadata,
       },
     }
 
@@ -113,6 +140,7 @@ export async function POST(request) {
         metadata: {
           member_id: member.id,
           type: 'party_donation',
+          ...fecMetadata,
         },
       }
     } else {
@@ -139,6 +167,7 @@ export async function POST(request) {
         metadata: {
           member_id: member.id,
           type: 'party_donation',
+          ...fecMetadata,
         },
       }
     }

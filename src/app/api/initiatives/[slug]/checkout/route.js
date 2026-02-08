@@ -2,8 +2,9 @@ import { NextResponse } from 'next/server'
 import { stripe } from '@/lib/stripe'
 import { createAdminClient } from '@/lib/supabase/server'
 
-export async function POST(request) {
+export async function POST(request, { params }) {
   try {
+    const { slug } = await params
     const body = await request.json()
     const {
       amount,
@@ -44,16 +45,29 @@ export async function POST(request) {
       return NextResponse.json({ error: 'All FEC attestations are required' }, { status: 400 })
     }
 
+    const supabase = createAdminClient()
+
+    // Get initiative details
+    const { data: initiative, error: initiativeError } = await supabase
+      .from('initiatives')
+      .select('id, slug, title, min_amount, status')
+      .eq('slug', slug)
+      .eq('status', 'active')
+      .single()
+
+    if (initiativeError || !initiative) {
+      return NextResponse.json({ error: 'Initiative not found or not active' }, { status: 404 })
+    }
+
     // Validate amount
     const amountCents = Math.round(parseFloat(amount) * 100)
-    if (amountCents < 100 || amountCents > 1000000) {
+    const minAmount = (initiative.min_amount || 1) * 100
+    if (amountCents < minAmount || amountCents > 1000000) {
       return NextResponse.json(
-        { error: 'Amount must be between $1 and $10,000' },
+        { error: `Amount must be between $${initiative.min_amount || 1} and $10,000` },
         { status: 400 }
       )
     }
-
-    const supabase = createAdminClient()
 
     // Check if this email already has a member account
     const { data: existingMember } = await supabase
@@ -74,6 +88,21 @@ export async function POST(request) {
 
       if (existingCustomers.data.length > 0) {
         stripeCustomerId = existingCustomers.data[0].id
+        // Update customer with FEC info
+        await stripe.customers.update(stripeCustomerId, {
+          name: `${firstName} ${lastName}`,
+          address: {
+            line1: streetAddress,
+            city: city,
+            state: state,
+            postal_code: zipCode,
+            country: 'US',
+          },
+          metadata: {
+            employer: employer,
+            occupation: occupation,
+          },
+        })
       } else {
         // Create new Stripe customer with FEC-required address info
         const customer = await stripe.customers.create({
@@ -87,7 +116,7 @@ export async function POST(request) {
             country: 'US',
           },
           metadata: {
-            source: 'care-packages-initiative',
+            source: `initiative-${slug}`,
             member_id: existingMember?.id || 'guest',
             employer: employer,
             occupation: occupation,
@@ -107,7 +136,8 @@ export async function POST(request) {
 
     // Store donation intent in metadata with FEC compliance data
     const metadata = {
-      initiative: 'care-packages',
+      initiative: slug,
+      initiative_id: initiative.id,
       email: email.toLowerCase(),
       first_name: firstName,
       last_name: lastName,
@@ -131,8 +161,7 @@ export async function POST(request) {
     const baseUrl = process.env.NEXT_PUBLIC_BASE_URL || 'https://members.votelabor.org'
 
     // Get or create a dedicated Stripe Product for this initiative
-    // This makes it easy to filter/report on initiative donations in Stripe Dashboard
-    const productId = 'prod_care_packages_initiative'
+    const productId = `prod_initiative_${slug.replace(/-/g, '_')}`
     let product
     try {
       product = await stripe.products.retrieve(productId)
@@ -140,11 +169,12 @@ export async function POST(request) {
       // Product doesn't exist, create it
       product = await stripe.products.create({
         id: productId,
-        name: 'ICE Protestor Care Package Fund',
-        description: 'Donations to provide care packages for ICE protestors',
+        name: initiative.title,
+        description: `Donations to ${initiative.title}`,
         metadata: {
           type: 'initiative',
-          initiative_slug: 'care-packages',
+          initiative_slug: slug,
+          initiative_id: initiative.id,
         },
       })
     }
@@ -152,8 +182,8 @@ export async function POST(request) {
     const session = await stripe.checkout.sessions.create({
       customer: stripeCustomerId,
       mode: 'payment',
-      success_url: `${baseUrl}/initiatives/care-packages/success?session_id={CHECKOUT_SESSION_ID}`,
-      cancel_url: `${baseUrl}/initiatives/care-packages`,
+      success_url: `${baseUrl}/initiatives/${slug}/success?session_id={CHECKOUT_SESSION_ID}`,
+      cancel_url: `${baseUrl}/initiatives/${slug}`,
       line_items: [
         {
           price_data: {
@@ -172,7 +202,7 @@ export async function POST(request) {
 
     return NextResponse.json({ url: session.url, sessionId: session.id })
   } catch (error) {
-    console.error('Care packages checkout error:', error)
+    console.error('Initiative checkout error:', error)
     return NextResponse.json(
       { error: 'Unable to process request' },
       { status: 500 }
