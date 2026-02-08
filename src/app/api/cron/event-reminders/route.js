@@ -12,15 +12,6 @@ function verifyCronSecret(request) {
   return true
 }
 
-/**
- * Combine a date string (YYYY-MM-DD) and time string (HH:MM:SS) into a Date object.
- * If no time is provided, defaults to midnight.
- */
-function combineDateAndTime(dateStr, timeStr) {
-  if (!timeStr) return new Date(dateStr + 'T00:00:00')
-  return new Date(`${dateStr}T${timeStr}`)
-}
-
 export async function GET(request) {
   // Verify this is a legitimate cron request
   if (process.env.CRON_SECRET && !verifyCronSecret(request)) {
@@ -30,39 +21,25 @@ export async function GET(request) {
   const supabase = createAdminClient()
   const now = new Date()
   const results = {
-    reminders_24h: { sent: 0, failed: 0, skipped: 0 },
-    reminders_1h: { sent: 0, failed: 0, skipped: 0 },
+    reminders_tomorrow: { sent: 0, failed: 0, skipped: 0 },
+    reminders_today: { sent: 0, failed: 0, skipped: 0 },
   }
 
   try {
-    // Define reminder windows
-    const windows = [
-      {
-        key: 'reminders_24h',
-        templateKey: 'event_reminder_24h',
-        startMs: 23 * 60 * 60 * 1000,
-        endMs: 25 * 60 * 60 * 1000,
-      },
-      {
-        key: 'reminders_1h',
-        templateKey: 'event_reminder_1h',
-        startMs: 30 * 60 * 1000,
-        endMs: 90 * 60 * 1000,
-      },
-    ]
-
-    // Date range for queries: today and tomorrow (covers both windows)
+    // Date-based approach: send reminders for events today and tomorrow
+    // Works with once-daily cron on Vercel Hobby plan
     const today = now.toISOString().split('T')[0]
+    const tomorrow = new Date(now.getTime() + 24 * 60 * 60 * 1000).toISOString().split('T')[0]
     const dayAfterTomorrow = new Date(now.getTime() + 2 * 24 * 60 * 60 * 1000).toISOString().split('T')[0]
 
-    // Get non-recurring published events in the date range
+    // Get non-recurring published events for today and tomorrow
     const { data: oneTimeEvents } = await supabase
       .from('events')
       .select('id, title, start_date, start_time, location_name, rrule')
       .eq('status', 'published')
       .is('rrule', null)
       .gte('start_date', today)
-      .lte('start_date', dayAfterTomorrow)
+      .lt('start_date', dayAfterTomorrow)
 
     // Get recurring published events that might have instances in range
     const { data: recurringEvents } = await supabase
@@ -84,7 +61,6 @@ export async function GET(request) {
           dayAfterTomorrow
         )
 
-        // Check cancelled overrides for these dates
         const instanceDates = occurrences.map(d =>
           d instanceof Date ? d.toISOString().split('T')[0] : d
         )
@@ -114,36 +90,32 @@ export async function GET(request) {
       }
     }
 
-    // Combine all events (one-time use start_date as instance_date)
+    // Combine all events
     const allInstances = [
       ...(oneTimeEvents || []).map(e => ({ ...e, instance_date: e.start_date })),
       ...recurringInstances,
     ]
 
-    // Process each reminder window
-    for (const window of windows) {
-      const windowStart = new Date(now.getTime() + window.startMs)
-      const windowEnd = new Date(now.getTime() + window.endMs)
+    // Send reminders based on date
+    for (const event of allInstances) {
+      const relatedId = event.rrule
+        ? `${event.id}:${event.instance_date}`
+        : event.id
 
-      for (const event of allInstances) {
-        const eventDateTime = combineDateAndTime(event.instance_date, event.start_time)
+      if (event.instance_date === tomorrow) {
+        // Day-before reminder (tomorrow's events)
+        await sendEventReminders(
+          supabase, event, event.instance_date, relatedId,
+          'event_reminder_24h', results.reminders_tomorrow
+        )
+      }
 
-        // Check if the event falls within this reminder window
-        if (eventDateTime >= windowStart && eventDateTime <= windowEnd) {
-          // Use a unique relatedId for recurring instances to avoid duplicate reminders
-          const relatedId = event.rrule
-            ? `${event.id}:${event.instance_date}`
-            : event.id
-
-          await sendEventReminders(
-            supabase,
-            event,
-            event.instance_date,
-            relatedId,
-            window.templateKey,
-            results[window.key]
-          )
-        }
+      if (event.instance_date === today) {
+        // Day-of reminder (today's events)
+        await sendEventReminders(
+          supabase, event, event.instance_date, relatedId,
+          'event_reminder_1h', results.reminders_today
+        )
       }
     }
 
@@ -190,7 +162,6 @@ async function sendEventReminders(supabase, event, instanceDate, relatedId, temp
     const member = rsvp.members
     if (!member?.email) continue
 
-    // Check if reminder already sent (using composite relatedId for recurring)
     const alreadySent = await hasReminderBeenSent(templateKey, member.email, relatedId)
     if (alreadySent) {
       stats.skipped++
@@ -220,7 +191,6 @@ async function sendEventReminders(supabase, event, instanceDate, relatedId, temp
   for (const guest of guestRsvps || []) {
     if (!guest.email) continue
 
-    // Check if reminder already sent
     const alreadySent = await hasReminderBeenSent(templateKey, guest.email, relatedId)
     if (alreadySent) {
       stats.skipped++
@@ -228,7 +198,6 @@ async function sendEventReminders(supabase, event, instanceDate, relatedId, temp
     }
 
     try {
-      // Extract first name from full name
       const firstName = guest.name.trim().split(' ')[0]
       await sendAutomatedEmail({
         templateKey,
