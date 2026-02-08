@@ -1,6 +1,7 @@
 import { createClient, createAdminClient } from '@/lib/supabase/server'
 import { NextResponse } from 'next/server'
 import { sendNewEventNotifications } from '@/lib/event-notifications'
+import { buildRruleString, computeRecurrenceEndDate, expandEventInstances } from '@/lib/recurrence'
 
 // GET - List events (filtered by chapter access)
 export async function GET(request) {
@@ -14,60 +15,138 @@ export async function GET(request) {
     const status = searchParams.get('status') || 'published'
     const upcoming = searchParams.get('upcoming') === 'true'
 
-    // Build query
-    let query = adminClient
-      .from('events')
-      .select(`
+    const expand = searchParams.get('expand') !== 'false' // default: expand recurring
+    const rangeStart = searchParams.get('range_start')
+    const rangeEnd = searchParams.get('range_end')
+
+    const selectFields = `
+      id,
+      chapter_id,
+      title,
+      description,
+      location_name,
+      location_address,
+      location_city,
+      location_state,
+      location_zip,
+      is_virtual,
+      virtual_link,
+      start_date,
+      start_time,
+      end_date,
+      end_time,
+      timezone,
+      status,
+      is_all_day,
+      max_attendees,
+      rsvp_deadline,
+      image_url,
+      rrule,
+      recurrence_end_date,
+      created_at,
+      chapters (
         id,
-        chapter_id,
-        title,
-        description,
-        location_name,
-        location_address,
-        location_city,
-        location_state,
-        location_zip,
-        is_virtual,
-        virtual_link,
-        start_date,
-        start_time,
-        end_date,
-        end_time,
-        timezone,
-        status,
-        is_all_day,
-        max_attendees,
-        rsvp_deadline,
-        image_url,
-        created_at,
-        chapters (
-          id,
-          name,
-          level
-        )
-      `)
+        name,
+        level
+      )
+    `
+
+    // Compute date range for instance expansion
+    const today = new Date().toISOString().split('T')[0]
+    const effectiveRangeStart = rangeStart || today
+    const defaultEnd = new Date()
+    defaultEnd.setDate(defaultEnd.getDate() + 90)
+    const effectiveRangeEnd = rangeEnd || defaultEnd.toISOString().split('T')[0]
+
+    // Query non-recurring events
+    let nonRecurringQuery = adminClient
+      .from('events')
+      .select(selectFields)
+      .is('rrule', null)
       .order('start_date', { ascending: true })
       .order('start_time', { ascending: true })
 
-    // Filter by chapter if provided
-    if (chapterId) {
-      query = query.eq('chapter_id', chapterId)
-    }
+    if (chapterId) nonRecurringQuery = nonRecurringQuery.eq('chapter_id', chapterId)
+    if (status !== 'all') nonRecurringQuery = nonRecurringQuery.eq('status', status)
+    if (upcoming) nonRecurringQuery = nonRecurringQuery.gte('start_date', effectiveRangeStart)
 
-    // Filter by status
-    if (status !== 'all') {
-      query = query.eq('status', status)
-    }
+    // Query recurring events (those whose range overlaps our window)
+    let recurringQuery = adminClient
+      .from('events')
+      .select(selectFields)
+      .not('rrule', 'is', null)
+      .lte('start_date', effectiveRangeEnd)
 
-    // Filter to upcoming events only
+    if (chapterId) recurringQuery = recurringQuery.eq('chapter_id', chapterId)
+    if (status !== 'all') recurringQuery = recurringQuery.eq('status', status)
     if (upcoming) {
-      const today = new Date().toISOString().split('T')[0]
-      query = query.gte('start_date', today)
+      recurringQuery = recurringQuery.or(`recurrence_end_date.gte.${effectiveRangeStart},recurrence_end_date.is.null`)
     }
 
-    const { data: events, error } = await query
+    const [nonRecurringResult, recurringResult] = await Promise.all([
+      nonRecurringQuery,
+      recurringQuery,
+    ])
 
-    if (error) throw error
+    if (nonRecurringResult.error) throw nonRecurringResult.error
+    if (recurringResult.error) throw recurringResult.error
+
+    const nonRecurringEvents = nonRecurringResult.data || []
+    const recurringEvents = recurringResult.data || []
+
+    // Fetch overrides for recurring events in the date range
+    let overrideMap = {}
+    if (recurringEvents.length > 0 && expand) {
+      const recurringIds = recurringEvents.map(e => e.id)
+      const { data: overrides } = await adminClient
+        .from('event_instance_overrides')
+        .select('*')
+        .in('event_id', recurringIds)
+        .gte('instance_date', effectiveRangeStart)
+        .lte('instance_date', effectiveRangeEnd)
+
+      for (const o of (overrides || [])) {
+        if (!overrideMap[o.event_id]) overrideMap[o.event_id] = []
+        overrideMap[o.event_id].push(o)
+      }
+    }
+
+    // Expand recurring events into instances
+    let allInstances = []
+
+    // Add non-recurring events as single instances
+    for (const event of nonRecurringEvents) {
+      allInstances.push({
+        ...event,
+        instance_date: event.start_date,
+        is_recurring: false,
+      })
+    }
+
+    // Expand recurring events
+    if (expand) {
+      for (const event of recurringEvents) {
+        const overrides = overrideMap[event.id] || []
+        const instances = expandEventInstances(event, overrides, effectiveRangeStart, effectiveRangeEnd)
+        allInstances.push(...instances)
+      }
+    } else {
+      // Don't expand — return parent events as-is (for workspace admin view)
+      for (const event of recurringEvents) {
+        allInstances.push({
+          ...event,
+          instance_date: event.start_date,
+          is_recurring: true,
+        })
+      }
+    }
+
+    // Sort by instance_date then start_time
+    allInstances.sort((a, b) => {
+      const dateCompare = (a.instance_date || '').localeCompare(b.instance_date || '')
+      if (dateCompare !== 0) return dateCompare
+      return (a.start_time || '').localeCompare(b.start_time || '')
+    })
 
     // If user is logged in, get their RSVPs
     let userRsvps = {}
@@ -79,36 +158,46 @@ export async function GET(request) {
         .single()
 
       if (member) {
-        const eventIds = events.map(e => e.id)
+        const eventIds = [...new Set(allInstances.map(e => e.id))]
         const { data: rsvps } = await adminClient
           .from('event_rsvps')
-          .select('event_id, status, guest_count')
+          .select('event_id, instance_date, status, guest_count')
           .eq('member_id', member.id)
           .in('event_id', eventIds)
 
-        userRsvps = (rsvps || []).reduce((acc, r) => {
-          acc[r.event_id] = { status: r.status, guest_count: r.guest_count }
-          return acc
-        }, {})
+        for (const r of (rsvps || [])) {
+          const key = `${r.event_id}:${r.instance_date}`
+          userRsvps[key] = { status: r.status, guest_count: r.guest_count }
+        }
       }
     }
 
-    // Get RSVP counts for each event
-    const eventsWithRsvps = await Promise.all(events.map(async (event) => {
-      const { data: attending } = await adminClient
-        .rpc('get_event_rsvp_count', { event_uuid: event.id, rsvp_stat: 'attending' })
-      const { data: maybe } = await adminClient
-        .rpc('get_event_rsvp_count', { event_uuid: event.id, rsvp_stat: 'maybe' })
+    // Get RSVP counts — batch query instead of N+1
+    const eventIds = [...new Set(allInstances.map(e => e.id))]
+    const { data: rsvpRows } = await adminClient
+      .from('event_rsvps')
+      .select('event_id, instance_date, status, guest_count')
+      .in('event_id', eventIds)
+      .in('status', ['attending', 'maybe'])
 
+    // Build count map keyed by event_id:instance_date
+    const rsvpCountMap = {}
+    for (const r of (rsvpRows || [])) {
+      const key = `${r.event_id}:${r.instance_date}`
+      if (!rsvpCountMap[key]) rsvpCountMap[key] = { attending: 0, maybe: 0 }
+      const people = 1 + (r.guest_count || 0)
+      if (r.status === 'attending') rsvpCountMap[key].attending += people
+      else if (r.status === 'maybe') rsvpCountMap[key].maybe += people
+    }
+
+    const eventsWithRsvps = allInstances.map(instance => {
+      const key = `${instance.id}:${instance.instance_date}`
       return {
-        ...event,
-        rsvp_counts: {
-          attending: attending || 0,
-          maybe: maybe || 0
-        },
-        user_rsvp: userRsvps[event.id] || null
+        ...instance,
+        rsvp_counts: rsvpCountMap[key] || { attending: 0, maybe: 0 },
+        user_rsvp: userRsvps[key] || null,
       }
-    }))
+    })
 
     return NextResponse.json({ events: eventsWithRsvps })
 
@@ -162,7 +251,9 @@ export async function POST(request) {
       is_all_day,
       max_attendees,
       rsvp_deadline,
-      image_url
+      image_url,
+      recurrence_preset,
+      recurrence_options,
     } = body
 
     if (!chapter_id || !title || !start_date) {
@@ -184,6 +275,15 @@ export async function POST(request) {
       if (!allowedChapterIds.has(chapter_id)) {
         return NextResponse.json({ error: 'Cannot create events for this chapter' }, { status: 403 })
       }
+    }
+
+    // Build RRULE if recurrence is specified
+    let rrule = null
+    let recurrence_end_date = null
+
+    if (recurrence_preset && recurrence_preset !== 'none') {
+      rrule = buildRruleString(recurrence_preset, start_date, recurrence_options || {})
+      recurrence_end_date = computeRecurrenceEndDate(rrule, start_date)
     }
 
     // Create the event
@@ -210,7 +310,9 @@ export async function POST(request) {
         is_all_day: is_all_day || false,
         max_attendees,
         rsvp_deadline,
-        image_url
+        image_url,
+        rrule,
+        recurrence_end_date,
       })
       .select()
       .single()

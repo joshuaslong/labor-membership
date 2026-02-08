@@ -1,12 +1,12 @@
 'use client'
 
-import { useState, useEffect } from 'react'
+import { useState, useEffect, Suspense } from 'react'
 import Link from 'next/link'
-import { useParams, useRouter } from 'next/navigation'
+import { useParams, useRouter, useSearchParams } from 'next/navigation'
 import { createClient } from '@/lib/supabase/client'
 
 function formatEventDate(dateStr) {
-  const date = new Date(dateStr)
+  const date = new Date(dateStr + 'T12:00:00')
   return date.toLocaleDateString('en-US', {
     weekday: 'long',
     month: 'long',
@@ -27,9 +27,12 @@ function formatEventTime(timeStr) {
   })
 }
 
-export default function EventDetailPage() {
+function EventDetailContent() {
   const params = useParams()
   const router = useRouter()
+  const searchParams = useSearchParams()
+  const dateParam = searchParams.get('date')
+
   const [event, setEvent] = useState(null)
   const [chapter, setChapter] = useState(null)
   const [loading, setLoading] = useState(true)
@@ -40,6 +43,12 @@ export default function EventDetailPage() {
   const [submitting, setSubmitting] = useState(false)
   const [error, setError] = useState(null)
 
+  // Recurring event state
+  const [isRecurring, setIsRecurring] = useState(false)
+  const [recurrenceDescription, setRecurrenceDescription] = useState(null)
+  const [instanceDate, setInstanceDate] = useState(null)
+  const [upcomingInstances, setUpcomingInstances] = useState([])
+
   // Guest RSVP form state
   const [showGuestForm, setShowGuestForm] = useState(false)
   const [guestName, setGuestName] = useState('')
@@ -49,9 +58,10 @@ export default function EventDetailPage() {
 
   useEffect(() => {
     loadEventData()
-  }, [params.id])
+  }, [params.id, dateParam])
 
   async function loadEventData() {
+    setLoading(true)
     const supabase = createClient()
 
     // Get current user
@@ -70,55 +80,54 @@ export default function EventDetailPage() {
       memberId = memberData?.id
     }
 
-    // Fetch event
-    const { data: eventData, error: eventError } = await supabase
-      .from('events')
-      .select('*')
-      .eq('id', params.id)
-      .eq('status', 'published')
-      .single()
+    // Fetch event via API (handles recurring instance merging)
+    const apiUrl = dateParam
+      ? `/api/events/${params.id}?instance_date=${dateParam}`
+      : `/api/events/${params.id}`
 
-    if (eventError || !eventData) {
+    const res = await fetch(apiUrl)
+    if (!res.ok) {
       setLoading(false)
       setError('Event not found')
       return
     }
 
+    const data = await res.json()
+    const eventData = data.event
+
     setEvent(eventData)
+    setIsRecurring(data.is_recurring || false)
+    setRecurrenceDescription(data.recurrence_description || null)
+    setUpcomingInstances(data.upcoming_instances || [])
+
+    // Determine the instance date for RSVP operations
+    const effectiveDate = dateParam || eventData.start_date
+    setInstanceDate(effectiveDate)
 
     // Fetch chapter
-    const { data: chapterData } = await supabase
-      .from('chapters')
-      .select('id, name, level')
-      .eq('id', eventData.chapter_id)
-      .single()
+    if (eventData.chapter_id) {
+      const { data: chapterData } = await supabase
+        .from('chapters')
+        .select('id, name, level')
+        .eq('id', eventData.chapter_id)
+        .single()
+      setChapter(chapterData)
+    }
 
-    setChapter(chapterData)
+    // RSVP count comes from API response
+    setRsvpCount(data.rsvp_counts?.attending || 0)
 
-    // Get RSVP count (members + guests)
-    const { count: memberCount } = await supabase
-      .from('event_rsvps')
-      .select('*', { count: 'exact', head: true })
-      .eq('event_id', params.id)
-      .eq('status', 'attending')
-
-    const { count: guestCount } = await supabase
-      .from('event_guest_rsvps')
-      .select('*', { count: 'exact', head: true })
-      .eq('event_id', params.id)
-      .eq('status', 'attending')
-
-    setRsvpCount((memberCount || 0) + (guestCount || 0))
-
-    // Get user's RSVP if logged in
+    // Get user's RSVP if logged in (for this specific instance)
     if (memberId) {
-      const { data: rsvpData } = await supabase
+      const rsvpQuery = supabase
         .from('event_rsvps')
         .select('status')
         .eq('event_id', params.id)
         .eq('member_id', memberId)
+        .eq('instance_date', effectiveDate)
         .single()
 
+      const { data: rsvpData } = await rsvpQuery
       setRsvpStatus(rsvpData?.status || null)
     }
 
@@ -135,7 +144,7 @@ export default function EventDetailPage() {
       const res = await fetch(`/api/events/${params.id}/rsvp`, {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ status })
+        body: JSON.stringify({ status, instance_date: instanceDate })
       })
 
       const data = await res.json()
@@ -145,7 +154,6 @@ export default function EventDetailPage() {
       }
 
       setRsvpStatus(status)
-      // Reload to get updated count
       loadEventData()
     } catch (err) {
       setError(err.message)
@@ -161,7 +169,8 @@ export default function EventDetailPage() {
     setError(null)
 
     try {
-      const res = await fetch(`/api/events/${params.id}/rsvp`, {
+      const instanceParam = instanceDate ? `?instance_date=${instanceDate}` : ''
+      const res = await fetch(`/api/events/${params.id}/rsvp${instanceParam}`, {
         method: 'DELETE'
       })
 
@@ -172,7 +181,6 @@ export default function EventDetailPage() {
       }
 
       setRsvpStatus(null)
-      // Reload to get updated count
       loadEventData()
     } catch (err) {
       setError(err.message)
@@ -192,7 +200,8 @@ export default function EventDetailPage() {
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({
           name: guestName,
-          email: guestEmail
+          email: guestEmail,
+          instance_date: instanceDate
         })
       })
 
@@ -209,6 +218,23 @@ export default function EventDetailPage() {
     } finally {
       setGuestSubmitting(false)
     }
+  }
+
+  // Find previous and next instances for navigation
+  function getInstanceNav() {
+    if (!isRecurring || !instanceDate || upcomingInstances.length === 0) return { prev: null, next: null }
+
+    // Find instances before and after current
+    const sorted = [...upcomingInstances].sort()
+    let prev = null
+    let next = null
+
+    for (const d of sorted) {
+      if (d < instanceDate) prev = d
+      if (d > instanceDate && !next) next = d
+    }
+
+    return { prev, next }
   }
 
   if (loading) {
@@ -237,7 +263,9 @@ export default function EventDetailPage() {
     )
   }
 
-  const isPastEvent = new Date(event.start_date) < new Date(new Date().toDateString())
+  const displayDate = instanceDate || event.start_date
+  const isPastEvent = new Date(displayDate) < new Date(new Date().toDateString())
+  const { prev: prevInstance, next: nextInstance } = getInstanceNav()
 
   return (
     <div className="max-w-4xl mx-auto px-4 py-8">
@@ -253,6 +281,15 @@ export default function EventDetailPage() {
             <div className="mb-6">
               <h1 className="text-3xl text-gray-900 mb-3">{event.title}</h1>
 
+              {isRecurring && recurrenceDescription && (
+                <div className="flex items-center gap-2 text-sm text-gray-500 mb-2">
+                  <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M4 4v5h.582m15.356 2A8.001 8.001 0 004.582 9m0 0H9m11 11v-5h-.581m0 0a8.003 8.003 0 01-15.357-2m15.357 2H15" />
+                  </svg>
+                  <span>Recurring: {recurrenceDescription}</span>
+                </div>
+              )}
+
               {chapter && (
                 <Link
                   href={`/chapters/${chapter.id}`}
@@ -266,6 +303,34 @@ export default function EventDetailPage() {
               )}
             </div>
 
+            {/* Instance navigation for recurring events */}
+            {isRecurring && (prevInstance || nextInstance) && (
+              <div className="flex items-center justify-between mb-6 p-3 bg-gray-50 rounded-lg border border-gray-100">
+                {prevInstance ? (
+                  <Link
+                    href={`/events/${params.id}?date=${prevInstance}`}
+                    className="flex items-center gap-1 text-sm text-gray-600 hover:text-gray-900"
+                  >
+                    <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                      <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M15 19l-7-7 7-7" />
+                    </svg>
+                    {formatEventDate(prevInstance)}
+                  </Link>
+                ) : <span />}
+                {nextInstance ? (
+                  <Link
+                    href={`/events/${params.id}?date=${nextInstance}`}
+                    className="flex items-center gap-1 text-sm text-gray-600 hover:text-gray-900"
+                  >
+                    {formatEventDate(nextInstance)}
+                    <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                      <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 5l7 7-7 7" />
+                    </svg>
+                  </Link>
+                ) : <span />}
+              </div>
+            )}
+
             {/* Event Details */}
             <div className="space-y-4 mb-6">
               <div className="flex items-start gap-4 p-4 bg-gray-50 rounded-lg">
@@ -276,7 +341,7 @@ export default function EventDetailPage() {
                 </div>
                 <div>
                   <div className="font-semibold text-gray-900">
-                    {formatEventDate(event.start_date)}
+                    {formatEventDate(displayDate)}
                   </div>
                   {event.start_time && (
                     <div className="text-gray-600">
@@ -441,7 +506,7 @@ export default function EventDetailPage() {
                   </div>
                 </div>
                 <Link
-                  href={`/login?redirect=/events/${params.id}`}
+                  href={`/login?redirect=/events/${params.id}${dateParam ? `?date=${dateParam}` : ''}`}
                   className="block w-full text-center py-2 px-4 border border-gray-200 rounded-lg text-gray-700 hover:bg-gray-50 transition-colors"
                 >
                   Log in to RSVP
@@ -470,6 +535,28 @@ export default function EventDetailPage() {
             </div>
           )}
 
+          {/* Upcoming instances for recurring events */}
+          {isRecurring && upcomingInstances.length > 1 && (
+            <div className="card">
+              <h3 className="font-semibold mb-3">Upcoming Dates</h3>
+              <div className="space-y-2">
+                {upcomingInstances.slice(0, 5).map(d => (
+                  <Link
+                    key={d}
+                    href={`/events/${params.id}?date=${d}`}
+                    className={`block px-3 py-2 text-sm rounded-lg transition-colors ${
+                      d === instanceDate
+                        ? 'bg-labor-red-50 text-labor-red font-medium'
+                        : 'text-gray-700 hover:bg-gray-50'
+                    }`}
+                  >
+                    {formatEventDate(d)}
+                  </Link>
+                ))}
+              </div>
+            </div>
+          )}
+
           {/* Chapter Info */}
           {chapter && (
             <div className="card">
@@ -491,5 +578,21 @@ export default function EventDetailPage() {
         </div>
       </div>
     </div>
+  )
+}
+
+export default function EventDetailPage() {
+  return (
+    <Suspense fallback={
+      <div className="max-w-4xl mx-auto px-4 py-12">
+        <div className="animate-pulse space-y-4">
+          <div className="h-8 bg-gray-200 rounded w-1/3"></div>
+          <div className="h-12 bg-gray-200 rounded w-2/3"></div>
+          <div className="h-4 bg-gray-200 rounded w-1/4"></div>
+        </div>
+      </div>
+    }>
+      <EventDetailContent />
+    </Suspense>
   )
 }

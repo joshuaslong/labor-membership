@@ -5,7 +5,7 @@ import { sendAutomatedEmail, formatEmailDate, formatEmailTime } from '@/lib/emai
 export async function POST(request, { params }) {
   try {
     const { id } = await params
-    const { name, email } = await request.json()
+    const { name, email, instance_date: bodyInstanceDate } = await request.json()
 
     if (!name || !email) {
       return NextResponse.json(
@@ -28,7 +28,7 @@ export async function POST(request, { params }) {
     // Verify event exists and is published
     const { data: event, error: eventError } = await supabase
       .from('events')
-      .select('id, title, start_date, status, location_name')
+      .select('id, title, start_date, status, location_name, rrule')
       .eq('id', id)
       .eq('status', 'published')
       .single()
@@ -40,8 +40,11 @@ export async function POST(request, { params }) {
       )
     }
 
-    // Check if event is in the future
-    const eventDate = new Date(event.start_date)
+    // Determine instance_date
+    const instanceDate = bodyInstanceDate || event.start_date
+
+    // Check if event instance is in the future
+    const eventDate = new Date(instanceDate)
     const today = new Date()
     today.setHours(0, 0, 0, 0)
 
@@ -52,13 +55,31 @@ export async function POST(request, { params }) {
       )
     }
 
-    // Check if this email already has a guest RSVP
+    // Check if this instance is cancelled (for recurring events)
+    if (event.rrule && bodyInstanceDate) {
+      const { data: override } = await supabase
+        .from('event_instance_overrides')
+        .select('is_cancelled')
+        .eq('event_id', id)
+        .eq('instance_date', instanceDate)
+        .maybeSingle()
+
+      if (override?.is_cancelled) {
+        return NextResponse.json(
+          { error: 'This event instance has been cancelled' },
+          { status: 400 }
+        )
+      }
+    }
+
+    // Check if this email already has a guest RSVP for this instance
     const { data: existingRsvp } = await supabase
       .from('event_guest_rsvps')
       .select('id')
       .eq('event_id', id)
       .eq('email', email.toLowerCase())
-      .single()
+      .eq('instance_date', instanceDate)
+      .maybeSingle()
 
     if (existingRsvp) {
       return NextResponse.json(
@@ -74,6 +95,7 @@ export async function POST(request, { params }) {
         event_id: id,
         name: name.trim(),
         email: email.toLowerCase().trim(),
+        instance_date: instanceDate,
         status: 'attending'
       })
       .select()
@@ -97,8 +119,8 @@ export async function POST(request, { params }) {
         variables: {
           name: firstName,
           event_name: event.title,
-          event_date: formatEmailDate(event.start_date),
-          event_time: formatEmailTime(event.start_date),
+          event_date: formatEmailDate(instanceDate),
+          event_time: formatEmailTime(instanceDate),
           event_location: event.location_name || 'TBD',
           rsvp_status: 'confirmed',
         },

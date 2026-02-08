@@ -3,6 +3,8 @@
 import { useState, useEffect, use } from 'react'
 import { useRouter } from 'next/navigation'
 import Link from 'next/link'
+import RecurrenceBuilder from '@/components/RecurrenceBuilder'
+import { detectPreset, parseEndCondition } from '@/lib/recurrence'
 
 const TIMEZONES = [
   { value: 'America/New_York', label: 'Eastern Time (ET)' },
@@ -20,6 +22,9 @@ export default function EditEventPage({ params }) {
   const [saving, setSaving] = useState(false)
   const [error, setError] = useState(null)
   const [success, setSuccess] = useState(null)
+  const [showScopeModal, setShowScopeModal] = useState(false)
+  const [isRecurring, setIsRecurring] = useState(false)
+  const [recurrenceDescription, setRecurrenceDescription] = useState('')
 
   const [formData, setFormData] = useState({
     title: '',
@@ -40,6 +45,18 @@ export default function EditEventPage({ params }) {
     max_attendees: '',
     rsvp_deadline: '',
     status: 'draft'
+  })
+
+  const [recurrenceData, setRecurrenceData] = useState({
+    enabled: false,
+    preset: 'weekly',
+    endType: 'never',
+    endDate: '',
+    count: 12,
+    customFreq: 'WEEKLY',
+    customInterval: 1,
+    customByDay: [],
+    customMonthlyPosition: '',
   })
 
   useEffect(() => {
@@ -76,6 +93,28 @@ export default function EditEventPage({ params }) {
         rsvp_deadline: event.rsvp_deadline ? event.rsvp_deadline.slice(0, 16) : '',
         status: event.status || 'draft'
       })
+
+      // Set recurrence state
+      const hasRrule = !!event.rrule
+      setIsRecurring(hasRrule)
+      setRecurrenceDescription(event.recurrence_description || '')
+
+      if (hasRrule) {
+        const detectedPreset = detectPreset(event.rrule, event.start_date)
+        const endCondition = parseEndCondition(event.rrule)
+
+        setRecurrenceData({
+          enabled: true,
+          preset: detectedPreset || 'custom',
+          endType: endCondition.endType,
+          endDate: endCondition.endDate || '',
+          count: endCondition.count || 12,
+          customFreq: 'WEEKLY',
+          customInterval: 1,
+          customByDay: [],
+          customMonthlyPosition: '',
+        })
+      }
     } catch (err) {
       setError(err.message)
     } finally {
@@ -93,9 +132,21 @@ export default function EditEventPage({ params }) {
 
   const handleSubmit = async (e) => {
     e.preventDefault()
+
+    // If editing a recurring event, show scope modal
+    if (isRecurring) {
+      setShowScopeModal(true)
+      return
+    }
+
+    await saveEvent('all')
+  }
+
+  const saveEvent = async (editScope) => {
     setSaving(true)
     setError(null)
     setSuccess(null)
+    setShowScopeModal(false)
 
     try {
       const payload = {
@@ -104,7 +155,32 @@ export default function EditEventPage({ params }) {
         rsvp_deadline: formData.rsvp_deadline || null,
         start_time: formData.is_all_day ? null : formData.start_time || null,
         end_time: formData.is_all_day ? null : formData.end_time || null,
-        end_date: formData.end_date || null
+        end_date: formData.end_date || null,
+        edit_scope: editScope,
+      }
+
+      // For "this" scope, use the event's start_date as instance_date
+      if (editScope === 'this' || editScope === 'this_and_following') {
+        payload.instance_date = formData.start_date
+      }
+
+      // Handle recurrence changes for "all" scope
+      if (editScope === 'all') {
+        if (recurrenceData.enabled) {
+          payload.recurrence_preset = recurrenceData.preset
+          payload.recurrence_options = {
+            endType: recurrenceData.endType,
+            endDate: recurrenceData.endDate,
+            count: recurrenceData.count,
+            customFreq: recurrenceData.customFreq,
+            customInterval: recurrenceData.customInterval,
+            customByDay: recurrenceData.customByDay,
+            customMonthlyPosition: recurrenceData.customMonthlyPosition,
+          }
+        } else if (isRecurring) {
+          // Removing recurrence from a recurring event
+          payload.recurrence_preset = 'none'
+        }
       }
 
       const res = await fetch(`/api/events/${id}`, {
@@ -119,7 +195,12 @@ export default function EditEventPage({ params }) {
         throw new Error(data.error || 'Failed to update event')
       }
 
-      setSuccess('Event updated successfully!')
+      if (data.split) {
+        setSuccess('Series split. Redirecting to new event...')
+        setTimeout(() => router.push(`/workspace/events/${data.event.id}`), 1500)
+      } else {
+        setSuccess('Event updated successfully!')
+      }
     } catch (err) {
       setError(err.message)
     } finally {
@@ -145,6 +226,11 @@ export default function EditEventPage({ params }) {
     <div className="max-w-4xl mx-auto px-4 sm:px-6 py-6">
       <div className="mb-6">
         <h1 className="text-sm font-semibold text-gray-900 uppercase tracking-wide">Edit Event</h1>
+        {isRecurring && recurrenceDescription && (
+          <p className="text-xs text-gray-500 mt-1">
+            Recurring: {recurrenceDescription}
+          </p>
+        )}
       </div>
 
       {error && (
@@ -166,6 +252,48 @@ export default function EditEventPage({ params }) {
               <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M6 18L18 6M6 6l12 12" />
             </svg>
           </button>
+        </div>
+      )}
+
+      {/* Edit Scope Modal */}
+      {showScopeModal && (
+        <div className="fixed inset-0 bg-black/40 z-50 flex items-center justify-center p-4">
+          <div className="bg-white rounded-lg border border-stone-200 shadow-lg max-w-sm w-full p-6">
+            <h3 className="text-sm font-semibold text-gray-900 mb-1">Edit Recurring Event</h3>
+            <p className="text-xs text-gray-500 mb-4">How would you like to apply these changes?</p>
+            <div className="space-y-2">
+              <button
+                onClick={() => saveEvent('this')}
+                disabled={saving}
+                className="w-full px-4 py-2.5 text-sm text-left font-medium text-gray-700 bg-white border border-stone-200 rounded hover:bg-stone-50 disabled:opacity-50"
+              >
+                This event only
+                <span className="block text-xs text-gray-400 font-normal mt-0.5">Only change this specific occurrence</span>
+              </button>
+              <button
+                onClick={() => saveEvent('this_and_following')}
+                disabled={saving}
+                className="w-full px-4 py-2.5 text-sm text-left font-medium text-gray-700 bg-white border border-stone-200 rounded hover:bg-stone-50 disabled:opacity-50"
+              >
+                This and all following
+                <span className="block text-xs text-gray-400 font-normal mt-0.5">Split the series from this date forward</span>
+              </button>
+              <button
+                onClick={() => saveEvent('all')}
+                disabled={saving}
+                className="w-full px-4 py-2.5 text-sm text-left font-medium text-gray-700 bg-white border border-stone-200 rounded hover:bg-stone-50 disabled:opacity-50"
+              >
+                All events in the series
+                <span className="block text-xs text-gray-400 font-normal mt-0.5">Apply changes to every occurrence</span>
+              </button>
+            </div>
+            <button
+              onClick={() => setShowScopeModal(false)}
+              className="w-full mt-3 px-4 py-2 text-sm font-medium text-gray-500 hover:text-gray-700"
+            >
+              Cancel
+            </button>
+          </div>
         </div>
       )}
 
@@ -274,6 +402,15 @@ export default function EditEventPage({ params }) {
                     </div>
                   )}
                 </div>
+
+                {/* Recurrence */}
+                <RecurrenceBuilder
+                  startDate={formData.start_date}
+                  recurrenceData={recurrenceData}
+                  onChange={setRecurrenceData}
+                  inputClass={inputClass}
+                  labelClass={labelClass}
+                />
 
                 <div>
                   <label className={labelClass}>Timezone</label>

@@ -1,5 +1,6 @@
 import { createAdminClient } from '@/lib/supabase/server'
 import { sendAutomatedEmail, formatEmailDate, formatEmailTime } from '@/lib/email-templates'
+import { describeRrule } from '@/lib/recurrence'
 
 /**
  * Send new event notification emails to all members in the event's chapter
@@ -86,6 +87,19 @@ export async function sendNewEventNotifications(event) {
     }
   }
 
+  // Recurrence info
+  let recurrenceRow = ''
+  if (event.rrule) {
+    try {
+      const recurrenceText = describeRrule(event.rrule, event.start_date)
+      if (recurrenceText) {
+        recurrenceRow = `<tr><td style="padding: 6px 12px 6px 0; color: #6b7280; vertical-align: top; white-space: nowrap;"><strong>Repeats:</strong></td><td style="padding: 6px 0;">${recurrenceText}</td></tr>`
+      }
+    } catch (e) {
+      // describeRrule may fail for malformed rrules, skip silently
+    }
+  }
+
   // Event URL
   const appUrl = process.env.NEXT_PUBLIC_APP_URL || 'https://members.votelabor.org'
   const eventUrl = `${appUrl}/events/${event.id}`
@@ -95,7 +109,14 @@ export async function sendNewEventNotifications(event) {
   let successCount = 0
   let errorCount = 0
 
-  for (const member of members) {
+  for (let i = 0; i < members.length; i++) {
+    const member = members[i]
+
+    // Rate limit: Resend allows 2 req/sec, space out sends by 600ms
+    if (i > 0) {
+      await new Promise(resolve => setTimeout(resolve, 600))
+    }
+
     try {
       const result = await sendAutomatedEmail({
         templateKey: 'new_event',
@@ -107,6 +128,7 @@ export async function sendNewEventNotifications(event) {
           event_time: eventTime,
           event_location: location,
           event_description: event.description || '',
+          event_recurrence_row: recurrenceRow,
           event_url: eventUrl,
         },
         recipientType: 'member',

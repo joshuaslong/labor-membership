@@ -1,6 +1,7 @@
 import { NextResponse } from 'next/server'
 import { createAdminClient } from '@/lib/supabase/server'
 import { sendAutomatedEmail, formatEmailDate, formatEmailTime, hasReminderBeenSent } from '@/lib/email-templates'
+import { getOccurrences } from '@/lib/recurrence'
 
 // Verify cron secret to prevent unauthorized access
 function verifyCronSecret(request) {
@@ -9,6 +10,15 @@ function verifyCronSecret(request) {
     return false
   }
   return true
+}
+
+/**
+ * Combine a date string (YYYY-MM-DD) and time string (HH:MM:SS) into a Date object.
+ * If no time is provided, defaults to midnight.
+ */
+function combineDateAndTime(dateStr, timeStr) {
+  if (!timeStr) return new Date(dateStr + 'T00:00:00')
+  return new Date(`${dateStr}T${timeStr}`)
 }
 
 export async function GET(request) {
@@ -25,38 +35,116 @@ export async function GET(request) {
   }
 
   try {
-    // Find events starting in 23-25 hours (for 24h reminder)
-    const twentyThreeHours = new Date(now.getTime() + 23 * 60 * 60 * 1000)
-    const twentyFiveHours = new Date(now.getTime() + 25 * 60 * 60 * 1000)
+    // Define reminder windows
+    const windows = [
+      {
+        key: 'reminders_24h',
+        templateKey: 'event_reminder_24h',
+        startMs: 23 * 60 * 60 * 1000,
+        endMs: 25 * 60 * 60 * 1000,
+      },
+      {
+        key: 'reminders_1h',
+        templateKey: 'event_reminder_1h',
+        startMs: 30 * 60 * 1000,
+        endMs: 90 * 60 * 1000,
+      },
+    ]
 
-    // Find events starting in 0.5-1.5 hours (for 1h reminder)
-    const thirtyMinutes = new Date(now.getTime() + 30 * 60 * 1000)
-    const ninetyMinutes = new Date(now.getTime() + 90 * 60 * 1000)
+    // Date range for queries: today and tomorrow (covers both windows)
+    const today = now.toISOString().split('T')[0]
+    const dayAfterTomorrow = new Date(now.getTime() + 2 * 24 * 60 * 60 * 1000).toISOString().split('T')[0]
 
-    // Get events for 24h reminder
-    const { data: events24h } = await supabase
+    // Get non-recurring published events in the date range
+    const { data: oneTimeEvents } = await supabase
       .from('events')
-      .select('id, title, start_date, location')
+      .select('id, title, start_date, start_time, location_name, rrule')
       .eq('status', 'published')
-      .gte('start_date', twentyThreeHours.toISOString())
-      .lte('start_date', twentyFiveHours.toISOString())
+      .is('rrule', null)
+      .gte('start_date', today)
+      .lte('start_date', dayAfterTomorrow)
 
-    // Get events for 1h reminder
-    const { data: events1h } = await supabase
+    // Get recurring published events that might have instances in range
+    const { data: recurringEvents } = await supabase
       .from('events')
-      .select('id, title, start_date, location')
+      .select('id, title, start_date, start_time, location_name, rrule, recurrence_end_date')
       .eq('status', 'published')
-      .gte('start_date', thirtyMinutes.toISOString())
-      .lte('start_date', ninetyMinutes.toISOString())
+      .not('rrule', 'is', null)
+      .lte('start_date', dayAfterTomorrow)
+      .or(`recurrence_end_date.gte.${today},recurrence_end_date.is.null`)
 
-    // Process 24h reminders
-    for (const event of events24h || []) {
-      await sendEventReminders(supabase, event, 'event_reminder_24h', results.reminders_24h)
+    // Expand recurring events to find instances in range
+    const recurringInstances = []
+    for (const event of recurringEvents || []) {
+      try {
+        const occurrences = getOccurrences(
+          event.rrule,
+          event.start_date,
+          today,
+          dayAfterTomorrow
+        )
+
+        // Check cancelled overrides for these dates
+        const instanceDates = occurrences.map(d =>
+          d instanceof Date ? d.toISOString().split('T')[0] : d
+        )
+
+        if (instanceDates.length === 0) continue
+
+        const { data: overrides } = await supabase
+          .from('event_instance_overrides')
+          .select('instance_date, is_cancelled')
+          .eq('event_id', event.id)
+          .in('instance_date', instanceDates)
+
+        const cancelledDates = new Set(
+          (overrides || []).filter(o => o.is_cancelled).map(o => o.instance_date)
+        )
+
+        for (const instDate of instanceDates) {
+          if (!cancelledDates.has(instDate)) {
+            recurringInstances.push({
+              ...event,
+              instance_date: instDate,
+            })
+          }
+        }
+      } catch (err) {
+        console.error(`Failed to expand recurring event ${event.id}:`, err)
+      }
     }
 
-    // Process 1h reminders
-    for (const event of events1h || []) {
-      await sendEventReminders(supabase, event, 'event_reminder_1h', results.reminders_1h)
+    // Combine all events (one-time use start_date as instance_date)
+    const allInstances = [
+      ...(oneTimeEvents || []).map(e => ({ ...e, instance_date: e.start_date })),
+      ...recurringInstances,
+    ]
+
+    // Process each reminder window
+    for (const window of windows) {
+      const windowStart = new Date(now.getTime() + window.startMs)
+      const windowEnd = new Date(now.getTime() + window.endMs)
+
+      for (const event of allInstances) {
+        const eventDateTime = combineDateAndTime(event.instance_date, event.start_time)
+
+        // Check if the event falls within this reminder window
+        if (eventDateTime >= windowStart && eventDateTime <= windowEnd) {
+          // Use a unique relatedId for recurring instances to avoid duplicate reminders
+          const relatedId = event.rrule
+            ? `${event.id}:${event.instance_date}`
+            : event.id
+
+          await sendEventReminders(
+            supabase,
+            event,
+            event.instance_date,
+            relatedId,
+            window.templateKey,
+            results[window.key]
+          )
+        }
+      }
     }
 
     return NextResponse.json({
@@ -70,8 +158,8 @@ export async function GET(request) {
   }
 }
 
-async function sendEventReminders(supabase, event, templateKey, stats) {
-  // Get member RSVPs (attending or maybe)
+async function sendEventReminders(supabase, event, instanceDate, relatedId, templateKey, stats) {
+  // Get member RSVPs for this instance (attending or maybe)
   const { data: memberRsvps } = await supabase
     .from('event_rsvps')
     .select(`
@@ -79,20 +167,22 @@ async function sendEventReminders(supabase, event, templateKey, stats) {
       members!inner(id, email, first_name)
     `)
     .eq('event_id', event.id)
+    .eq('instance_date', instanceDate)
     .in('status', ['attending', 'maybe'])
 
-  // Get guest RSVPs
+  // Get guest RSVPs for this instance
   const { data: guestRsvps } = await supabase
     .from('event_guest_rsvps')
     .select('id, name, email')
     .eq('event_id', event.id)
+    .eq('instance_date', instanceDate)
     .eq('status', 'attending')
 
   const emailVariables = {
     event_name: event.title,
-    event_date: formatEmailDate(event.start_date),
-    event_time: formatEmailTime(event.start_date),
-    event_location: event.location || 'TBD',
+    event_date: formatEmailDate(instanceDate),
+    event_time: event.start_time ? formatEmailTime(`${instanceDate}T${event.start_time}`) : '',
+    event_location: event.location_name || 'TBD',
   }
 
   // Send to members
@@ -100,8 +190,8 @@ async function sendEventReminders(supabase, event, templateKey, stats) {
     const member = rsvp.members
     if (!member?.email) continue
 
-    // Check if reminder already sent
-    const alreadySent = await hasReminderBeenSent(templateKey, member.email, event.id)
+    // Check if reminder already sent (using composite relatedId for recurring)
+    const alreadySent = await hasReminderBeenSent(templateKey, member.email, relatedId)
     if (alreadySent) {
       stats.skipped++
       continue
@@ -117,7 +207,7 @@ async function sendEventReminders(supabase, event, templateKey, stats) {
         },
         recipientType: 'member',
         recipientId: member.id,
-        relatedId: event.id,
+        relatedId,
       })
       stats.sent++
     } catch (error) {
@@ -131,7 +221,7 @@ async function sendEventReminders(supabase, event, templateKey, stats) {
     if (!guest.email) continue
 
     // Check if reminder already sent
-    const alreadySent = await hasReminderBeenSent(templateKey, guest.email, event.id)
+    const alreadySent = await hasReminderBeenSent(templateKey, guest.email, relatedId)
     if (alreadySent) {
       stats.skipped++
       continue
@@ -148,7 +238,7 @@ async function sendEventReminders(supabase, event, templateKey, stats) {
           name: firstName,
         },
         recipientType: 'guest',
-        relatedId: event.id,
+        relatedId,
       })
       stats.sent++
     } catch (error) {

@@ -29,7 +29,7 @@ export async function POST(request, { params }) {
     // Check if event exists and is published
     const { data: event } = await adminClient
       .from('events')
-      .select('id, title, status, max_attendees, rsvp_deadline, start_date, location_name')
+      .select('id, title, status, max_attendees, rsvp_deadline, start_date, location_name, rrule')
       .eq('id', id)
       .single()
 
@@ -50,16 +50,35 @@ export async function POST(request, { params }) {
     }
 
     const body = await request.json()
-    const { status, guest_count, notes } = body
+    const { status, guest_count, notes, instance_date: bodyInstanceDate } = body
+
+    // Determine instance_date: required for recurring, defaults to start_date for one-time
+    const instanceDate = bodyInstanceDate || event.start_date
 
     if (!status || !['attending', 'maybe', 'declined'].includes(status)) {
       return NextResponse.json({ error: 'Invalid RSVP status' }, { status: 400 })
     }
 
+    // Check if this instance is cancelled (for recurring events)
+    if (event.rrule && bodyInstanceDate) {
+      const { data: override } = await adminClient
+        .from('event_instance_overrides')
+        .select('is_cancelled')
+        .eq('event_id', id)
+        .eq('instance_date', instanceDate)
+        .maybeSingle()
+
+      if (override?.is_cancelled) {
+        return NextResponse.json({ error: 'This event instance has been cancelled' }, { status: 400 })
+      }
+    }
+
     // Check max attendees if attending
     if (status === 'attending' && event.max_attendees) {
+      const rpcParams = { event_uuid: id, rsvp_stat: 'attending' }
+      if (event.rrule) rpcParams.for_instance_date = instanceDate
       const { data: currentCount } = await adminClient
-        .rpc('get_event_rsvp_count', { event_uuid: id, rsvp_stat: 'attending' })
+        .rpc('get_event_rsvp_count', rpcParams)
 
       // Get existing RSVP to see if user is already counted
       const { data: existingRsvp } = await adminClient
@@ -67,7 +86,8 @@ export async function POST(request, { params }) {
         .select('status, guest_count')
         .eq('event_id', id)
         .eq('member_id', member.id)
-        .single()
+        .eq('instance_date', instanceDate)
+        .maybeSingle()
 
       const newGuestCount = guest_count || 0
       let additionalPeople = 1 + newGuestCount
@@ -88,11 +108,12 @@ export async function POST(request, { params }) {
       .upsert({
         event_id: id,
         member_id: member.id,
+        instance_date: instanceDate,
         status,
         guest_count: guest_count || 0,
         notes
       }, {
-        onConflict: 'event_id,member_id'
+        onConflict: 'event_id,member_id,instance_date'
       })
       .select()
       .single()
@@ -109,8 +130,8 @@ export async function POST(request, { params }) {
           variables: {
             name: member.first_name || 'Member',
             event_name: event.title,
-            event_date: formatEmailDate(event.start_date),
-            event_time: formatEmailTime(event.start_date),
+            event_date: formatEmailDate(instanceDate),
+            event_time: formatEmailTime(instanceDate),
             event_location: event.location_name || 'TBD',
             rsvp_status: rsvpStatusText,
           },
@@ -155,11 +176,21 @@ export async function DELETE(request, { params }) {
       return NextResponse.json({ error: 'Member record not found' }, { status: 404 })
     }
 
-    const { error } = await adminClient
+    // Get instance_date from query params
+    const { searchParams } = new URL(request.url)
+    const instanceDate = searchParams.get('instance_date')
+
+    let deleteQuery = adminClient
       .from('event_rsvps')
       .delete()
       .eq('event_id', id)
       .eq('member_id', member.id)
+
+    if (instanceDate) {
+      deleteQuery = deleteQuery.eq('instance_date', instanceDate)
+    }
+
+    const { error } = await deleteQuery
 
     if (error) throw error
 

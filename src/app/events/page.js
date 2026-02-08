@@ -73,57 +73,18 @@ function EventsContent() {
       setFilterChapter(chapter || null)
     }
 
-    // Load upcoming events
-    const now = new Date().toISOString().split('T')[0]
-    let query = supabase
-      .from('events')
-      .select(`
-        id,
-        title,
-        start_date,
-        start_time,
-        end_time,
-        location_name,
-        description,
-        chapter_id,
-        chapters (
-          id,
-          name,
-          level
-        )
-      `)
-      .eq('status', 'published')
-      .gte('start_date', now)
-      .order('start_date', { ascending: true })
-      .order('start_time', { ascending: true })
+    // Load upcoming events via API (handles recurring event expansion)
+    const params = new URLSearchParams({ upcoming: 'true' })
+    if (chapterFilter) params.set('chapter_id', chapterFilter)
+    const res = await fetch(`/api/events?${params.toString()}`)
+    const data = await res.json()
 
-    if (chapterFilter) {
-      query = query.eq('chapter_id', chapterFilter)
-    }
+    const eventsData = (data.events || []).map(e => ({
+      ...e,
+      rsvpCount: e.rsvp_counts?.attending || 0,
+    }))
 
-    const { data: eventsData } = await query
-
-    // Get RSVP counts
-    if (eventsData && eventsData.length > 0) {
-      const eventIds = eventsData.map(e => e.id)
-
-      const { data: rsvpCounts } = await supabase
-        .from('event_rsvps')
-        .select('event_id, status')
-        .in('event_id', eventIds)
-        .eq('status', 'attending')
-
-      const countMap = {}
-      rsvpCounts?.forEach(rsvp => {
-        countMap[rsvp.event_id] = (countMap[rsvp.event_id] || 0) + 1
-      })
-
-      eventsData.forEach(event => {
-        event.rsvpCount = countMap[event.id] || 0
-      })
-    }
-
-    setEvents(eventsData || [])
+    setEvents(eventsData)
     setLoading(false)
   }
 
@@ -132,10 +93,11 @@ function EventsContent() {
     ? events.filter(e => e.chapter_id === selectedChapter)
     : events
 
-  // Group events by month
+  // Group events by month (use instance_date for recurring events)
   const eventsByMonth = {}
   filteredEvents.forEach(event => {
-    const date = new Date(event.start_date)
+    const displayDate = event.instance_date || event.start_date
+    const date = new Date(displayDate + 'T12:00:00')
     const monthKey = `${date.getFullYear()}-${String(date.getMonth() + 1).padStart(2, '0')}`
     const monthLabel = date.toLocaleDateString('en-US', { month: 'long', year: 'numeric' })
 
@@ -277,29 +239,39 @@ function EventsContent() {
                 {label}
               </h2>
               <div className="space-y-4">
-                {monthEvents.map(event => (
+                {monthEvents.map((event, idx) => {
+                  const displayDate = event.instance_date || event.start_date
+                  const eventKey = event.is_recurring ? `${event.id}-${displayDate}` : event.id
+                  const eventHref = event.is_recurring
+                    ? `/events/${event.id}?date=${displayDate}`
+                    : `/events/${event.id}`
+                  const dateObj = new Date(displayDate + 'T12:00:00')
+                  return (
                   <Link
-                    key={event.id}
-                    href={`/events/${event.id}`}
+                    key={eventKey}
+                    href={eventHref}
                     className="card block hover:shadow-md transition-shadow"
                   >
                     <div className="flex gap-4">
                       {/* Date badge */}
                       <div className="flex-shrink-0 w-14 text-center">
                         <div className="text-sm font-medium text-labor-red uppercase">
-                          {new Date(event.start_date).toLocaleDateString('en-US', { month: 'short' })}
+                          {dateObj.toLocaleDateString('en-US', { month: 'short' })}
                         </div>
                         <div className="text-2xl font-bold text-gray-900">
-                          {new Date(event.start_date).getDate()}
+                          {dateObj.getDate()}
                         </div>
                         <div className="text-xs text-gray-500">
-                          {new Date(event.start_date).toLocaleDateString('en-US', { weekday: 'short' })}
+                          {dateObj.toLocaleDateString('en-US', { weekday: 'short' })}
                         </div>
                       </div>
 
                       {/* Event details */}
                       <div className="flex-1 min-w-0">
                         <h3 className="font-semibold text-gray-900 text-lg mb-1">{event.title}</h3>
+                        {event.is_recurring && (
+                          <span className="text-xs text-gray-400">Recurring</span>
+                        )}
 
                         <div className="flex flex-wrap items-center gap-x-4 gap-y-1 text-sm text-gray-600 mb-2">
                           {event.start_time && (
@@ -342,7 +314,8 @@ function EventsContent() {
                       </div>
                     </div>
                   </Link>
-                ))}
+                  )
+                })}
               </div>
             </div>
           ))}

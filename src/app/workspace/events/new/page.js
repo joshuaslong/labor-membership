@@ -4,6 +4,7 @@ import { useState, useEffect } from 'react'
 import { useRouter } from 'next/navigation'
 import { createClient } from '@/lib/supabase/client'
 import ChapterSelect from '@/components/ChapterSelect'
+import RecurrenceBuilder from '@/components/RecurrenceBuilder'
 
 const TIMEZONES = [
   { value: 'America/New_York', label: 'Eastern Time (ET)' },
@@ -40,6 +41,18 @@ export default function CreateEventPage() {
     max_attendees: '',
     rsvp_deadline: '',
     status: 'draft'
+  })
+
+  const [recurrenceData, setRecurrenceData] = useState({
+    enabled: false,
+    preset: 'weekly',
+    endType: 'never',
+    endDate: '',
+    count: 12,
+    customFreq: 'WEEKLY',
+    customInterval: 1,
+    customByDay: [],
+    customMonthlyPosition: '',
   })
 
   useEffect(() => {
@@ -117,6 +130,20 @@ export default function CreateEventPage() {
         start_time: formData.is_all_day ? null : formData.start_time || null,
         end_time: formData.is_all_day ? null : formData.end_time || null,
         end_date: formData.end_date || null
+      }
+
+      // Add recurrence data if enabled
+      if (recurrenceData.enabled) {
+        payload.recurrence_preset = recurrenceData.preset
+        payload.recurrence_options = {
+          endType: recurrenceData.endType,
+          endDate: recurrenceData.endDate,
+          count: recurrenceData.count,
+          customFreq: recurrenceData.customFreq,
+          customInterval: recurrenceData.customInterval,
+          customByDay: recurrenceData.customByDay,
+          customMonthlyPosition: recurrenceData.customMonthlyPosition,
+        }
       }
 
       const res = await fetch('/api/events', {
@@ -259,6 +286,15 @@ export default function CreateEventPage() {
                     </div>
                   )}
                 </div>
+
+                {/* Recurrence */}
+                <RecurrenceBuilder
+                  startDate={formData.start_date}
+                  recurrenceData={recurrenceData}
+                  onChange={setRecurrenceData}
+                  inputClass={inputClass}
+                  labelClass={labelClass}
+                />
 
                 <div>
                   <label className={labelClass}>Timezone</label>
