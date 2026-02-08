@@ -42,6 +42,10 @@ export async function POST(request) {
 
     const url = getPublicUrl(key)
 
+    if (!url) {
+      return NextResponse.json({ error: 'R2_PUBLIC_URL is not configured. Cannot serve email images.' }, { status: 500 })
+    }
+
     return NextResponse.json({ url })
   } catch (error) {
     console.error('Image upload error:', error)

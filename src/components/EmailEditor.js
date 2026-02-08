@@ -278,6 +278,83 @@ export default function EmailEditor({ value, onChange, placeholder = 'Enter your
     return () => clearTimeout(timer)
   }, [onChange])
 
+  // Intercept pasted/dropped images and upload to R2 instead of embedding base64
+  useEffect(() => {
+    const editorElement = document.querySelector('.email-editor .ql-editor')
+    if (!editorElement) return
+
+    async function uploadImageFile(file) {
+      const formData = new FormData()
+      formData.append('image', file)
+      const res = await fetch('/api/admin/email/upload-image', {
+        method: 'POST',
+        body: formData,
+      })
+      if (!res.ok) {
+        const err = await res.json()
+        throw new Error(err.error || 'Upload failed')
+      }
+      const { url } = await res.json()
+      return url
+    }
+
+    function handlePaste(e) {
+      const items = e.clipboardData?.items
+      if (!items) return
+
+      for (const item of items) {
+        if (item.type.startsWith('image/')) {
+          e.preventDefault()
+          e.stopPropagation()
+          const file = item.getAsFile()
+          if (!file) return
+
+          const quill = editorRef.current?.getEditor()
+          if (!quill) return
+
+          uploadImageFile(file).then(url => {
+            const range = quill.getSelection(true)
+            quill.insertEmbed(range?.index || 0, 'image', url)
+          }).catch(err => {
+            console.error('Paste image upload failed:', err)
+            alert('Failed to upload pasted image: ' + err.message)
+          })
+          return
+        }
+      }
+    }
+
+    function handleDrop(e) {
+      const files = e.dataTransfer?.files
+      if (!files?.length) return
+
+      const imageFile = Array.from(files).find(f => f.type.startsWith('image/'))
+      if (!imageFile) return
+
+      e.preventDefault()
+      e.stopPropagation()
+
+      const quill = editorRef.current?.getEditor()
+      if (!quill) return
+
+      uploadImageFile(imageFile).then(url => {
+        const range = quill.getSelection(true)
+        quill.insertEmbed(range?.index || 0, 'image', url)
+      }).catch(err => {
+        console.error('Drop image upload failed:', err)
+        alert('Failed to upload dropped image: ' + err.message)
+      })
+    }
+
+    editorElement.addEventListener('paste', handlePaste)
+    editorElement.addEventListener('drop', handleDrop)
+
+    return () => {
+      editorElement.removeEventListener('paste', handlePaste)
+      editorElement.removeEventListener('drop', handleDrop)
+    }
+  }, [])
+
   // Simplified toolbar for email composition
   const modules = useMemo(() => ({
     toolbar: {
