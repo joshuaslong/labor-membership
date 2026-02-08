@@ -1,3 +1,4 @@
+import { after } from 'next/server'
 import { createClient, createAdminClient } from '@/lib/supabase/server'
 import { NextResponse } from 'next/server'
 import { sendNewPollNotifications } from '@/lib/poll-notifications'
@@ -216,8 +217,12 @@ export async function POST(request) {
 
     // Send notifications if poll is active
     if (poll.status === 'active') {
-      sendNewPollNotifications(poll).catch(err => {
-        console.error('Error sending new poll notifications:', err)
+      after(async () => {
+        try {
+          await sendNewPollNotifications(poll)
+        } catch (err) {
+          console.error('Error sending new poll notifications:', err)
+        }
       })
     }
 

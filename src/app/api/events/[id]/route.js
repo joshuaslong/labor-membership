@@ -1,3 +1,4 @@
+import { after } from 'next/server'
 import { createClient, createAdminClient } from '@/lib/supabase/server'
 import { NextResponse } from 'next/server'
 import { sendNewEventNotifications } from '@/lib/event-notifications'
@@ -446,8 +447,12 @@ export async function PUT(request, { params }) {
 
     // Send notifications if event was just published
     if (event.status === 'published' && previousStatus !== 'published') {
-      sendNewEventNotifications(event).catch(err => {
-        console.error('Error sending new event notifications:', err)
+      after(async () => {
+        try {
+          await sendNewEventNotifications(event)
+        } catch (err) {
+          console.error('Error sending new event notifications:', err)
+        }
       })
     }
 
