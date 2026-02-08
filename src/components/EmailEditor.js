@@ -207,6 +207,47 @@ export default function EmailEditor({ value, onChange, placeholder = 'Enter your
             wrapper.appendChild(btn)
           })
 
+          // Separator before delete
+          const sep2 = document.createElement('div')
+          sep2.style.cssText = 'width: 1px; background: #e5e7eb; margin: 0 4px;'
+          wrapper.appendChild(sep2)
+
+          // Delete button
+          const deleteSvg = `<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" width="16" height="16" style="vertical-align: middle;" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M3 6h18"/><path d="M19 6v14a2 2 0 01-2 2H7a2 2 0 01-2-2V6"/><path d="M8 6V4a2 2 0 012-2h4a2 2 0 012 2v2"/></svg>`
+          const deleteBtn = document.createElement('button')
+          deleteBtn.innerHTML = deleteSvg
+          deleteBtn.type = 'button'
+          deleteBtn.title = 'Delete image'
+          deleteBtn.style.cssText = `
+            padding: 6px 10px;
+            font-size: 13px;
+            font-weight: 500;
+            border: 1px solid #e5e7eb;
+            border-radius: 4px;
+            background: white;
+            color: #dc2626;
+            cursor: pointer;
+            transition: all 0.15s;
+          `
+          deleteBtn.onmouseenter = () => {
+            deleteBtn.style.background = '#fef2f2'
+            deleteBtn.style.borderColor = '#fca5a5'
+          }
+          deleteBtn.onmouseleave = () => {
+            deleteBtn.style.background = 'white'
+            deleteBtn.style.borderColor = '#e5e7eb'
+          }
+          deleteBtn.onclick = (e) => {
+            e.preventDefault()
+            e.stopPropagation()
+            img.remove()
+            wrapper.remove()
+            const html = editorElement.innerHTML
+            internalValueRef.current = html
+            onChange(html)
+          }
+          wrapper.appendChild(deleteBtn)
+
           // Position the controls above the image using fixed positioning
           const rect = img.getBoundingClientRect()
           wrapper.style.left = rect.left + 'px'
@@ -244,6 +285,7 @@ export default function EmailEditor({ value, onChange, placeholder = 'Enter your
         ['bold', 'italic', 'underline'],
         [{ 'header': 1 }, { 'header': 2 }],
         [{ 'list': 'ordered' }, { 'list': 'bullet' }],
+        [{ 'align': '' }, { 'align': 'center' }, { 'align': 'right' }],
         ['link', 'image'],
         ['insert-variable']
       ],
@@ -264,6 +306,7 @@ export default function EmailEditor({ value, onChange, placeholder = 'Enter your
     'bold', 'italic', 'underline',
     'header',
     'list',
+    'align',
     'link', 'image'
   ]
 

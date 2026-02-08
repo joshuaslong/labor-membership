@@ -173,6 +173,17 @@
   .email-editor-wrapper .ql-editor {
     @apply min-h-64 p-4 text-base;
     font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, 'Helvetica Neue', Arial, sans-serif;
+    line-height: 1.7;
+  }
+
+  .email-editor-wrapper .ql-editor p {
+    margin-bottom: 0.75em;
+  }
+
+  .email-editor-wrapper .ql-editor h1,
+  .email-editor-wrapper .ql-editor h2 {
+    margin-top: 0.5em;
+    margin-bottom: 0.5em;
   }
 
   @media (max-width: 640px) {
@@ -225,9 +236,14 @@
     @apply ring-1 ring-labor-red border-labor-red;
   }
 
+  .email-editor-wrapper .ql-insert-variable {
+    @apply w-auto !important;
+    padding: 0 8px !important;
+  }
+
   .email-editor-wrapper .ql-insert-variable::after {
-    content: '{$}';
-    @apply font-mono font-bold;
+    content: 'Name';
+    @apply text-xs font-semibold;
   }
 
   .email-editor-wrapper .ql-editor img {

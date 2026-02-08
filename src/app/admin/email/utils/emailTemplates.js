@@ -13,25 +13,25 @@ export const EMAIL_TEMPLATES = [
     id: 'announcement',
     name: 'General Announcement',
     subject: '',
-    content: `${LOGO_HEADER}<p>Dear {$name},</p><p>[Your announcement here]</p><p>{$SIGNATURE}</p>`,
+    content: `${LOGO_HEADER}<p>{$name},</p><p>[Your announcement here]</p><p>{$SIGNATURE}</p>`,
   },
   {
     id: 'event',
     name: 'Event Invitation',
     subject: "You're Invited: ",
-    content: `${LOGO_HEADER}<p>Dear {$name},</p><p>You're invited to join us for an upcoming event!</p><p><strong>Event:</strong> [Event Name]<br><strong>Date:</strong> [Date]<br><strong>Time:</strong> [Time]<br><strong>Location:</strong> [Location/Virtual Link]</p><p>[Additional details about the event]</p><p>We hope to see you there!</p><p>{$SIGNATURE}</p>`,
+    content: `${LOGO_HEADER}<p>{$name},</p><p>You're invited to join us for an upcoming event!</p><p><strong>Event:</strong> [Event Name]<br><strong>Date:</strong> [Date]<br><strong>Time:</strong> [Time]<br><strong>Location:</strong> [Location/Virtual Link]</p><p>[Additional details about the event]</p><p>We hope to see you there!</p><p>{$SIGNATURE}</p>`,
   },
   {
     id: 'action',
     name: 'Call to Action',
     subject: 'Action Needed: ',
-    content: `${LOGO_HEADER}<p>Dear {$name},</p><p>We need your help with an urgent action.</p><p><strong>What:</strong> [Describe the action]</p><p><strong>Why it matters:</strong> [Explain the importance]</p><p><strong>How you can help:</strong></p><ul><li>[Action item 1]</li><li>[Action item 2]</li><li>[Action item 3]</li></ul><p>Together, we can make a difference.</p><p>{$SIGNATURE}</p>`,
+    content: `${LOGO_HEADER}<p>{$name},</p><p>We need your help with an urgent action.</p><p><strong>What:</strong> [Describe the action]</p><p><strong>Why it matters:</strong> [Explain the importance]</p><p><strong>How you can help:</strong></p><ul><li>[Action item 1]</li><li>[Action item 2]</li><li>[Action item 3]</li></ul><p>Together, we can make a difference.</p><p>{$SIGNATURE}</p>`,
   },
   {
     id: 'blank',
     name: 'Blank Template',
     subject: '',
-    content: `${LOGO_HEADER}<p>Dear {$name},</p><p></p><p>{$SIGNATURE}</p>`,
+    content: `${LOGO_HEADER}<p>{$name},</p><p></p><p>{$SIGNATURE}</p>`,
   },
 ]
 

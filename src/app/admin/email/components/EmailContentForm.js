@@ -61,7 +61,7 @@ export default function EmailContentForm({
           placeholder="Write your email..."
         />
         <p className="text-xs text-gray-400 mt-1.5">
-          Use <code className="bg-stone-100 px-1 py-0.5 rounded text-labor-red">{'{$name}'}</code> to personalize
+          Click <span className="font-semibold text-gray-500">Name</span> in the toolbar to insert the member&apos;s first name
         </p>
       </div>
     </div>
