@@ -82,35 +82,20 @@ export default function RecurrenceBuilder({ startDate, recurrenceData, onChange,
     return d.toLocaleDateString('en-US', { month: 'short', day: 'numeric' })
   }
 
-  if (!enabled) {
-    return (
-      <div className="flex items-center gap-2">
-        <input
-          type="checkbox"
-          id="recurrence_enabled"
-          checked={false}
-          onChange={() => update({ enabled: true })}
-          className="w-4 h-4 text-labor-red border-gray-300 rounded focus:ring-labor-red"
-        />
-        <label htmlFor="recurrence_enabled" className="text-sm text-gray-700">Repeats</label>
-      </div>
-    )
-  }
-
   return (
     <div className="space-y-3">
       <div className="flex items-center gap-2">
         <input
           type="checkbox"
           id="recurrence_enabled"
-          checked={true}
-          onChange={() => update({ enabled: false })}
+          checked={enabled}
+          onChange={() => update({ enabled: !enabled })}
           className="w-4 h-4 text-labor-red border-gray-300 rounded focus:ring-labor-red"
         />
         <label htmlFor="recurrence_enabled" className="text-sm text-gray-700">Repeats</label>
       </div>
 
-      <div className="pl-6 space-y-3 border-l-2 border-stone-200">
+      {enabled && <div className="pl-6 space-y-3 border-l-2 border-stone-200">
         {/* Preset selector */}
         <div>
           <label className={labelClass}>Repeat</label>
@@ -284,7 +269,7 @@ export default function RecurrenceBuilder({ startDate, recurrenceData, onChange,
             )}
           </div>
         )}
-      </div>
+      </div>}
     </div>
   )
 }
