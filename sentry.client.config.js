@@ -17,9 +17,4 @@ Sentry.init({
 
   // Enable logs to be sent to Sentry
   enableLogs: true,
-
-  // You can remove this option if you're not planning to use the Sentry Session Replay feature:
-  integrations: [
-    Sentry.replayIntegration(),
-  ],
 });
