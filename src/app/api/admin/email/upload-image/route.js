@@ -1,6 +1,6 @@
 import { NextResponse } from 'next/server'
 import { createClient } from '@/lib/supabase/server'
-import { r2Client, generateR2Key, BUCKET_PREFIXES, getPublicUrl } from '@/lib/r2'
+import { r2Client } from '@/lib/r2'
 import { PutObjectCommand } from '@aws-sdk/client-s3'
 
 const MAX_SIZE = 5 * 1024 * 1024 // 5MB
@@ -30,21 +30,25 @@ export async function POST(request) {
       return NextResponse.json({ error: 'Image too large. Maximum 5MB.' }, { status: 400 })
     }
 
-    const key = generateR2Key(BUCKET_PREFIXES.PUBLIC, file.name)
+    // Generate a unique filename
+    const timestamp = Date.now()
+    const randomStr = Math.random().toString(36).substring(2, 8)
+    const sanitizedFilename = file.name.replace(/[^a-zA-Z0-9.-]/g, '_')
+    const filename = `${timestamp}-${randomStr}-${sanitizedFilename}`
+    const r2Key = `public/email-images/${filename}`
+
     const buffer = Buffer.from(await file.arrayBuffer())
 
     await r2Client.send(new PutObjectCommand({
       Bucket: process.env.R2_BUCKET_NAME,
-      Key: key,
+      Key: r2Key,
       Body: buffer,
       ContentType: file.type,
     }))
 
-    const url = getPublicUrl(key)
-
-    if (!url) {
-      return NextResponse.json({ error: 'R2_PUBLIC_URL is not configured. Cannot serve email images.' }, { status: 500 })
-    }
+    // Serve through app's own domain via proxy route — always works
+    const appUrl = process.env.NEXT_PUBLIC_APP_URL || 'https://members.votelabor.org'
+    const url = `${appUrl}/api/email-images/${filename}`
 
     return NextResponse.json({ url })
   } catch (error) {
