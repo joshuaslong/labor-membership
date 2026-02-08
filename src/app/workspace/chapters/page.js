@@ -22,15 +22,13 @@ export default async function WorkspaceChaptersPage() {
     throw new Error('Failed to load chapters')
   }
 
-  // Get member counts per chapter
+  // Get member counts per chapter (aggregated in DB to avoid PostgREST row limits)
   const { data: memberCounts } = await supabase
-    .from('member_chapters')
-    .select('chapter_id, members!inner(status)')
-    .eq('members.status', 'active')
+    .rpc('get_chapter_member_counts')
 
   const countMap = {}
   memberCounts?.forEach(mc => {
-    countMap[mc.chapter_id] = (countMap[mc.chapter_id] || 0) + 1
+    countMap[mc.chapter_id] = Number(mc.member_count)
   })
 
   const chaptersWithCounts = chapters?.map(c => ({
