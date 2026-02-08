@@ -20,6 +20,8 @@ export async function GET(request) {
     const rangeStart = searchParams.get('range_start')
     const rangeEnd = searchParams.get('range_end')
 
+    const visibility = searchParams.get('visibility')
+
     const selectFields = `
       id,
       chapter_id,
@@ -44,6 +46,9 @@ export async function GET(request) {
       image_url,
       rrule,
       recurrence_end_date,
+      target_type,
+      group_id,
+      visibility,
       created_at,
       chapters (
         id,
@@ -69,6 +74,7 @@ export async function GET(request) {
 
     if (chapterId) nonRecurringQuery = nonRecurringQuery.eq('chapter_id', chapterId)
     if (status !== 'all') nonRecurringQuery = nonRecurringQuery.eq('status', status)
+    if (visibility) nonRecurringQuery = nonRecurringQuery.eq('visibility', visibility)
     if (upcoming) nonRecurringQuery = nonRecurringQuery.gte('start_date', effectiveRangeStart)
 
     // Query recurring events (those whose range overlaps our window)
@@ -80,6 +86,7 @@ export async function GET(request) {
 
     if (chapterId) recurringQuery = recurringQuery.eq('chapter_id', chapterId)
     if (status !== 'all') recurringQuery = recurringQuery.eq('status', status)
+    if (visibility) recurringQuery = recurringQuery.eq('visibility', visibility)
     if (upcoming) {
       recurringQuery = recurringQuery.or(`recurrence_end_date.gte.${effectiveRangeStart},recurrence_end_date.is.null`)
     }
@@ -255,6 +262,9 @@ export async function POST(request) {
       image_url,
       recurrence_preset,
       recurrence_options,
+      target_type,
+      group_id,
+      visibility,
     } = body
 
     if (!chapter_id || !title || !start_date) {
@@ -275,6 +285,19 @@ export async function POST(request) {
 
       if (!allowedChapterIds.has(chapter_id)) {
         return NextResponse.json({ error: 'Cannot create events for this chapter' }, { status: 403 })
+      }
+    }
+
+    // Validate group belongs to the event's chapter if targeting a group
+    if (target_type === 'group' && group_id) {
+      const { data: group } = await adminClient
+        .from('chapter_groups')
+        .select('id, chapter_id')
+        .eq('id', group_id)
+        .single()
+
+      if (!group || group.chapter_id !== chapter_id) {
+        return NextResponse.json({ error: 'Group does not belong to the selected chapter' }, { status: 400 })
       }
     }
 
@@ -314,6 +337,9 @@ export async function POST(request) {
         image_url,
         rrule,
         recurrence_end_date,
+        target_type: target_type || 'chapter',
+        group_id: target_type === 'group' ? group_id : null,
+        visibility: visibility || 'public',
       })
       .select()
       .single()

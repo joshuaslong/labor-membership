@@ -73,8 +73,8 @@ function EventsContent() {
       setFilterChapter(chapter || null)
     }
 
-    // Load upcoming events via API (handles recurring event expansion)
-    const params = new URLSearchParams({ upcoming: 'true' })
+    // Load upcoming public events via API (handles recurring event expansion)
+    const params = new URLSearchParams({ upcoming: 'true', visibility: 'public' })
     if (chapterFilter) params.set('chapter_id', chapterFilter)
     const res = await fetch(`/api/events?${params.toString()}`)
     const data = await res.json()

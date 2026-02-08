@@ -43,6 +43,9 @@ export async function GET(request, { params }) {
         image_url,
         rrule,
         recurrence_end_date,
+        target_type,
+        group_id,
+        visibility,
         created_at,
         updated_at,
         chapters (
@@ -265,6 +268,9 @@ export async function PUT(request, { params }) {
       image_url,
       recurrence_preset,
       recurrence_options,
+      target_type,
+      group_id,
+      visibility,
     } = body
 
     const isRecurring = !!existingEvent.rrule
@@ -358,6 +364,9 @@ export async function PUT(request, { params }) {
         max_attendees: max_attendees ?? existingEvent.max_attendees,
         rsvp_deadline: rsvp_deadline ?? existingEvent.rsvp_deadline,
         image_url: image_url ?? existingEvent.image_url,
+        target_type: target_type ?? existingEvent.target_type,
+        group_id: target_type === 'group' ? (group_id ?? existingEvent.group_id) : (target_type === 'chapter' ? null : existingEvent.group_id),
+        visibility: visibility ?? existingEvent.visibility,
       }
 
       // Rebuild RRULE for the new series (same pattern unless changed)
@@ -410,6 +419,11 @@ export async function PUT(request, { params }) {
     if (max_attendees !== undefined) updateData.max_attendees = max_attendees
     if (rsvp_deadline !== undefined) updateData.rsvp_deadline = rsvp_deadline
     if (image_url !== undefined) updateData.image_url = image_url
+    if (target_type !== undefined) {
+      updateData.target_type = target_type
+      updateData.group_id = target_type === 'group' ? group_id : null
+    }
+    if (visibility !== undefined) updateData.visibility = visibility
 
     // Handle recurrence changes for "all" scope
     if (recurrence_preset !== undefined) {

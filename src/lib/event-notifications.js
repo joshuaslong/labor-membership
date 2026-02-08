@@ -20,24 +20,37 @@ export async function sendNewEventNotifications(event) {
     return { success: false, error: 'Chapter not found' }
   }
 
-  // Get all members in this chapter via member_chapters junction table
-  const { data: memberChapters } = await supabase
-    .from('member_chapters')
-    .select('member_id')
-    .eq('chapter_id', event.chapter_id)
+  // Get target members based on target_type
+  let allMemberIds = []
 
-  const memberIdsFromJunction = memberChapters?.map(mc => mc.member_id) || []
+  if (event.target_type === 'group' && event.group_id) {
+    // Get members in the specific group
+    const { data: groupAssignments } = await supabase
+      .from('member_group_assignments')
+      .select('member_id')
+      .eq('group_id', event.group_id)
 
-  // Also get members with legacy chapter_id
-  const { data: legacyMembers } = await supabase
-    .from('members')
-    .select('id')
-    .eq('chapter_id', event.chapter_id)
+    allMemberIds = groupAssignments?.map(ga => ga.member_id) || []
+  } else {
+    // Get all members in this chapter via member_chapters junction table
+    const { data: memberChapters } = await supabase
+      .from('member_chapters')
+      .select('member_id')
+      .eq('chapter_id', event.chapter_id)
 
-  const legacyMemberIds = legacyMembers?.map(m => m.id) || []
+    const memberIdsFromJunction = memberChapters?.map(mc => mc.member_id) || []
 
-  // Combine and dedupe member IDs
-  const allMemberIds = [...new Set([...memberIdsFromJunction, ...legacyMemberIds])]
+    // Also get members with legacy chapter_id
+    const { data: legacyMembers } = await supabase
+      .from('members')
+      .select('id')
+      .eq('chapter_id', event.chapter_id)
+
+    const legacyMemberIds = legacyMembers?.map(m => m.id) || []
+
+    // Combine and dedupe
+    allMemberIds = [...new Set([...memberIdsFromJunction, ...legacyMemberIds])]
+  }
 
   if (allMemberIds.length === 0) {
     console.log('No members found in chapter for event notifications:', chapter.name)

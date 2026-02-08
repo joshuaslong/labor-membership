@@ -20,6 +20,8 @@ export default function CreateEventPage() {
   const [loading, setLoading] = useState(false)
   const [error, setError] = useState(null)
   const [chapters, setChapters] = useState([])
+  const [groups, setGroups] = useState([])
+  const [loadingGroups, setLoadingGroups] = useState(false)
 
   const [formData, setFormData] = useState({
     chapter_id: '',
@@ -40,7 +42,10 @@ export default function CreateEventPage() {
     is_all_day: false,
     max_attendees: '',
     rsvp_deadline: '',
-    status: 'draft'
+    status: 'draft',
+    target_type: 'chapter',
+    group_id: '',
+    visibility: 'public',
   })
 
   const [recurrenceData, setRecurrenceData] = useState({
@@ -109,6 +114,29 @@ export default function CreateEventPage() {
     }
   }
 
+  // Load groups when chapter changes
+  useEffect(() => {
+    if (formData.chapter_id) {
+      loadGroups(formData.chapter_id)
+    } else {
+      setGroups([])
+      setFormData(prev => ({ ...prev, target_type: 'chapter', group_id: '' }))
+    }
+  }, [formData.chapter_id])
+
+  const loadGroups = async (chapterId) => {
+    setLoadingGroups(true)
+    try {
+      const res = await fetch(`/api/admin/groups?chapterId=${chapterId}`)
+      const data = await res.json()
+      setGroups(data.groups || [])
+    } catch {
+      setGroups([])
+    } finally {
+      setLoadingGroups(false)
+    }
+  }
+
   const handleChange = (e) => {
     const { name, value, type, checked } = e.target
     setFormData(prev => ({
@@ -129,7 +157,8 @@ export default function CreateEventPage() {
         rsvp_deadline: formData.rsvp_deadline || null,
         start_time: formData.is_all_day ? null : formData.start_time || null,
         end_time: formData.is_all_day ? null : formData.end_time || null,
-        end_date: formData.end_date || null
+        end_date: formData.end_date || null,
+        group_id: formData.target_type === 'group' ? formData.group_id : null,
       }
 
       // Add recurrence data if enabled
@@ -425,6 +454,94 @@ export default function CreateEventPage() {
                   onChange={(value) => setFormData(prev => ({ ...prev, chapter_id: value }))}
                   required
                 />
+              </div>
+            </div>
+
+            {/* Audience */}
+            {formData.chapter_id && groups.length > 0 && (
+              <div className="bg-white border border-stone-200 rounded">
+                <div className="px-4 py-3 border-b border-stone-200">
+                  <h2 className="text-sm font-semibold text-gray-900">Audience</h2>
+                </div>
+                <div className="p-4 space-y-3">
+                  <label className="flex items-center gap-2 cursor-pointer">
+                    <input
+                      type="radio"
+                      name="target_type"
+                      value="chapter"
+                      checked={formData.target_type === 'chapter'}
+                      onChange={handleChange}
+                      className="w-4 h-4 text-labor-red border-gray-300 focus:ring-labor-red"
+                    />
+                    <span className="text-sm text-gray-700">Entire Chapter</span>
+                  </label>
+                  <label className="flex items-center gap-2 cursor-pointer">
+                    <input
+                      type="radio"
+                      name="target_type"
+                      value="group"
+                      checked={formData.target_type === 'group'}
+                      onChange={handleChange}
+                      className="w-4 h-4 text-labor-red border-gray-300 focus:ring-labor-red"
+                    />
+                    <span className="text-sm text-gray-700">Chapter Group</span>
+                  </label>
+                  {formData.target_type === 'group' && (
+                    <select
+                      name="group_id"
+                      value={formData.group_id}
+                      onChange={handleChange}
+                      className={inputClass}
+                      required
+                    >
+                      <option value="">Select a group...</option>
+                      {groups.map(g => (
+                        <option key={g.id} value={g.id}>{g.name} ({g.member_count} members)</option>
+                      ))}
+                    </select>
+                  )}
+                  <p className="text-xs text-gray-400">
+                    {formData.target_type === 'group'
+                      ? 'Only group members will be notified.'
+                      : 'All chapter members will be notified.'}
+                  </p>
+                </div>
+              </div>
+            )}
+
+            {/* Visibility */}
+            <div className="bg-white border border-stone-200 rounded">
+              <div className="px-4 py-3 border-b border-stone-200">
+                <h2 className="text-sm font-semibold text-gray-900">Visibility</h2>
+              </div>
+              <div className="p-4 space-y-3">
+                <label className="flex items-center gap-2 cursor-pointer">
+                  <input
+                    type="radio"
+                    name="visibility"
+                    value="public"
+                    checked={formData.visibility === 'public'}
+                    onChange={handleChange}
+                    className="w-4 h-4 text-labor-red border-gray-300 focus:ring-labor-red"
+                  />
+                  <span className="text-sm text-gray-700">Public</span>
+                </label>
+                <label className="flex items-center gap-2 cursor-pointer">
+                  <input
+                    type="radio"
+                    name="visibility"
+                    value="internal"
+                    checked={formData.visibility === 'internal'}
+                    onChange={handleChange}
+                    className="w-4 h-4 text-labor-red border-gray-300 focus:ring-labor-red"
+                  />
+                  <span className="text-sm text-gray-700">Internal (Members Only)</span>
+                </label>
+                <p className="text-xs text-gray-400">
+                  {formData.visibility === 'internal'
+                    ? 'Only visible in the workspace.'
+                    : 'Visible on the public events page.'}
+                </p>
               </div>
             </div>
 
