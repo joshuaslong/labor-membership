@@ -4,8 +4,23 @@ import { useMemo, useEffect, useRef, useCallback } from 'react'
 import dynamic from 'next/dynamic'
 import 'react-quill-new/dist/quill.snow.css'
 
-// Dynamically import ReactQuill to avoid SSR issues
-const ReactQuill = dynamic(() => import('react-quill-new'), { ssr: false })
+// Dynamically import ReactQuill and register Font/Size whitelists
+const ReactQuill = dynamic(
+  () => import('react-quill-new').then((mod) => {
+    const Quill = mod.default.Quill || mod.Quill
+    if (Quill) {
+      const Font = Quill.import('formats/font')
+      Font.whitelist = ['serif', 'monospace']
+      Quill.register(Font, true)
+
+      const Size = Quill.import('formats/size')
+      Size.whitelist = ['small', false, 'large', 'huge']
+      Quill.register(Size, true)
+    }
+    return mod
+  }),
+  { ssr: false }
+)
 
 export default function EmailEditor({ value, onChange, placeholder = 'Enter your message...' }) {
   const editorRef = useRef(null)

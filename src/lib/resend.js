@@ -49,44 +49,27 @@ export function wrapEmailTemplate(content, options = {}) {
 <head>
   <meta charset="utf-8">
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
-  <style>
-    body {
-      font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, 'Helvetica Neue', Arial, sans-serif;
-      line-height: 1.6;
-      color: #374151;
-      max-width: 600px;
-      margin: 0 auto;
-      padding: 20px;
-    }
-    .header {
-      text-align: center;
-      padding-bottom: 20px;
-      border-bottom: 2px solid #E25555;
-      margin-bottom: 24px;
-    }
-    .content {
-      padding: 0 0 24px;
-    }
-    .footer {
-      border-top: 1px solid #e5e7eb;
-      padding-top: 20px;
-      text-align: center;
-      font-size: 12px;
-      color: #9ca3af;
-    }
-    a {
-      color: #E25555;
-    }
-  </style>
 </head>
-<body>
-  <div class="content">
-    ${content}
-  </div>
-  ${includeUnsubscribe ? `<div class="footer">
-    <p>Labor Party</p>
-    <p><a href="${appUrl}/unsubscribe">Unsubscribe</a></p>
-  </div>` : ''}
+<body style="margin: 0; padding: 0; background-color: #f9fafb;">
+  <table role="presentation" width="100%" cellpadding="0" cellspacing="0" style="background-color: #f9fafb;">
+    <tr>
+      <td align="center" style="padding: 20px 0;">
+        <table role="presentation" width="600" cellpadding="0" cellspacing="0" style="max-width: 600px; width: 100%; background-color: #ffffff; font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, 'Helvetica Neue', Arial, sans-serif; line-height: 1.6; color: #374151;">
+          <tr>
+            <td style="padding: 32px 32px 24px;">
+              ${content}
+            </td>
+          </tr>
+          ${includeUnsubscribe ? `<tr>
+            <td style="border-top: 1px solid #e5e7eb; padding: 20px 32px; text-align: center; font-size: 12px; color: #9ca3af;">
+              <p style="margin: 0;">Labor Party</p>
+              <p style="margin: 4px 0 0;"><a href="${appUrl}/unsubscribe" style="color: #E25555;">Unsubscribe</a></p>
+            </td>
+          </tr>` : ''}
+        </table>
+      </td>
+    </tr>
+  </table>
 </body>
 </html>`
 }

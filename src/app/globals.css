@@ -311,8 +311,14 @@
     margin: 0 0 0.5em 0;
     line-height: 1.4;
   }
-  .email-preview p[style*="text-align: center"] {
+  .email-preview .ql-align-center {
     text-align: center;
+  }
+  .email-preview .ql-align-right {
+    text-align: right;
+  }
+  .email-preview .ql-align-justify {
+    text-align: justify;
   }
   .email-preview img {
     height: auto !important;
