@@ -93,7 +93,7 @@ export async function sendNewEventNotifications(event) {
     try {
       const recurrenceText = describeRrule(event.rrule, event.start_date)
       if (recurrenceText) {
-        recurrenceRow = `<tr><td style="padding: 6px 12px 6px 0; color: #6b7280; vertical-align: top; white-space: nowrap;"><strong>Repeats:</strong></td><td style="padding: 6px 0;">${recurrenceText}</td></tr>`
+        recurrenceRow = `<br>\n<strong>Repeats:</strong> ${recurrenceText}`
       }
     } catch (e) {
       // describeRrule may fail for malformed rrules, skip silently
