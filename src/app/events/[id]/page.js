@@ -96,9 +96,9 @@ function EventDetailContent() {
     const eventData = data.event
 
     setEvent(eventData)
-    setIsRecurring(data.is_recurring || false)
-    setRecurrenceDescription(data.recurrence_description || null)
-    setUpcomingInstances(data.upcoming_instances || [])
+    setIsRecurring(eventData.is_recurring || false)
+    setRecurrenceDescription(eventData.recurrence_description || null)
+    setUpcomingInstances(eventData.upcoming_instances || [])
 
     // Determine the instance date for RSVP operations
     const effectiveDate = dateParam || eventData.start_date
@@ -115,7 +115,7 @@ function EventDetailContent() {
     }
 
     // RSVP count comes from API response
-    setRsvpCount(data.rsvp_counts?.attending || 0)
+    setRsvpCount(eventData.rsvp_counts?.attending || 0)
 
     // Get user's RSVP if logged in (for this specific instance)
     if (memberId) {
