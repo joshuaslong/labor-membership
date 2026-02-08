@@ -35,7 +35,7 @@ export async function GET(request) {
     // Get non-recurring published events for today and tomorrow
     const { data: oneTimeEvents } = await supabase
       .from('events')
-      .select('id, title, start_date, start_time, location_name, rrule')
+      .select('id, title, start_date, start_time, location_name, virtual_link, rrule')
       .eq('status', 'published')
       .is('rrule', null)
       .gte('start_date', today)
@@ -44,7 +44,7 @@ export async function GET(request) {
     // Get recurring published events that might have instances in range
     const { data: recurringEvents } = await supabase
       .from('events')
-      .select('id, title, start_date, start_time, location_name, rrule, recurrence_end_date')
+      .select('id, title, start_date, start_time, location_name, virtual_link, rrule, recurrence_end_date')
       .eq('status', 'published')
       .not('rrule', 'is', null)
       .lte('start_date', dayAfterTomorrow)
@@ -155,6 +155,9 @@ async function sendEventReminders(supabase, event, instanceDate, relatedId, temp
     event_date: formatEmailDate(instanceDate),
     event_time: event.start_time ? formatEmailTime(`${instanceDate}T${event.start_time}`) : '',
     event_location: event.location_name || 'TBD',
+    virtual_link_html: event.virtual_link
+      ? `<p><strong>Join Online:</strong> <a href="${event.virtual_link}" style="color: #E25555;">${event.virtual_link}</a></p>`
+      : '',
   }
 
   // Send to members
