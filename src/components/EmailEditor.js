@@ -282,6 +282,8 @@ export default function EmailEditor({ value, onChange, placeholder = 'Enter your
   const modules = useMemo(() => ({
     toolbar: {
       container: [
+        [{ 'font': ['', 'serif', 'monospace'] }],
+        [{ 'size': ['small', false, 'large', 'huge'] }],
         ['bold', 'italic', 'underline'],
         [{ 'header': 1 }, { 'header': 2 }],
         [{ 'list': 'ordered' }, { 'list': 'bullet' }],
@@ -294,6 +296,45 @@ export default function EmailEditor({ value, onChange, placeholder = 'Enter your
           const cursorPosition = this.quill.getSelection()?.index || 0
           this.quill.insertText(cursorPosition, '{$name}')
           this.quill.setSelection(cursorPosition + 7)
+        },
+        'image': function() {
+          const input = document.createElement('input')
+          input.setAttribute('type', 'file')
+          input.setAttribute('accept', 'image/jpeg,image/png,image/gif,image/webp')
+          input.click()
+
+          input.onchange = async () => {
+            const file = input.files?.[0]
+            if (!file) return
+
+            if (file.size > 5 * 1024 * 1024) {
+              alert('Image too large. Maximum 5MB.')
+              return
+            }
+
+            const formData = new FormData()
+            formData.append('image', file)
+
+            try {
+              const res = await fetch('/api/admin/email/upload-image', {
+                method: 'POST',
+                body: formData,
+              })
+
+              if (!res.ok) {
+                const err = await res.json()
+                throw new Error(err.error || 'Upload failed')
+              }
+
+              const { url } = await res.json()
+              const range = this.quill.getSelection(true)
+              this.quill.insertEmbed(range.index, 'image', url)
+              this.quill.setSelection(range.index + 1)
+            } catch (err) {
+              console.error('Image upload failed:', err)
+              alert('Failed to upload image: ' + err.message)
+            }
+          }
         }
       }
     },
@@ -303,6 +344,7 @@ export default function EmailEditor({ value, onChange, placeholder = 'Enter your
   }), [])
 
   const formats = [
+    'font', 'size',
     'bold', 'italic', 'underline',
     'header',
     'list',

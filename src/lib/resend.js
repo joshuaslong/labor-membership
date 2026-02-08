@@ -10,12 +10,23 @@ function getResendClient() {
 }
 
 /**
- * Image alignment is now handled via inline styles directly in the editor
- * This function is kept for backwards compatibility but may be removed
+ * Convert Quill CSS classes to inline styles for email client compatibility.
+ * Email clients (Gmail, Outlook) strip <style> blocks and CSS classes,
+ * so we must inline everything before sending.
  */
-function transformImageAlignment(html) {
-  // Inline styles are already applied by the editor, no transformation needed
+function inlineQuillStyles(html) {
   return html
+    // Text alignment
+    .replace(/class="ql-align-center"/g, 'style="text-align: center;"')
+    .replace(/class="ql-align-right"/g, 'style="text-align: right;"')
+    .replace(/class="ql-align-justify"/g, 'style="text-align: justify;"')
+    // Font families
+    .replace(/class="ql-font-serif"/g, "style=\"font-family: Georgia, Cambria, 'Times New Roman', Times, serif;\"")
+    .replace(/class="ql-font-monospace"/g, "style=\"font-family: 'SFMono-Regular', Consolas, 'Liberation Mono', Menlo, monospace;\"")
+    // Font sizes
+    .replace(/class="ql-size-small"/g, 'style="font-size: 13px;"')
+    .replace(/class="ql-size-large"/g, 'style="font-size: 20px;"')
+    .replace(/class="ql-size-huge"/g, 'style="font-size: 28px;"')
 }
 
 // Use mail.votelabor.org subdomain (verified in Resend)
@@ -92,8 +103,8 @@ export async function sendEmail({
 }) {
   const from = fromName ? `${fromName} <${FROM_DOMAIN}>` : FROM_EMAIL
 
-  // Transform data-align attributes to inline styles for email compatibility
-  const transformedHtml = transformImageAlignment(htmlContent)
+  // Convert Quill CSS classes to inline styles for email compatibility
+  const transformedHtml = inlineQuillStyles(htmlContent)
 
   const { data, error } = await getResendClient().emails.send({
     from,
@@ -138,8 +149,8 @@ export async function sendBatchEmails({
         recipient.firstName || 'Member'
       )
 
-      // Transform data-align attributes to inline styles for email compatibility
-      personalizedContent = transformImageAlignment(personalizedContent)
+      // Convert Quill CSS classes to inline styles for email compatibility
+      personalizedContent = inlineQuillStyles(personalizedContent)
 
       return {
         from,
