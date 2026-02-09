@@ -1,6 +1,6 @@
 import { createClient } from '@/lib/supabase/server'
 import { getCurrentTeamMember } from '@/lib/teamMember'
-import { getEffectiveChapterScope, applyChapterFilter } from '@/lib/chapterScope'
+import { getEffectiveChapterScope, resolveChapterIds, applyChapterFilter } from '@/lib/chapterScope'
 import { redirect } from 'next/navigation'
 import Link from 'next/link'
 import EventsToolbar from '@/components/EventsToolbar'
@@ -20,10 +20,11 @@ export default async function EventsPage({ searchParams: searchParamsPromise }) 
   const to = from + PAGE_SIZE - 1
 
   const scope = await getEffectiveChapterScope(teamMember)
+  const chapterIds = await resolveChapterIds(scope, supabase)
 
-  // Apply shared filters
-  async function applyFilters(q) {
-    q = await applyChapterFilter(q, scope, supabase)
+  // Apply shared filters — synchronous
+  function applyFilters(q) {
+    q = applyChapterFilter(q, chapterIds)
     if (searchParams?.search) {
       const term = `%${searchParams.search}%`
       q = q.ilike('title', term)
@@ -45,7 +46,7 @@ export default async function EventsPage({ searchParams: searchParamsPromise }) 
   let countQuery = supabase
     .from('events')
     .select('id', { count: 'exact', head: true })
-  countQuery = await applyFilters(countQuery)
+  countQuery = applyFilters(countQuery)
   const { count: totalCount } = await countQuery
 
   // Get page of data
@@ -75,7 +76,7 @@ export default async function EventsPage({ searchParams: searchParamsPromise }) 
     .order('start_time', { ascending: false })
     .range(from, to)
 
-  query = await applyFilters(query)
+  query = applyFilters(query)
 
   const { data: events, error } = await query
 

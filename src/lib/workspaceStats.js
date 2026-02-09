@@ -1,5 +1,5 @@
 import { createClient } from '@/lib/supabase/server'
-import { getEffectiveChapterScope, applyChapterFilter } from '@/lib/chapterScope'
+import { getEffectiveChapterScope, resolveChapterIds, applyChapterFilter } from '@/lib/chapterScope'
 
 /**
  * Get stats for workspace home based on user role and selected chapter
@@ -18,6 +18,7 @@ export async function getWorkspaceStats(teamMember) {
 
   const supabase = await createClient()
   const scope = await getEffectiveChapterScope(teamMember)
+  const chapterIds = await resolveChapterIds(scope, supabase)
 
   // Format date for event query
   const startOfMonth = new Date()
@@ -27,16 +28,16 @@ export async function getWorkspaceStats(teamMember) {
 
   // Build queries, applying chapter filter to each
   let memberQuery = supabase.from('members').select('id', { count: 'exact', head: true })
-  memberQuery = await applyChapterFilter(memberQuery, scope, supabase)
+  memberQuery = applyChapterFilter(memberQuery, chapterIds)
 
   let pendingQuery = supabase.from('members').select('id', { count: 'exact', head: true }).eq('status', 'pending')
-  pendingQuery = await applyChapterFilter(pendingQuery, scope, supabase)
+  pendingQuery = applyChapterFilter(pendingQuery, chapterIds)
 
   let eventQuery = supabase
     .from('events')
     .select('id', { count: 'exact', head: true })
     .gte('start_date', startOfMonthDate)
-  eventQuery = await applyChapterFilter(eventQuery, scope, supabase)
+  eventQuery = applyChapterFilter(eventQuery, chapterIds)
 
   const taskQuery = supabase
     .from('tasks')
@@ -75,6 +76,7 @@ export async function getRecentMembers(teamMember, limit = 5) {
 
   const supabase = await createClient()
   const scope = await getEffectiveChapterScope(teamMember)
+  const chapterIds = await resolveChapterIds(scope, supabase)
 
   let query = supabase
     .from('members')
@@ -82,7 +84,7 @@ export async function getRecentMembers(teamMember, limit = 5) {
     .order('joined_date', { ascending: false })
     .limit(limit)
 
-  query = await applyChapterFilter(query, scope, supabase)
+  query = applyChapterFilter(query, chapterIds)
 
   const { data, error } = await query
 

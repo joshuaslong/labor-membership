@@ -33,26 +33,38 @@ export async function getEffectiveChapterScope(teamMember) {
 }
 
 /**
- * Apply chapter scope filtering to a Supabase query.
- * Handles descendant RPC call internally when needed.
+ * Resolve the list of chapter IDs that the scope covers.
+ * Call this once (async), then use the result to filter queries synchronously.
  *
- * @param {Object} query - Supabase query builder
  * @param {null|Object} scope - From getEffectiveChapterScope
  * @param {Object} supabase - Supabase client for RPC calls
- * @param {string} [columnName='chapter_id'] - Column to filter on
- * @returns {Promise<Object>} The filtered query
+ * @returns {Promise<string[]|null>} Array of chapter IDs, or null for no filter
  */
-export async function applyChapterFilter(query, scope, supabase, columnName = 'chapter_id') {
-  if (!scope || !scope.chapterId) return query
+export async function resolveChapterIds(scope, supabase) {
+  if (!scope || !scope.chapterId) return null
 
   if (scope.includeDescendants) {
     const { data: descendants } = await supabase
       .rpc('get_chapter_descendants', { chapter_uuid: scope.chapterId })
-    const ids = [scope.chapterId, ...(descendants?.map(d => d.id) || [])]
-    return query.in(columnName, ids)
+    return [scope.chapterId, ...(descendants?.map(d => d.id) || [])]
   }
 
-  return query.eq(columnName, scope.chapterId)
+  return [scope.chapterId]
+}
+
+/**
+ * Apply chapter ID filtering to a Supabase query (synchronous).
+ * Use resolveChapterIds() first to get the IDs.
+ *
+ * @param {Object} query - Supabase query builder
+ * @param {string[]|null} chapterIds - From resolveChapterIds, or null for no filter
+ * @param {string} [columnName='chapter_id'] - Column to filter on
+ * @returns {Object} The filtered query builder
+ */
+export function applyChapterFilter(query, chapterIds, columnName = 'chapter_id') {
+  if (!chapterIds) return query
+  if (chapterIds.length === 1) return query.eq(columnName, chapterIds[0])
+  return query.in(columnName, chapterIds)
 }
 
 /**

@@ -1,6 +1,6 @@
 import { createClient } from '@/lib/supabase/server'
 import { getCurrentTeamMember } from '@/lib/teamMember'
-import { getEffectiveChapterScope, applyChapterFilter } from '@/lib/chapterScope'
+import { getEffectiveChapterScope, resolveChapterIds, applyChapterFilter } from '@/lib/chapterScope'
 import { redirect } from 'next/navigation'
 import Link from 'next/link'
 import SegmentBadge from '@/components/SegmentBadge'
@@ -20,10 +20,11 @@ export default async function MembersPage({ searchParams: searchParamsPromise })
   const to = from + PAGE_SIZE - 1
 
   const scope = await getEffectiveChapterScope(teamMember)
+  const chapterIds = await resolveChapterIds(scope, supabase)
 
-  // Apply shared filters (chapter scope, search, status)
-  async function applyFilters(q) {
-    q = await applyChapterFilter(q, scope, supabase)
+  // Apply shared filters (chapter scope, search, segment, status) — synchronous
+  function applyFilters(q) {
+    q = applyChapterFilter(q, chapterIds)
     if (searchParams?.search) {
       const term = `%${searchParams.search}%`
       q = q.or(`first_name.ilike.${term},last_name.ilike.${term},email.ilike.${term}`)
@@ -41,7 +42,7 @@ export default async function MembersPage({ searchParams: searchParamsPromise })
   let countQuery = searchParams?.segment
     ? supabase.from('members').select('id, member_segments(segment)', { count: 'exact', head: true })
     : supabase.from('members').select('id', { count: 'exact', head: true })
-  countQuery = await applyFilters(countQuery)
+  countQuery = applyFilters(countQuery)
   const { count: totalCount } = await countQuery
 
   // Get page of data
@@ -61,7 +62,7 @@ export default async function MembersPage({ searchParams: searchParamsPromise })
     .order('joined_date', { ascending: false })
     .range(from, to)
 
-  query = await applyFilters(query)
+  query = applyFilters(query)
 
   const { data: members, error } = await query
 
@@ -109,7 +110,7 @@ export default async function MembersPage({ searchParams: searchParamsPromise })
     if (searchParams?.status) params.set('status', searchParams.status)
     if (p > 1) params.set('page', String(p))
     const qs = params.toString()
-    return qs ? `/members?${qs}` : '/members'
+    return qs ? `/workspace/members?${qs}` : '/workspace/members'
   }
 
   return (
@@ -149,7 +150,7 @@ export default async function MembersPage({ searchParams: searchParamsPromise })
               {members.map(member => (
                 <tr key={member.id} className="hover:bg-stone-50">
                   <td className="px-4 py-3 text-sm">
-                    <Link href={`/members/${member.id}`} className="text-gray-900 hover:text-labor-red">
+                    <Link href={`/workspace/members/${member.id}`} className="text-gray-900 hover:text-labor-red">
                       {member.first_name} {member.last_name}
                     </Link>
                   </td>

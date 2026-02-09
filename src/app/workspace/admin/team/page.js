@@ -1,6 +1,6 @@
 import { createClient, createAdminClient } from '@/lib/supabase/server'
 import { getCurrentTeamMember } from '@/lib/teamMember'
-import { getEffectiveChapterScope, applyChapterFilter } from '@/lib/chapterScope'
+import { getEffectiveChapterScope, resolveChapterIds, applyChapterFilter } from '@/lib/chapterScope'
 import { redirect } from 'next/navigation'
 import Link from 'next/link'
 
@@ -46,6 +46,7 @@ export default async function TeamPage({ searchParams: searchParamsPromise }) {
   const to = from + PAGE_SIZE - 1
 
   const scope = await getEffectiveChapterScope(teamMember)
+  const chapterIds = await resolveChapterIds(scope, supabase)
 
   let query = supabase
     .from('team_members')
@@ -62,7 +63,7 @@ export default async function TeamPage({ searchParams: searchParamsPromise }) {
     .order('created_at', { ascending: false })
     .range(from, to)
 
-  query = await applyChapterFilter(query, scope, supabase)
+  query = applyChapterFilter(query, chapterIds)
 
   if (searchParams?.role) {
     query = query.contains('roles', [searchParams.role])
