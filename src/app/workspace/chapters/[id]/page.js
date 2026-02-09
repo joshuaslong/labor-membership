@@ -92,6 +92,30 @@ export default async function WorkspaceChapterDetailPage({ params }) {
     .order('created_at', { ascending: false })
     .limit(5)
 
+  // Get chapter groups
+  const { data: groups } = await supabase
+    .from('chapter_groups')
+    .select('id, name, description')
+    .eq('chapter_id', id)
+    .order('name')
+
+  // Get member counts per group
+  let groupsWithCounts = groups || []
+  if (groups && groups.length > 0) {
+    const { data: assignments } = await supabase
+      .from('member_group_assignments')
+      .select('group_id')
+      .in('group_id', groups.map(g => g.id))
+
+    if (assignments) {
+      const countMap = {}
+      for (const a of assignments) {
+        countMap[a.group_id] = (countMap[a.group_id] || 0) + 1
+      }
+      groupsWithCounts = groups.map(g => ({ ...g, memberCount: countMap[g.id] || 0 }))
+    }
+  }
+
   // Get recent resources/files for this chapter
   const { data: resources } = await supabase
     .from('files')
@@ -282,6 +306,40 @@ export default async function WorkspaceChapterDetailPage({ params }) {
               </ul>
             ) : (
               <div className="px-4 py-6 text-center text-sm text-gray-500">No polls</div>
+            )}
+          </div>
+
+          {/* Groups */}
+          <div className="bg-white border border-stone-200 rounded">
+            <div className="px-4 py-3 border-b border-stone-200 flex items-center justify-between">
+              <h2 className="text-sm font-semibold text-gray-900 uppercase tracking-wide">Groups</h2>
+              {userIsAdmin && (
+                <Link href={`/admin/groups?chapter=${id}`} className="text-xs text-gray-500 hover:text-gray-700">Manage</Link>
+              )}
+            </div>
+            {groupsWithCounts.length > 0 ? (
+              <ul className="divide-y divide-stone-100">
+                {groupsWithCounts.map(group => (
+                  <li key={group.id} className="px-4 py-2.5">
+                    <div className="flex items-center justify-between">
+                      <p className="text-sm font-medium text-gray-900 truncate">{group.name}</p>
+                      <span className="text-xs text-gray-400 shrink-0 ml-2">
+                        {group.memberCount} member{group.memberCount !== 1 ? 's' : ''}
+                      </span>
+                    </div>
+                    {group.description && (
+                      <p className="text-xs text-gray-500 truncate mt-0.5">{group.description}</p>
+                    )}
+                  </li>
+                ))}
+              </ul>
+            ) : (
+              <div className="px-4 py-6 text-center text-sm text-gray-500">
+                No groups
+                {userIsAdmin && (
+                  <> — <Link href={`/admin/groups?chapter=${id}`} className="text-labor-red hover:underline">create one</Link></>
+                )}
+              </div>
             )}
           </div>
 
