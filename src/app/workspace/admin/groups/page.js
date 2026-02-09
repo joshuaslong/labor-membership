@@ -3,6 +3,7 @@
 import { useState, useEffect } from 'react'
 import { useSearchParams } from 'next/navigation'
 import { createClient } from '@/lib/supabase/client'
+import ChapterSelect from '@/components/ChapterSelect'
 
 export default function WorkspaceGroupsPage() {
   const searchParams = useSearchParams()
@@ -291,20 +292,17 @@ export default function WorkspaceGroupsPage() {
         <label className="block text-xs font-medium text-gray-500 uppercase tracking-wide mb-1">
           Select Chapter
         </label>
-        <select
-          value={selectedChapterId}
-          onChange={(e) => {
-            setSelectedChapterId(e.target.value)
-            setManagingGroup(null)
-            resetForm()
-          }}
-          className="w-full max-w-sm px-3 py-2 text-sm border border-stone-200 rounded bg-white text-gray-900 focus:outline-none focus:ring-1 focus:ring-labor-red focus:border-labor-red"
-        >
-          <option value="">Choose a chapter...</option>
-          {chapters.map(ch => (
-            <option key={ch.id} value={ch.id}>{ch.name}</option>
-          ))}
-        </select>
+        <div className="max-w-sm">
+          <ChapterSelect
+            chapters={chapters}
+            value={selectedChapterId}
+            onChange={(id) => {
+              setSelectedChapterId(id)
+              setManagingGroup(null)
+              resetForm()
+            }}
+          />
+        </div>
       </div>
 
       {selectedChapterId && (
