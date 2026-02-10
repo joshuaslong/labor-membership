@@ -58,20 +58,25 @@ export default async function WorkspaceChapterDetailPage({ params }) {
     .eq('parent_id', id)
     .order('name')
 
-  // Get member count for this chapter
+  // Get member count for this chapter (includes members from sub-chapters via member_chapters)
   const { count: memberCount } = await supabase
-    .from('members')
-    .select('id', { count: 'exact', head: true })
+    .from('member_chapters')
+    .select('member_id, members!inner(status)', { count: 'exact', head: true })
     .eq('chapter_id', id)
-    .eq('status', 'active')
+    .eq('members.status', 'active')
 
-  // Get recent members
-  const { data: recentMembers } = await supabase
-    .from('members')
-    .select('id, first_name, last_name, email, status, joined_date')
+  // Get recent members (includes members from sub-chapters via member_chapters)
+  const { data: recentMemberRows } = await supabase
+    .from('member_chapters')
+    .select('members!inner(id, first_name, last_name, email, status, joined_date)')
     .eq('chapter_id', id)
-    .order('joined_date', { ascending: false })
-    .limit(10)
+    .eq('members.status', 'active')
+
+  const recentMembers = (recentMemberRows || [])
+    .map(r => r.members)
+    .filter(Boolean)
+    .sort((a, b) => new Date(b.joined_date) - new Date(a.joined_date))
+    .slice(0, 10)
 
   // Get upcoming events for this chapter
   const now = new Date().toISOString().split('T')[0]
