@@ -85,16 +85,23 @@ export default async function EventsPage({ searchParams: searchParamsPromise }) 
     throw new Error('Failed to load events')
   }
 
-  // Get RSVP counts for these events
+  // Get RSVP counts for these events (member + guest RSVPs)
   const eventIds = events?.map(e => e.id) || []
   let rsvpCounts = {}
   if (eventIds.length > 0) {
-    const { data: rsvps } = await supabase
-      .from('event_rsvps')
-      .select('event_id, status')
-      .in('event_id', eventIds)
+    const [{ data: memberRsvps }, { data: guestRsvps }] = await Promise.all([
+      supabase
+        .from('event_rsvps')
+        .select('event_id, status')
+        .in('event_id', eventIds),
+      supabase
+        .from('event_guest_rsvps')
+        .select('event_id, status')
+        .in('event_id', eventIds),
+    ])
 
-    rsvpCounts = (rsvps || []).reduce((acc, r) => {
+    const allRsvps = [...(memberRsvps || []), ...(guestRsvps || [])]
+    rsvpCounts = allRsvps.reduce((acc, r) => {
       if (!acc[r.event_id]) acc[r.event_id] = { attending: 0, maybe: 0 }
       if (r.status === 'attending') acc[r.event_id].attending++
       else if (r.status === 'maybe') acc[r.event_id].maybe++
