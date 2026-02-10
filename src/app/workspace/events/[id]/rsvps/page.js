@@ -246,13 +246,20 @@ export default function EventRSVPsPage({ params }) {
               filteredRSVPs.map((rsvp) => (
                 <tr key={rsvp.id} className="hover:bg-stone-50">
                   <td className="px-4 py-3 text-sm text-gray-900">
-                    {rsvp.members ? (
+                    {rsvp.members?.id ? (
                       <Link
                         href={`/workspace/members/${rsvp.members.id}`}
                         className="hover:text-labor-red"
                       >
                         {rsvp.members.first_name} {rsvp.members.last_name}
                       </Link>
+                    ) : rsvp.members ? (
+                      <span className="flex items-center gap-1.5">
+                        {rsvp.members.first_name} {rsvp.members.last_name}
+                        {rsvp.is_guest && (
+                          <span className="inline-flex items-center px-1.5 py-0.5 rounded text-xs font-medium bg-purple-50 text-purple-700 border border-purple-200">Guest</span>
+                        )}
+                      </span>
                     ) : (
                       <span className="text-gray-400">Unknown</span>
                     )}

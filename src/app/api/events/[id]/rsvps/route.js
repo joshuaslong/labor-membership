@@ -49,8 +49,8 @@ export async function GET(request, { params }) {
       }
     }
 
-    // Get RSVPs with member info
-    const { data: rsvps, error } = await adminClient
+    // Get member RSVPs
+    const { data: memberRsvps, error } = await adminClient
       .from('event_rsvps')
       .select(`
         id,
@@ -72,6 +72,37 @@ export async function GET(request, { params }) {
 
     if (error) throw error
 
+    // Get guest RSVPs
+    const { data: guestRsvps, error: guestError } = await adminClient
+      .from('event_guest_rsvps')
+      .select('id, name, email, status, created_at, instance_date')
+      .eq('event_id', id)
+      .order('created_at', { ascending: false })
+
+    if (guestError) throw guestError
+
+    // Normalize guest RSVPs to match member RSVP shape
+    const normalizedGuests = (guestRsvps || []).map(g => ({
+      id: g.id,
+      status: g.status,
+      guest_count: 0,
+      notes: null,
+      created_at: g.created_at,
+      updated_at: null,
+      is_guest: true,
+      members: {
+        id: null,
+        first_name: g.name.split(' ')[0] || g.name,
+        last_name: g.name.split(' ').slice(1).join(' ') || '',
+        email: g.email,
+        phone: null
+      }
+    }))
+
+    // Combine both lists
+    const rsvps = [...(memberRsvps || []), ...normalizedGuests]
+      .sort((a, b) => new Date(b.created_at) - new Date(a.created_at))
+
     // Group by status
     const grouped = {
       attending: rsvps.filter(r => r.status === 'attending'),
@@ -79,7 +110,7 @@ export async function GET(request, { params }) {
       declined: rsvps.filter(r => r.status === 'declined')
     }
 
-    // Calculate totals (including guests)
+    // Calculate totals (including +guests from member RSVPs)
     const totals = {
       attending: grouped.attending.reduce((sum, r) => sum + 1 + (r.guest_count || 0), 0),
       maybe: grouped.maybe.reduce((sum, r) => sum + 1 + (r.guest_count || 0), 0),
