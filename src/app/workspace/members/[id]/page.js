@@ -4,6 +4,7 @@ import { useState, useEffect, useRef } from 'react'
 import { useParams, useRouter } from 'next/navigation'
 import Link from 'next/link'
 import { createClient } from '@/lib/supabase/client'
+import ChapterSelect from '@/components/ChapterSelect'
 
 const statusBadgeColor = {
   pending: 'text-amber-700 bg-amber-50 border-amber-200',
@@ -419,22 +420,13 @@ export default function MemberDetailPage() {
               <div>
                 <label className="block text-xs font-medium text-gray-500 uppercase tracking-wide mb-1">Primary Chapter</label>
                 <div className="flex gap-2">
-                  <select
-                    value={selectedChapter}
-                    onChange={(e) => setSelectedChapter(e.target.value)}
-                    className={`${inputClass} flex-1`}
-                  >
-                    <option value="">No chapter assigned</option>
-                    {['national', 'state', 'county', 'city'].map(level => (
-                      groupedChapters[level]?.length > 0 && (
-                        <optgroup key={level} label={level.charAt(0).toUpperCase() + level.slice(1)}>
-                          {groupedChapters[level].map(c => (
-                            <option key={c.id} value={c.id}>{c.name}</option>
-                          ))}
-                        </optgroup>
-                      )
-                    ))}
-                  </select>
+                  <div className="flex-1">
+                    <ChapterSelect
+                      chapters={chapters}
+                      value={selectedChapter}
+                      onChange={(id) => setSelectedChapter(id)}
+                    />
+                  </div>
                   <button
                     onClick={handleChapterChange}
                     disabled={saving || selectedChapter === member.chapter_id}
