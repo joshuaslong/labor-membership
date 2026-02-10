@@ -1,4 +1,4 @@
-import { createClient } from '@/lib/supabase/server'
+import { createClient, createAdminClient } from '@/lib/supabase/server'
 import { getCurrentTeamMember } from '@/lib/teamMember'
 import { getEffectiveChapterScope, resolveChapterIds, applyChapterFilter } from '@/lib/chapterScope'
 import { redirect } from 'next/navigation'
@@ -86,15 +86,17 @@ export default async function EventsPage({ searchParams: searchParamsPromise }) 
   }
 
   // Get RSVP counts for these events (member + guest RSVPs)
+  // Use admin client to bypass RLS for accurate counts
+  const adminClient = createAdminClient()
   const eventIds = events?.map(e => e.id) || []
   let rsvpCounts = {}
   if (eventIds.length > 0) {
     const [{ data: memberRsvps }, { data: guestRsvps }] = await Promise.all([
-      supabase
+      adminClient
         .from('event_rsvps')
         .select('event_id, status')
         .in('event_id', eventIds),
-      supabase
+      adminClient
         .from('event_guest_rsvps')
         .select('event_id, status')
         .in('event_id', eventIds),
