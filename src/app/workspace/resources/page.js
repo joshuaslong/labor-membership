@@ -1,7 +1,6 @@
 import { redirect } from 'next/navigation'
 import { getCurrentTeamMember } from '@/lib/teamMember'
 import { hasRole } from '@/lib/permissions'
-import { getEffectiveChapterScope } from '@/lib/chapterScope'
 import ResourceBrowser from './ResourceBrowser'
 
 export default async function WorkspaceResourcesPage() {
@@ -24,14 +23,13 @@ export default async function WorkspaceResourcesPage() {
     allowedBuckets.push('internal-docs')
   }
 
-  // Use selected chapter from switcher, fall back to team member's chapter
-  const scope = await getEffectiveChapterScope(teamMember)
-  const effectiveChapterId = scope?.chapterId || null
-
+  // Don't pass chapterId — the files API already handles access control
+  // via access_tier filtering based on admin role and chapter jurisdiction.
+  // Passing chapterId would over-filter and hide files with null or
+  // different chapter_id (e.g. public bucket uploads).
   return (
     <ResourceBrowser
       allowedBuckets={allowedBuckets}
-      chapterId={effectiveChapterId}
     />
   )
 }
