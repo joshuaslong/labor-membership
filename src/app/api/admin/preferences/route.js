@@ -10,15 +10,14 @@ export async function GET() {
     return NextResponse.json({ error: 'Unauthorized' }, { status: 401 })
   }
 
-  // Verify user is an admin
-  const { data: adminUser } = await supabase
+  // Verify user is an admin (user may have multiple admin records)
+  const { data: adminRecords } = await supabase
     .from('admin_users')
     .select('id')
     .eq('user_id', user.id)
     .limit(1)
-    .single()
 
-  if (!adminUser) {
+  if (!adminRecords || adminRecords.length === 0) {
     return NextResponse.json({ error: 'Not an admin' }, { status: 403 })
   }
 
@@ -47,15 +46,14 @@ export async function PUT(request) {
     return NextResponse.json({ error: 'Unauthorized' }, { status: 401 })
   }
 
-  // Verify user is an admin
-  const { data: adminUser } = await supabase
+  // Verify user is an admin (user may have multiple admin records)
+  const { data: adminRecords } = await supabase
     .from('admin_users')
     .select('id')
     .eq('user_id', user.id)
     .limit(1)
-    .single()
 
-  if (!adminUser) {
+  if (!adminRecords || adminRecords.length === 0) {
     return NextResponse.json({ error: 'Not an admin' }, { status: 403 })
   }
 

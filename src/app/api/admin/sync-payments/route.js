@@ -4,22 +4,23 @@ import { stripe } from '@/lib/stripe'
 
 async function getAdminRoles(adminClient, userId) {
   // Check team_members first, then fall back to admin_users
-  const { data: teamMember } = await adminClient
+  const { data: teamMembers } = await adminClient
     .from('team_members')
     .select('roles')
     .eq('user_id', userId)
     .eq('active', true)
-    .single()
 
-  if (teamMember?.roles?.length) return teamMember.roles
+  // Combine roles from all active team_member records
+  const tmRoles = (teamMembers || []).flatMap(tm => tm.roles || [])
+  if (tmRoles.length > 0) return [...new Set(tmRoles)]
 
-  const { data: adminUser } = await adminClient
+  // Fall back to admin_users (user may have multiple records)
+  const { data: adminUsers } = await adminClient
     .from('admin_users')
     .select('role')
     .eq('user_id', userId)
-    .single()
 
-  return adminUser ? [adminUser.role] : []
+  return (adminUsers || []).map(a => a.role)
 }
 
 // POST - Sync all Stripe payments to database

@@ -164,7 +164,7 @@ export async function POST(request) {
     const adminClient = createAdminClient()
     const { data: adminRecords } = await adminClient
       .from('admin_users')
-      .select('role')
+      .select('id, role')
       .eq('user_id', user.id)
 
     // Check if any admin record has sufficient permissions
@@ -174,13 +174,7 @@ export async function POST(request) {
     }
 
     // Get admin user ID for segment applied_by tracking
-    const adminUserId = adminRecords?.[0] ? (await adminClient
-      .from('admin_users')
-      .select('id')
-      .eq('user_id', user.id)
-      .limit(1)
-      .single()
-    ).data?.id : null
+    const adminUserId = adminRecords?.[0]?.id || null
 
     // Get CSV data from request
     const formData = await request.formData()
