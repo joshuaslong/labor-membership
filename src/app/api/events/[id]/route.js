@@ -140,14 +140,13 @@ export async function GET(request, { params }) {
         userRsvp = rsvp
       }
 
-      // Check if user is admin
-      const { data: admin } = await adminClient
+      // Check if user is admin (may have multiple records)
+      const { data: adminRecords } = await adminClient
         .from('admin_users')
         .select('id, role, chapter_id')
         .eq('user_id', user.id)
-        .single()
 
-      if (admin) {
+      if (adminRecords && adminRecords.length > 0) {
         isAdmin = true
       }
     }
@@ -204,16 +203,22 @@ export async function PUT(request, { params }) {
 
     const adminClient = createAdminClient()
 
-    // Verify admin access
-    const { data: currentAdmin } = await adminClient
+    // Verify admin access (user may have multiple admin records)
+    const { data: adminRecords } = await adminClient
       .from('admin_users')
       .select('id, role, chapter_id')
       .eq('user_id', user.id)
-      .single()
 
-    if (!currentAdmin) {
+    if (!adminRecords || adminRecords.length === 0) {
       return NextResponse.json({ error: 'Not an admin' }, { status: 403 })
     }
+
+    const roleHierarchy = ['super_admin', 'national_admin', 'state_admin', 'county_admin', 'city_admin']
+    const currentAdmin = adminRecords.reduce((highest, current) => {
+      const currentIndex = roleHierarchy.indexOf(current.role)
+      const highestIndex = roleHierarchy.indexOf(highest.role)
+      return currentIndex < highestIndex ? current : highest
+    }, adminRecords[0])
 
     // Get the existing event
     const { data: existingEvent } = await adminClient
@@ -492,15 +497,21 @@ export async function DELETE(request, { params }) {
     const adminClient = createAdminClient()
 
     // Verify admin access
-    const { data: currentAdmin } = await adminClient
+    const { data: deleteAdminRecords } = await adminClient
       .from('admin_users')
       .select('id, role, chapter_id')
       .eq('user_id', user.id)
-      .single()
 
-    if (!currentAdmin) {
+    if (!deleteAdminRecords || deleteAdminRecords.length === 0) {
       return NextResponse.json({ error: 'Not an admin' }, { status: 403 })
     }
+
+    const deleteRoleHierarchy = ['super_admin', 'national_admin', 'state_admin', 'county_admin', 'city_admin']
+    const currentAdmin = deleteAdminRecords.reduce((highest, current) => {
+      const currentIndex = deleteRoleHierarchy.indexOf(current.role)
+      const highestIndex = deleteRoleHierarchy.indexOf(highest.role)
+      return currentIndex < highestIndex ? current : highest
+    }, deleteAdminRecords[0])
 
     // Get the event to check chapter access
     const { data: existingEvent } = await adminClient

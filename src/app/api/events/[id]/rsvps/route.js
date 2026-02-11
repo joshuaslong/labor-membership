@@ -14,16 +14,22 @@ export async function GET(request, { params }) {
 
     const adminClient = createAdminClient()
 
-    // Verify admin access
-    const { data: currentAdmin } = await adminClient
+    // Verify admin access (user may have multiple admin records)
+    const { data: adminRecords } = await adminClient
       .from('admin_users')
       .select('id, role, chapter_id')
       .eq('user_id', user.id)
-      .single()
 
-    if (!currentAdmin) {
+    if (!adminRecords || adminRecords.length === 0) {
       return NextResponse.json({ error: 'Not an admin' }, { status: 403 })
     }
+
+    const roleHierarchy = ['super_admin', 'national_admin', 'state_admin', 'county_admin', 'city_admin']
+    const currentAdmin = adminRecords.reduce((highest, current) => {
+      const currentIndex = roleHierarchy.indexOf(current.role)
+      const highestIndex = roleHierarchy.indexOf(highest.role)
+      return currentIndex < highestIndex ? current : highest
+    }, adminRecords[0])
 
     // Get the event to check chapter access
     const { data: event } = await adminClient
