@@ -102,8 +102,29 @@ export default function TaskDetailPage({ params }) {
     const supabase = createClient()
     const { data } = await supabase
       .from('team_members')
-      .select('id, member:members(first_name, last_name)')
+      .select('id, user_id, member:members(first_name, last_name)')
       .order('created_at')
+
+    // For team members without member_id linked, look up by user_id
+    const needsLookup = (data || []).filter(tm => !tm.member && tm.user_id)
+    if (needsLookup.length > 0) {
+      const userIds = needsLookup.map(tm => tm.user_id)
+      const { data: members } = await supabase
+        .from('members')
+        .select('user_id, first_name, last_name')
+        .in('user_id', userIds)
+
+      const memberByUserId = {}
+      for (const m of (members || [])) {
+        memberByUserId[m.user_id] = { first_name: m.first_name, last_name: m.last_name }
+      }
+
+      for (const tm of data) {
+        if (!tm.member && memberByUserId[tm.user_id]) {
+          tm.member = memberByUserId[tm.user_id]
+        }
+      }
+    }
 
     setTeamMembers(data || [])
   }
