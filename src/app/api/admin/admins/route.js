@@ -84,7 +84,10 @@ export async function GET(request) {
       let canManage = false
       if (currentAdmin.role === 'super_admin') {
         canManage = true
-      } else if (currentAdmin.role !== 'national_admin' && admin.chapter_id) {
+      } else if (['national_admin'].includes(currentAdmin.role)) {
+        // National admins can manage state/county/city admins
+        canManage = !['super_admin', 'national_admin'].includes(admin.role)
+      } else if (admin.chapter_id) {
         // Can manage if admin's chapter is in our jurisdiction
         // and they're not a super_admin or national_admin
         canManage = descendantIds.has(admin.chapter_id) &&
@@ -182,10 +185,6 @@ export async function POST(request) {
     }
 
     // Check if current admin can manage the target chapter
-    // national_admin cannot create any admins
-    if (currentAdmin.role === 'national_admin') {
-      return NextResponse.json({ error: 'National admins cannot manage other admins' }, { status: 403 })
-    }
     if (currentAdmin.role !== 'super_admin') {
       const { data: canManage } = await adminClient
         .rpc('can_manage_chapter', {
@@ -301,11 +300,6 @@ export async function PUT(request) {
     // Only super_admin can update super_admin or national_admin
     if (['super_admin', 'national_admin'].includes(targetAdmin.role) && currentAdmin.role !== 'super_admin') {
       return NextResponse.json({ error: 'Cannot modify this admin type' }, { status: 403 })
-    }
-
-    // national_admin cannot modify any admins
-    if (currentAdmin.role === 'national_admin') {
-      return NextResponse.json({ error: 'National admins cannot manage other admins' }, { status: 403 })
     }
 
     // Only super_admin can set national_admin role
@@ -431,11 +425,6 @@ export async function DELETE(request) {
     // Can't delete super_admins or national_admins unless you're a super_admin
     if (['super_admin', 'national_admin'].includes(targetAdmin.role) && currentAdmin.role !== 'super_admin') {
       return NextResponse.json({ error: 'Cannot remove this admin type' }, { status: 403 })
-    }
-
-    // national_admin cannot delete any admins
-    if (currentAdmin.role === 'national_admin') {
-      return NextResponse.json({ error: 'National admins cannot manage other admins' }, { status: 403 })
     }
 
     // Check permissions
