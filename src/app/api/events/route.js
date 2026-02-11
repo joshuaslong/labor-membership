@@ -272,6 +272,7 @@ export async function POST(request) {
       target_type,
       group_id,
       visibility,
+      send_notification,
     } = body
 
     if (!chapter_id || !title || !start_date) {
@@ -354,7 +355,7 @@ export async function POST(request) {
     if (error) throw error
 
     // Send notifications if event is published
-    if (event.status === 'published') {
+    if (event.status === 'published' && send_notification !== false) {
       after(async () => {
         try {
           await sendNewEventNotifications(event)

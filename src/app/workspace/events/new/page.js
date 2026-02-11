@@ -46,6 +46,7 @@ export default function CreateEventPage() {
     target_type: 'chapter',
     group_id: '',
     visibility: 'public',
+    send_notification: true,
   })
 
   const [recurrenceData, setRecurrenceData] = useState({
@@ -159,6 +160,7 @@ export default function CreateEventPage() {
         end_time: formData.is_all_day ? null : formData.end_time || null,
         end_date: formData.end_date || null,
         group_id: formData.target_type === 'group' ? formData.group_id : null,
+        send_notification: formData.send_notification,
       }
 
       // Add recurrence data if enabled
@@ -566,6 +568,22 @@ export default function CreateEventPage() {
                     Draft events are only visible to admins.
                   </p>
                 </div>
+
+                {formData.status === 'published' && (
+                  <div className="flex items-center gap-2">
+                    <input
+                      type="checkbox"
+                      id="send_notification"
+                      name="send_notification"
+                      checked={formData.send_notification}
+                      onChange={handleChange}
+                      className="w-4 h-4 text-labor-red border-gray-300 rounded focus:ring-labor-red"
+                    />
+                    <label htmlFor="send_notification" className="text-sm text-gray-700">
+                      Send notification emails to members
+                    </label>
+                  </div>
+                )}
 
                 <div>
                   <label className={labelClass}>Max Attendees</label>

@@ -276,6 +276,7 @@ export async function PUT(request, { params }) {
       target_type,
       group_id,
       visibility,
+      send_notification,
     } = body
 
     const isRecurring = !!existingEvent.rrule
@@ -465,7 +466,7 @@ export async function PUT(request, { params }) {
     if (updateError) throw updateError
 
     // Send notifications if event was just published
-    if (event.status === 'published' && previousStatus !== 'published') {
+    if (event.status === 'published' && previousStatus !== 'published' && send_notification !== false) {
       after(async () => {
         try {
           await sendNewEventNotifications(event)

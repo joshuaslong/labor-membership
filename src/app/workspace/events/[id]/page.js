@@ -50,6 +50,7 @@ export default function EditEventPage({ params }) {
     target_type: 'chapter',
     group_id: '',
     visibility: 'public',
+    send_notification: false,
   })
 
   const [recurrenceData, setRecurrenceData] = useState({
@@ -659,6 +660,22 @@ export default function EditEventPage({ params }) {
                     <option value="cancelled">Cancelled</option>
                   </select>
                 </div>
+
+                {formData.status === 'published' && (
+                  <div className="flex items-center gap-2">
+                    <input
+                      type="checkbox"
+                      id="send_notification"
+                      name="send_notification"
+                      checked={formData.send_notification}
+                      onChange={handleChange}
+                      className="w-4 h-4 text-labor-red border-gray-300 rounded focus:ring-labor-red"
+                    />
+                    <label htmlFor="send_notification" className="text-sm text-gray-700">
+                      Send notification emails to members
+                    </label>
+                  </div>
+                )}
 
                 <div>
                   <label className={labelClass}>Max Attendees</label>

@@ -40,7 +40,7 @@ function EmailComposerLayout({
 
         {/* Right column - Preview (desktop) */}
         <div className="hidden lg:block w-[480px] border-l border-stone-200 bg-stone-50">
-          <div className="sticky top-[61px] h-[calc(100vh-61px)] overflow-y-auto">
+          <div>
             <div className="p-6">
               <div className="text-xs font-medium text-stone-500 uppercase tracking-wide mb-3">
                 Preview
