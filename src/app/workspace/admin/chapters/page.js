@@ -25,7 +25,7 @@ export default async function ChaptersPage() {
   // Get member counts — fetch all rows (default limit is 1000 which truncates)
   let allMemberChapters = []
   let from = 0
-  const batchSize = 5000
+  const batchSize = 1000 // PostgREST server caps at 1000 rows per request
   while (true) {
     const { data: batch } = await supabase
       .from('member_chapters')
