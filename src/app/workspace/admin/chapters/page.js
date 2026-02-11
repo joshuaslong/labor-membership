@@ -22,15 +22,26 @@ export default async function ChaptersPage() {
     .order('level')
     .order('name')
 
-  // Get member counts
-  const { data: memberCounts } = await supabase
-    .from('member_chapters')
-    .select('chapter_id, is_primary, members!inner(status)')
-    .eq('members.status', 'active')
+  // Get member counts — fetch all rows (default limit is 1000 which truncates)
+  let allMemberChapters = []
+  let from = 0
+  const batchSize = 5000
+  while (true) {
+    const { data: batch } = await supabase
+      .from('member_chapters')
+      .select('chapter_id, is_primary, members!inner(status)')
+      .eq('members.status', 'active')
+      .range(from, from + batchSize - 1)
+
+    if (!batch || batch.length === 0) break
+    allMemberChapters.push(...batch)
+    if (batch.length < batchSize) break
+    from += batchSize
+  }
 
   const countMap = {}
   const primaryCountMap = {}
-  memberCounts?.forEach(mc => {
+  allMemberChapters.forEach(mc => {
     countMap[mc.chapter_id] = (countMap[mc.chapter_id] || 0) + 1
     if (mc.is_primary) {
       primaryCountMap[mc.chapter_id] = (primaryCountMap[mc.chapter_id] || 0) + 1
