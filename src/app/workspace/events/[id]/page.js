@@ -727,6 +727,22 @@ export default function EditEventPage({ params }) {
               >
                 {saving ? 'Saving...' : 'Save Changes'}
               </button>
+              {formData.status === 'draft' && (
+                <button
+                  type="button"
+                  disabled={saving}
+                  onClick={() => {
+                    setFormData(prev => ({ ...prev, status: 'published' }))
+                    // Submit after state update via a microtask
+                    setTimeout(() => {
+                      document.querySelector('form')?.requestSubmit()
+                    }, 0)
+                  }}
+                  className="w-full px-4 py-2 text-sm font-medium text-white bg-green-600 rounded hover:bg-green-700 disabled:opacity-50"
+                >
+                  {saving ? 'Publishing...' : 'Save & Publish'}
+                </button>
+              )}
               <button
                 type="button"
                 onClick={() => router.push('/workspace/events')}
