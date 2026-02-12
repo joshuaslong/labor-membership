@@ -5,11 +5,12 @@ import { createPortal } from 'react-dom'
 import { useRouter } from 'next/navigation'
 import Link from 'next/link'
 
-export default function EventRowActions({ eventId, eventTitle }) {
+export default function EventRowActions({ eventId, eventTitle, eventStatus }) {
   const router = useRouter()
   const [isOpen, setIsOpen] = useState(false)
   const [showDeleteModal, setShowDeleteModal] = useState(false)
   const [deleting, setDeleting] = useState(false)
+  const [publishing, setPublishing] = useState(false)
   const [error, setError] = useState(null)
   const [menuPosition, setMenuPosition] = useState({ top: 0, left: 0 })
   const buttonRef = useRef(null)
@@ -41,6 +42,29 @@ export default function EventRowActions({ eventId, eventTitle }) {
     document.addEventListener('mousedown', handleClickOutside)
     return () => document.removeEventListener('mousedown', handleClickOutside)
   }, [])
+
+  const handlePublish = async () => {
+    setPublishing(true)
+    try {
+      const res = await fetch(`/api/events/${eventId}`, {
+        method: 'PUT',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ status: 'published' })
+      })
+
+      if (!res.ok) {
+        const data = await res.json()
+        throw new Error(data.error || 'Failed to publish event')
+      }
+
+      setIsOpen(false)
+      router.refresh()
+    } catch (err) {
+      setError(err.message)
+    } finally {
+      setPublishing(false)
+    }
+  }
 
   const handleDelete = async () => {
     setDeleting(true)
@@ -100,6 +124,15 @@ export default function EventRowActions({ eventId, eventTitle }) {
           >
             Edit
           </Link>
+          {eventStatus === 'draft' && (
+            <button
+              onClick={handlePublish}
+              disabled={publishing}
+              className="block w-full text-left px-4 py-2 text-sm text-green-700 hover:bg-green-50 disabled:opacity-50"
+            >
+              {publishing ? 'Publishing...' : 'Publish'}
+            </button>
+          )}
           <button
             onClick={() => {
               setIsOpen(false)

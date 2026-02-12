@@ -250,7 +250,7 @@ export default async function EventsPage({ searchParams: searchParamsPromise }) 
                       </span>
                     </td>
                     <td className="px-4 py-3 text-sm">
-                      <EventRowActions eventId={event.id} eventTitle={event.title} />
+                      <EventRowActions eventId={event.id} eventTitle={event.title} eventStatus={event.status} />
                     </td>
                   </tr>
                 )
