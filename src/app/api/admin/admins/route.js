@@ -201,7 +201,7 @@ export async function POST(request) {
     let targetUserId = null
     const { data: member } = await adminClient
       .from('members')
-      .select('user_id, email')
+      .select('id, user_id, email')
       .eq('email', email.toLowerCase())
       .single()
 
@@ -213,12 +213,40 @@ export async function POST(request) {
       const authUser = authUsers?.users?.find(u => u.email?.toLowerCase() === email.toLowerCase())
       if (authUser) {
         targetUserId = authUser.id
+        // Link auth user to member record if member exists but wasn't linked
+        if (member && !member.user_id) {
+          await adminClient
+            .from('members')
+            .update({ user_id: authUser.id })
+            .eq('id', member.id)
+        }
       }
+    }
+
+    // If member exists but has no account, invite them via Supabase Auth
+    if (!targetUserId && member) {
+      const { data: inviteData, error: inviteError } = await adminClient.auth.admin.inviteUserByEmail(
+        email.toLowerCase()
+      )
+
+      if (inviteError) {
+        return NextResponse.json({
+          error: `Failed to invite member: ${inviteError.message}`
+        }, { status: 500 })
+      }
+
+      targetUserId = inviteData.user.id
+
+      // Link the new auth user to the member record
+      await adminClient
+        .from('members')
+        .update({ user_id: targetUserId })
+        .eq('id', member.id)
     }
 
     if (!targetUserId) {
       return NextResponse.json({
-        error: 'User not found. They must have an account before being made an admin.'
+        error: 'No member found with this email. Add them as a member first.'
       }, { status: 404 })
     }
 
