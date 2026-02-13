@@ -3,6 +3,7 @@ import { getCurrentTeamMember } from '@/lib/teamMember'
 import { getEffectiveChapterScope, resolveChapterIds, applyChapterFilter } from '@/lib/chapterScope'
 import { redirect } from 'next/navigation'
 import Link from 'next/link'
+import VolunteerRowActions from '@/components/VolunteerRowActions'
 
 const PAGE_SIZE = 50
 
@@ -169,6 +170,7 @@ export default async function VolunteersPage({ searchParams: searchParamsPromise
                 <th scope="col" className="px-4 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wide">Chapter</th>
                 <th scope="col" className="px-4 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wide">Applications</th>
                 <th scope="col" className="px-4 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wide">Status</th>
+                <th scope="col" className="px-4 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wide">Actions</th>
               </tr>
             </thead>
             <tbody className="divide-y divide-stone-100">
@@ -219,6 +221,9 @@ export default async function VolunteersPage({ searchParams: searchParamsPromise
                       <span className={`inline-flex items-center px-2 py-0.5 rounded text-xs font-medium ${statusBadge[opp.status] || 'bg-gray-50 text-gray-700'}`}>
                         {opp.status}
                       </span>
+                    </td>
+                    <td className="px-4 py-3 text-sm">
+                      <VolunteerRowActions opportunityId={opp.id} opportunityTitle={opp.title} opportunityStatus={opp.status} />
                     </td>
                   </tr>
                 )
