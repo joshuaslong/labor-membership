@@ -1,7 +1,9 @@
 import { NextResponse } from 'next/server'
-import { createClient, createAdminClient } from '@/lib/supabase/server'
+import { createAdminClient } from '@/lib/supabase/server'
 import { sendBatchEmails, isResendConfigured, wrapEmailTemplate } from '@/lib/resend'
 import { validateRecipients } from '@/lib/validation'
+import { checkRateLimit, EMAIL_RATE_LIMITS } from '@/lib/rateLimit'
+import { requireAdmin, isSuperAdmin } from '@/lib/adminAuth'
 
 export async function POST(request) {
   // Check if Resend is configured
@@ -9,33 +11,30 @@ export async function POST(request) {
     return NextResponse.json({ error: 'RESEND_API_KEY is not configured' }, { status: 500 })
   }
 
-  // Verify admin access
-  const authClient = await createClient()
-  const { data: { user } } = await authClient.auth.getUser()
+  // Authenticate admin
+  const { admin, error: authError } = await requireAdmin({ includeChapter: true })
+  if (authError) return authError
 
-  if (!user) {
-    return NextResponse.json({ error: 'Unauthorized' }, { status: 401 })
+  // Check rate limit
+  const rateLimitConfig = EMAIL_RATE_LIMITS.SEND_EMAIL
+  const rateLimit = checkRateLimit(admin.userId, rateLimitConfig)
+
+  if (!rateLimit.allowed) {
+    return NextResponse.json(
+      {
+        error: rateLimitConfig.message,
+        resetAt: rateLimit.resetAt.toISOString()
+      },
+      {
+        status: 429,
+        headers: {
+          'X-RateLimit-Limit': String(rateLimit.limit),
+          'X-RateLimit-Remaining': String(rateLimit.remaining),
+          'X-RateLimit-Reset': rateLimit.resetAt.toISOString()
+        }
+      }
+    )
   }
-
-  const supabase = createAdminClient()
-
-  // Get current admin's role and chapter (user can have multiple admin records)
-  const roleHierarchy = ['super_admin', 'national_admin', 'state_admin', 'county_admin', 'city_admin']
-  const { data: adminRecords } = await supabase
-    .from('admin_users')
-    .select('id, role, chapter_id, chapters(name)')
-    .eq('user_id', user.id)
-
-  if (!adminRecords || adminRecords.length === 0) {
-    return NextResponse.json({ error: 'Not an admin' }, { status: 403 })
-  }
-
-  // Use highest privilege role
-  const currentAdmin = adminRecords.reduce((highest, current) => {
-    const currentIndex = roleHierarchy.indexOf(current.role)
-    const highestIndex = roleHierarchy.indexOf(highest.role)
-    return currentIndex < highestIndex ? current : highest
-  }, adminRecords[0])
 
   const body = await request.json()
   const { subject, content, recipientType, chapterId, groupId, replyTo, senderName } = body
@@ -44,13 +43,14 @@ export async function POST(request) {
     return NextResponse.json({ error: 'Subject and content are required' }, { status: 400 })
   }
 
-  const isSuperAdmin = ['super_admin', 'national_admin'].includes(currentAdmin.role)
+  const supabase = createAdminClient()
+  const isSuper = isSuperAdmin(admin.role)
 
   try {
     // Get recipients from Supabase based on selection
     let recipients = []
 
-    if (recipientType === 'all_members' && isSuperAdmin) {
+    if (recipientType === 'all_members' && isSuper) {
       // Get all active members
       const { data: members, error } = await supabase
         .from('members')
@@ -62,12 +62,12 @@ export async function POST(request) {
 
     } else if (recipientType === 'chapter') {
       // Verify admin has access to this chapter
-      if (!isSuperAdmin) {
+      if (!isSuper) {
         const { data: descendants } = await supabase
-          .rpc('get_chapter_descendants', { chapter_uuid: currentAdmin.chapter_id })
+          .rpc('get_chapter_descendants', { chapter_uuid: admin.chapterId })
         const allowedChapterIds = descendants?.map(d => d.id) || []
 
-        if (!allowedChapterIds.includes(chapterId) && currentAdmin.chapter_id !== chapterId) {
+        if (!allowedChapterIds.includes(chapterId) && admin.chapterId !== chapterId) {
           return NextResponse.json({ error: 'You do not have access to this chapter' }, { status: 403 })
         }
       }
@@ -90,8 +90,8 @@ export async function POST(request) {
     } else if (recipientType === 'my_chapter') {
       // Get admin's chapter and descendants
       const { data: allChapterIds } = await supabase
-        .rpc('get_chapter_descendants', { chapter_uuid: currentAdmin.chapter_id })
-      const chapterIds = allChapterIds?.map(c => c.id) || [currentAdmin.chapter_id]
+        .rpc('get_chapter_descendants', { chapter_uuid: admin.chapterId })
+      const chapterIds = allChapterIds?.map(c => c.id) || [admin.chapterId]
 
       const { data: members, error } = await supabase
         .from('members')
@@ -119,12 +119,12 @@ export async function POST(request) {
         return NextResponse.json({ error: 'Group not found' }, { status: 404 })
       }
 
-      if (!isSuperAdmin) {
+      if (!isSuper) {
         const { data: descendants } = await supabase
-          .rpc('get_chapter_descendants', { chapter_uuid: currentAdmin.chapter_id })
+          .rpc('get_chapter_descendants', { chapter_uuid: admin.chapterId })
         const allowedChapterIds = descendants?.map(d => d.id) || []
 
-        if (!allowedChapterIds.includes(group.chapter_id) && currentAdmin.chapter_id !== group.chapter_id) {
+        if (!allowedChapterIds.includes(group.chapter_id) && admin.chapterId !== group.chapter_id) {
           return NextResponse.json({ error: 'You do not have access to this group' }, { status: 403 })
         }
       }
@@ -141,7 +141,7 @@ export async function POST(request) {
         .map(a => a.members)
         .filter(m => m != null)
 
-    } else if (recipientType === 'mailing_list' && isSuperAdmin) {
+    } else if (recipientType === 'mailing_list' && isSuper) {
       // Get mailing list subscribers (non-members)
       const { data: subscribers, error } = await supabase
         .from('mailing_list')
@@ -198,10 +198,10 @@ export async function POST(request) {
     // Log the email send (ignore errors if table doesn't exist)
     try {
       await supabase.from('email_logs').insert({
-        admin_id: currentAdmin.id,
+        admin_id: admin.id,
         subject,
         recipient_type: recipientType,
-        chapter_id: chapterId || currentAdmin.chapter_id,
+        chapter_id: chapterId || admin.chapterId,
         status: 'sent',
         recipient_count: validRecipients.length,
         skipped_count: invalidRecipients.length,

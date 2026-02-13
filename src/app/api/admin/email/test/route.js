@@ -1,7 +1,8 @@
 import { NextResponse } from 'next/server'
-import { createClient, createAdminClient } from '@/lib/supabase/server'
 import { sendTestEmail, isResendConfigured, wrapEmailTemplate } from '@/lib/resend'
 import { isValidEmail } from '@/lib/validation'
+import { checkRateLimit, EMAIL_RATE_LIMITS } from '@/lib/rateLimit'
+import { requireAdmin } from '@/lib/adminAuth'
 
 export async function POST(request) {
   // Check if Resend is configured
@@ -9,24 +10,29 @@ export async function POST(request) {
     return NextResponse.json({ error: 'RESEND_API_KEY is not configured' }, { status: 500 })
   }
 
-  // Verify admin access
-  const authClient = await createClient()
-  const { data: { user } } = await authClient.auth.getUser()
+  // Authenticate admin
+  const { admin, error: authError } = await requireAdmin()
+  if (authError) return authError
 
-  if (!user) {
-    return NextResponse.json({ error: 'Unauthorized' }, { status: 401 })
-  }
+  // Check rate limit
+  const rateLimitConfig = EMAIL_RATE_LIMITS.TEST_EMAIL
+  const rateLimit = checkRateLimit(admin.userId, rateLimitConfig)
 
-  const supabase = createAdminClient()
-
-  // Get current admin (user can have multiple admin records)
-  const { data: adminRecords } = await supabase
-    .from('admin_users')
-    .select('id, role, chapter_id')
-    .eq('user_id', user.id)
-
-  if (!adminRecords || adminRecords.length === 0) {
-    return NextResponse.json({ error: 'Not an admin' }, { status: 403 })
+  if (!rateLimit.allowed) {
+    return NextResponse.json(
+      {
+        error: rateLimitConfig.message,
+        resetAt: rateLimit.resetAt.toISOString()
+      },
+      {
+        status: 429,
+        headers: {
+          'X-RateLimit-Limit': String(rateLimit.limit),
+          'X-RateLimit-Remaining': String(rateLimit.remaining),
+          'X-RateLimit-Reset': rateLimit.resetAt.toISOString()
+        }
+      }
+    )
   }
 
   const body = await request.json()

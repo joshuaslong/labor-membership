@@ -12,6 +12,68 @@ function getHighestPrivilegeAdmin(adminRecords) {
   }, adminRecords[0])
 }
 
+// Sync team_members record to match current admin_users roles for a user.
+// Preserves any non-admin roles (e.g. event_coordinator) already on the record.
+const adminRoleSet = new Set(roleHierarchy)
+async function syncTeamMember(adminClient, userId) {
+  // Get all admin_users roles for this user
+  const { data: adminRecords } = await adminClient
+    .from('admin_users')
+    .select('role, chapter_id')
+    .eq('user_id', userId)
+
+  const adminRoles = [...new Set((adminRecords || []).map(a => a.role))]
+  const highestAdmin = getHighestPrivilegeAdmin(adminRecords)
+
+  // Get existing team_members record
+  const { data: existing } = await adminClient
+    .from('team_members')
+    .select('id, roles, chapter_id, member_id')
+    .eq('user_id', userId)
+    .single()
+
+  if (existing) {
+    // Keep non-admin roles, replace admin roles with current set
+    const nonAdminRoles = (existing.roles || []).filter(r => !adminRoleSet.has(r))
+    const mergedRoles = [...nonAdminRoles, ...adminRoles]
+
+    if (mergedRoles.length === 0) {
+      // No roles left — deactivate
+      await adminClient
+        .from('team_members')
+        .update({ roles: [], active: false })
+        .eq('id', existing.id)
+    } else {
+      const updateData = { roles: mergedRoles, active: true }
+      // Update chapter to highest-privilege admin's chapter if it changed
+      if (highestAdmin) {
+        updateData.chapter_id = highestAdmin.chapter_id
+      }
+      await adminClient
+        .from('team_members')
+        .update(updateData)
+        .eq('id', existing.id)
+    }
+  } else if (adminRoles.length > 0) {
+    // No team_members record — create one
+    const { data: member } = await adminClient
+      .from('members')
+      .select('id')
+      .eq('user_id', userId)
+      .single()
+
+    await adminClient
+      .from('team_members')
+      .insert({
+        user_id: userId,
+        member_id: member?.id || null,
+        chapter_id: highestAdmin?.chapter_id || null,
+        roles: adminRoles,
+        active: true,
+      })
+  }
+}
+
 // GET - List admins the current user can see/manage
 export async function GET(request) {
   try {
@@ -276,6 +338,9 @@ export async function POST(request) {
 
     if (error) throw error
 
+    // Sync team_members so the new admin appears on the team page
+    await syncTeamMember(adminClient, targetUserId)
+
     return NextResponse.json({ admin: newAdmin })
 
   } catch (error) {
@@ -395,6 +460,9 @@ export async function PUT(request) {
 
     if (error) throw error
 
+    // Sync team_members to reflect the role/chapter change
+    await syncTeamMember(adminClient, targetAdmin.user_id)
+
     return NextResponse.json({ admin: updatedAdmin })
 
   } catch (error) {
@@ -475,6 +543,9 @@ export async function DELETE(request) {
       .eq('id', adminId)
 
     if (error) throw error
+
+    // Sync team_members to remove the admin role (or deactivate if no roles left)
+    await syncTeamMember(adminClient, targetAdmin.user_id)
 
     return NextResponse.json({ success: true })
 

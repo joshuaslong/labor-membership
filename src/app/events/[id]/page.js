@@ -64,8 +64,15 @@ function EventDetailContent() {
     setLoading(true)
     const supabase = createClient()
 
-    // Get current user
-    const { data: { user: currentUser } } = await supabase.auth.getUser()
+    // Get current user — wrapped in try-catch because Supabase Auth's
+    // storage adapter can fail on some mobile browsers (IndexedDB issues)
+    let currentUser = null
+    try {
+      const { data } = await supabase.auth.getUser()
+      currentUser = data?.user
+    } catch {
+      // Treat storage failures as not logged in
+    }
     setUser(currentUser)
 
     // Get member record if logged in

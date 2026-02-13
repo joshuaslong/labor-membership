@@ -12,6 +12,7 @@ const SECTION_PERMISSIONS = {
   chapters: ['national_admin', 'state_admin', 'county_admin', 'city_admin'],
   resources: ['national_admin', 'state_admin', 'county_admin', 'city_admin', 'content_creator'],
   polls: ['national_admin', 'state_admin', 'county_admin', 'city_admin', 'communications_lead'],
+  volunteers: ['national_admin', 'state_admin', 'county_admin', 'city_admin', 'volunteer_manager', 'event_coordinator'],
   tasks: ['national_admin', 'state_admin', 'county_admin', 'city_admin', 'volunteer_manager'],
   admin: ['super_admin', 'national_admin']
 }
