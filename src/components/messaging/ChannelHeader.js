@@ -45,19 +45,17 @@ export default function ChannelHeader({ channel, onBack }) {
           return
         }
 
-        // Create push subscription if we don't have one
-        if (!subscription) {
-          try {
-            await subscribe()
-          } catch (err) {
-            if (err.message === 'Permission denied') {
-              setPushError('Notification permission was denied. Check your browser settings.')
-            } else {
-              setPushError('Could not enable push notifications. Try installing the app to your home screen first.')
-            }
-            setToggling(false)
-            return
+        // Create or re-sync push subscription
+        try {
+          await subscribe()
+        } catch (err) {
+          if (err.message === 'Permission denied') {
+            setPushError('Notification permission was denied. Check your browser settings.')
+          } else {
+            setPushError('Could not enable push notifications. Try installing the app to your home screen first.')
           }
+          setToggling(false)
+          return
         }
       }
 

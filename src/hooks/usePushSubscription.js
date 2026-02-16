@@ -13,6 +13,21 @@ function urlBase64ToUint8Array(base64String) {
   return outputArray
 }
 
+async function syncSubscriptionToServer(sub) {
+  const subJson = sub.toJSON()
+  const res = await fetch('/api/workspace/messaging/push-subscription', {
+    method: 'POST',
+    headers: { 'Content-Type': 'application/json' },
+    body: JSON.stringify({
+      endpoint: subJson.endpoint,
+      keys: subJson.keys,
+    }),
+  })
+  if (!res.ok) {
+    throw new Error('Failed to save subscription')
+  }
+}
+
 export function usePushSubscription() {
   const [permission, setPermission] = useState('default')
   const [subscription, setSubscription] = useState(null)
@@ -46,7 +61,24 @@ export function usePushSubscription() {
       }
 
       const reg = await navigator.serviceWorker.ready
-      const sub = await reg.pushManager.subscribe({
+
+      // Check for existing browser subscription
+      let sub = await reg.pushManager.getSubscription()
+
+      if (sub) {
+        // Existing subscription — sync it to server and return
+        try {
+          await syncSubscriptionToServer(sub)
+          setSubscription(sub)
+          return sub
+        } catch {
+          // Sync failed — unsubscribe stale one and create fresh
+          await sub.unsubscribe().catch(() => {})
+        }
+      }
+
+      // Create new subscription
+      sub = await reg.pushManager.subscribe({
         userVisibleOnly: true,
         applicationServerKey: urlBase64ToUint8Array(
           process.env.NEXT_PUBLIC_VAPID_PUBLIC_KEY
@@ -54,16 +86,7 @@ export function usePushSubscription() {
       })
 
       setSubscription(sub)
-
-      const subJson = sub.toJSON()
-      await fetch('/api/workspace/messaging/push-subscription', {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({
-          endpoint: subJson.endpoint,
-          keys: subJson.keys,
-        }),
-      })
+      await syncSubscriptionToServer(sub)
 
       return sub
     } finally {
