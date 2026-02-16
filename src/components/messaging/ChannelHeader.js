@@ -25,12 +25,20 @@ export default function ChannelHeader({ channel, onBack }) {
     if (toggling || !channelId) return
     setToggling(true)
 
-    try {
-      const newEnabled = !notificationsEnabled
+    const newEnabled = !notificationsEnabled
 
-      // If enabling and no push subscription yet, request permission + subscribe
-      if (newEnabled && !subscription) {
-        await subscribe()
+    // Optimistic update
+    setNotificationsEnabled(newEnabled)
+
+    try {
+      // Request push permission if enabling and not yet subscribed
+      // Do this separately so it doesn't block the toggle
+      if (newEnabled && !subscription && isSupported) {
+        try {
+          await subscribe()
+        } catch (err) {
+          console.warn('Push subscription failed (notifications will still be saved):', err.message)
+        }
       }
 
       const res = await fetch(
@@ -42,20 +50,20 @@ export default function ChannelHeader({ channel, onBack }) {
         }
       )
 
-      if (res.ok) {
-        const data = await res.json()
-        setNotificationsEnabled(data.notifications_enabled)
+      if (!res.ok) {
+        // Revert optimistic update
+        setNotificationsEnabled(!newEnabled)
       }
     } catch (err) {
+      // Revert optimistic update
+      setNotificationsEnabled(!newEnabled)
       console.error('Failed to toggle notifications:', err)
     } finally {
       setToggling(false)
     }
-  }, [channelId, notificationsEnabled, subscription, subscribe, toggling])
+  }, [channelId, notificationsEnabled, subscription, subscribe, isSupported, toggling])
 
   if (!channel) return null
-
-  const showBell = isSupported && permission !== 'denied'
 
   return (
     <div className="border-b border-stone-200 bg-white px-4 py-3">
@@ -80,29 +88,27 @@ export default function ChannelHeader({ channel, onBack }) {
           )}
         </div>
         <div className="flex items-center gap-3 shrink-0 ml-4">
-          {showBell && (
-            <button
-              onClick={handleToggle}
-              disabled={toggling}
-              className={`flex items-center gap-1.5 px-2 py-1 rounded-md transition-colors ${
-                notificationsEnabled
-                  ? 'text-labor-red bg-red-50'
-                  : 'text-gray-400 hover:text-gray-600 hover:bg-stone-50'
-              }`}
-              title={notificationsEnabled ? 'Disable notifications' : 'Enable notifications'}
-            >
-              {notificationsEnabled ? (
-                <svg className="w-5 h-5 md:w-4 md:h-4" fill="currentColor" viewBox="0 0 24 24">
-                  <path d="M12 22c1.1 0 2-.9 2-2h-4c0 1.1.9 2 2 2zm6-6v-5c0-3.07-1.63-5.64-4.5-6.32V4c0-.83-.67-1.5-1.5-1.5s-1.5.67-1.5 1.5v.68C7.64 5.36 6 7.92 6 11v5l-2 2v1h16v-1l-2-2z"/>
-                </svg>
-              ) : (
-                <svg className="w-5 h-5 md:w-4 md:h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M15 17h5l-1.405-1.405A2.032 2.032 0 0118 14.158V11a6.002 6.002 0 00-4-5.659V5a2 2 0 10-4 0v.341C7.67 6.165 6 8.388 6 11v3.159c0 .538-.214 1.055-.595 1.436L4 17h5m6 0v1a3 3 0 11-6 0v-1m6 0H9" />
-                </svg>
-              )}
-              <span className="text-xs font-medium md:hidden">{notificationsEnabled ? 'On' : 'Notify'}</span>
-            </button>
-          )}
+          <button
+            onClick={handleToggle}
+            disabled={toggling}
+            className={`flex items-center gap-1.5 px-2.5 py-1.5 rounded-md text-xs font-medium transition-colors ${
+              notificationsEnabled
+                ? 'text-labor-red bg-red-50 border border-red-200'
+                : 'text-gray-500 hover:text-gray-700 bg-stone-50 border border-stone-200 hover:bg-stone-100'
+            }`}
+            title={notificationsEnabled ? 'Disable notifications' : 'Enable notifications'}
+          >
+            {notificationsEnabled ? (
+              <svg className="w-4 h-4" fill="currentColor" viewBox="0 0 24 24">
+                <path d="M12 22c1.1 0 2-.9 2-2h-4c0 1.1.9 2 2 2zm6-6v-5c0-3.07-1.63-5.64-4.5-6.32V4c0-.83-.67-1.5-1.5-1.5s-1.5.67-1.5 1.5v.68C7.64 5.36 6 7.92 6 11v5l-2 2v1h16v-1l-2-2z"/>
+              </svg>
+            ) : (
+              <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={1.5} d="M14.857 17.082a23.848 23.848 0 005.454-1.31A8.967 8.967 0 0118 9.75V9A6 6 0 006 9v.75a8.967 8.967 0 01-2.312 6.022c1.733.64 3.56 1.085 5.455 1.31m5.714 0a24.255 24.255 0 01-5.714 0m5.714 0a3 3 0 11-5.714 0" />
+              </svg>
+            )}
+            <span>{notificationsEnabled ? 'On' : 'Notify'}</span>
+          </button>
           {channel.member_count != null && (
             <div className="flex items-center gap-1 text-xs text-gray-400">
               <svg className="w-3.5 h-3.5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
