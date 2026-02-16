@@ -20,7 +20,7 @@ export default async function AdminLayout({ children }) {
     { type: 'link', label: 'Members', href: '/workspace/members' },
     { type: 'link', label: 'Team Members', href: '/workspace/admin/team' },
     { type: 'header', label: 'Organization' },
-    { type: 'link', label: 'Chapters', href: '/workspace/chapters' },
+    { type: 'link', label: 'Chapters', href: '/workspace/admin/chapters' },
     { type: 'link', label: 'Groups', href: '/workspace/admin/groups' },
     { type: 'divider' },
     { type: 'header', label: 'Tools' },
