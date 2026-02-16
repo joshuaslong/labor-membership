@@ -18,7 +18,7 @@ function TopNav({ sections = [], availableChapters = [], selectedChapterId = 'al
     workspace: 'Workspace',
     members: 'Members',
     events: 'Events',
-    communicate: 'Communicate',
+    communicate: 'Email',
     messaging: 'Messaging',
     chapters: 'Chapters',
     resources: 'Resources',
