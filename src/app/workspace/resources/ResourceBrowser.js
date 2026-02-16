@@ -1,8 +1,10 @@
 'use client'
 
 import { useState, useEffect, useCallback, useRef } from 'react'
-import { useSearchParams } from 'next/navigation'
+import { useSearchParams, useRouter } from 'next/navigation'
 import Link from 'next/link'
+import MoveToFolderModal from './MoveToFolderModal'
+import FolderTree from './FolderTree'
 
 const BUCKET_LABELS = {
   'public': 'Public Files',
@@ -145,11 +147,11 @@ function FilePreviewModal({ file, onClose, onDownload, onDelete }) {
             <h2 className="text-sm font-semibold text-gray-900 truncate">{file.original_filename}</h2>
             <div className="flex items-center gap-2 mt-0.5">
               <span className="text-xs text-gray-500">{formatFileSize(file.file_size_bytes)}</span>
-              <span className="text-xs text-gray-300">·</span>
+              <span className="text-xs text-gray-300">&middot;</span>
               <span className="text-xs text-gray-500">{formatDate(file.uploaded_at)}</span>
               {file.uploader_name && file.uploader_name !== 'Unknown' && (
                 <>
-                  <span className="text-xs text-gray-300">·</span>
+                  <span className="text-xs text-gray-300">&middot;</span>
                   <span className="text-xs text-gray-400">by {file.uploader_name}</span>
                 </>
               )}
@@ -248,8 +250,88 @@ function FilePreviewModal({ file, onClose, onDownload, onDelete }) {
   )
 }
 
-export default function ResourceBrowser({ allowedBuckets = ['public'], chapterId = null }) {
+function FolderBreadcrumbs({ folderId, chapterId }) {
+  const [path, setPath] = useState([])
+  const [loading, setLoading] = useState(true)
+
+  useEffect(() => {
+    if (!folderId || !chapterId) {
+      setPath([])
+      setLoading(false)
+      return
+    }
+
+    async function buildPath() {
+      setLoading(true)
+      try {
+        // Walk up the tree to build breadcrumb path
+        const crumbs = []
+        let currentId = folderId
+
+        while (currentId) {
+          const params = new URLSearchParams({ chapter_id: chapterId })
+          // Fetch the folder by getting all folders at the parent level
+          // We need to find the current folder's info
+          const res = await fetch(`/api/folders?${params}&parent_id=__all__`)
+
+          // Since the API doesn't have a single-folder GET, we need to iterate
+          // For now, fetch all root and find, or use the [id] endpoint if it exists
+          const singleRes = await fetch(`/api/folders/${currentId}`)
+          if (!singleRes.ok) break
+
+          const data = await singleRes.json()
+          const folder = data.folder
+          if (!folder) break
+
+          crumbs.unshift({ id: folder.id, name: folder.name })
+          currentId = folder.parent_id
+        }
+
+        setPath(crumbs)
+      } catch {
+        setPath([])
+      } finally {
+        setLoading(false)
+      }
+    }
+
+    buildPath()
+  }, [folderId, chapterId])
+
+  if (loading || (!folderId && path.length === 0)) return null
+
+  return (
+    <nav className="flex items-center gap-1 text-sm mb-3 flex-wrap">
+      <Link
+        href="/workspace/resources"
+        className="text-gray-500 hover:text-gray-700 transition-colors"
+      >
+        All Files
+      </Link>
+      {path.map((crumb) => (
+        <span key={crumb.id} className="flex items-center gap-1">
+          <svg className="w-3.5 h-3.5 text-gray-300" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+            <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 5l7 7-7 7" />
+          </svg>
+          {crumb.id === folderId ? (
+            <span className="text-gray-900 font-medium">{crumb.name}</span>
+          ) : (
+            <Link
+              href={`/workspace/resources?folder=${crumb.id}`}
+              className="text-gray-500 hover:text-gray-700 transition-colors"
+            >
+              {crumb.name}
+            </Link>
+          )}
+        </span>
+      ))}
+    </nav>
+  )
+}
+
+export default function ResourceBrowser({ allowedBuckets = ['public'], chapterId = null, folderId = null, isTopAdmin = false }) {
   const searchParams = useSearchParams()
+  const router = useRouter()
   const bucketParam = searchParams.get('bucket')
 
   const [files, setFiles] = useState([])
@@ -261,9 +343,10 @@ export default function ResourceBrowser({ allowedBuckets = ['public'], chapterId
   const [search, setSearch] = useState('')
   const [deleting, setDeleting] = useState(null)
   const [previewFile, setPreviewFile] = useState(null)
+  const [moveFile, setMoveFile] = useState(null)
 
   const activeBucket = bucketParam && allowedBuckets.includes(bucketParam) ? bucketParam : null
-  const pageTitle = activeBucket ? BUCKET_LABELS[activeBucket] || 'Files' : 'All Files'
+  const pageTitle = folderId ? 'Folder' : (activeBucket ? BUCKET_LABELS[activeBucket] || 'Files' : 'All Files')
 
   const fetchFiles = useCallback(async () => {
     setLoading(true)
@@ -281,6 +364,9 @@ export default function ResourceBrowser({ allowedBuckets = ['public'], chapterId
       if (search) {
         params.set('search', search)
       }
+      if (folderId) {
+        params.set('folder_id', folderId)
+      }
 
       const res = await fetch(`/api/files?${params}`)
       const data = await res.json()
@@ -295,16 +381,16 @@ export default function ResourceBrowser({ allowedBuckets = ['public'], chapterId
     } finally {
       setLoading(false)
     }
-  }, [activeBucket, page, search, chapterId])
+  }, [activeBucket, page, search, chapterId, folderId])
 
   useEffect(() => {
     fetchFiles()
   }, [fetchFiles])
 
-  // Reset page when bucket changes
+  // Reset page when bucket or folder changes
   useEffect(() => {
     setPage(1)
-  }, [bucketParam])
+  }, [bucketParam, folderId])
 
   const handleDownload = async (file) => {
     try {
@@ -343,8 +429,21 @@ export default function ResourceBrowser({ allowedBuckets = ['public'], chapterId
     }
   }
 
+  const handleMoveComplete = () => {
+    fetchFiles()
+  }
+
+  const uploadHref = folderId
+    ? `/workspace/resources/upload?folder=${folderId}`
+    : '/workspace/resources/upload'
+
   return (
     <div className="max-w-7xl mx-auto px-4 sm:px-6 py-6">
+      {/* Breadcrumbs */}
+      {folderId && (
+        <FolderBreadcrumbs folderId={folderId} chapterId={chapterId} />
+      )}
+
       {/* Header */}
       <div className="flex items-center justify-between mb-5">
         <div>
@@ -357,7 +456,7 @@ export default function ResourceBrowser({ allowedBuckets = ['public'], chapterId
           )}
         </div>
         <Link
-          href="/workspace/resources/upload"
+          href={uploadHref}
           className="inline-flex items-center gap-1.5 px-3 py-1.5 text-sm font-medium text-white bg-labor-red hover:bg-red-700 rounded transition-colors"
         >
           <svg className="w-4 h-4" fill="none" viewBox="0 0 24 24" stroke="currentColor">
@@ -366,6 +465,19 @@ export default function ResourceBrowser({ allowedBuckets = ['public'], chapterId
           Upload
         </Link>
       </div>
+
+      {/* Folder tree for chapter users (show alongside files when browsing by chapter) */}
+      {chapterId && !activeBucket && (
+        <div className="mb-4 bg-white border border-stone-200 rounded p-3">
+          <FolderTree
+            chapterId={chapterId}
+            selectedFolderId={folderId}
+            onFolderSelect={(id) => {
+              router.push(`/workspace/resources?folder=${id}`)
+            }}
+          />
+        </div>
+      )}
 
       {/* Search */}
       <div className="mb-4">
@@ -419,7 +531,7 @@ export default function ResourceBrowser({ allowedBuckets = ['public'], chapterId
               Clear search
             </button>
           ) : (
-            <Link href="/workspace/resources/upload" className="text-sm text-labor-red hover:underline">
+            <Link href={uploadHref} className="text-sm text-labor-red hover:underline">
               Upload your first file
             </Link>
           )}
@@ -446,11 +558,11 @@ export default function ResourceBrowser({ allowedBuckets = ['public'], chapterId
                 <div className="text-sm font-medium text-gray-900 truncate">{file.original_filename}</div>
                 <div className="flex items-center gap-2 mt-0.5 flex-wrap">
                   <span className="text-xs text-gray-500">{formatFileSize(file.file_size_bytes)}</span>
-                  <span className="text-xs text-gray-300">·</span>
+                  <span className="text-xs text-gray-300">&middot;</span>
                   <span className="text-xs text-gray-500">{formatDate(file.uploaded_at)}</span>
                   {file.uploader_name && file.uploader_name !== 'Unknown' && (
                     <>
-                      <span className="text-xs text-gray-300">·</span>
+                      <span className="text-xs text-gray-300">&middot;</span>
                       <span className="text-xs text-gray-400">{file.uploader_name}</span>
                     </>
                   )}
@@ -467,6 +579,18 @@ export default function ResourceBrowser({ allowedBuckets = ['public'], chapterId
 
               {/* Actions */}
               <div className="flex items-center gap-1 flex-shrink-0 opacity-0 group-hover:opacity-100 transition-opacity" onClick={(e) => e.stopPropagation()}>
+                {/* Move to folder */}
+                {chapterId && (
+                  <button
+                    onClick={() => setMoveFile(file)}
+                    className="p-1.5 text-gray-400 hover:text-gray-700 hover:bg-gray-100 rounded transition-colors"
+                    title="Move to folder"
+                  >
+                    <svg className="w-4 h-4" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                      <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M3 7v10a2 2 0 002 2h14a2 2 0 002-2V9a2 2 0 00-2-2h-6l-2-2H5a2 2 0 00-2 2z" />
+                    </svg>
+                  </button>
+                )}
                 <button
                   onClick={() => handleDownload(file)}
                   className="p-1.5 text-gray-400 hover:text-gray-700 hover:bg-gray-100 rounded transition-colors"
@@ -526,6 +650,17 @@ export default function ResourceBrowser({ allowedBuckets = ['public'], chapterId
           onClose={() => setPreviewFile(null)}
           onDownload={handleDownload}
           onDelete={handleDelete}
+        />
+      )}
+
+      {/* Move to Folder Modal */}
+      {moveFile && chapterId && (
+        <MoveToFolderModal
+          fileId={moveFile.id}
+          currentFolderId={moveFile.folder_id || null}
+          chapterId={chapterId}
+          onMove={handleMoveComplete}
+          onClose={() => setMoveFile(null)}
         />
       )}
     </div>
