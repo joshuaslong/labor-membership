@@ -86,6 +86,7 @@ export default function MessagingPage() {
       if (newScope !== chapterScope) {
         setChapterScope(newScope)
         setSelectedChannelId(null)
+        window.history.replaceState({}, '', '/workspace/messaging')
         fetchChannels(newScope)
       }
     }
@@ -102,15 +103,13 @@ export default function MessagingPage() {
     }
   }, [chapterScope, readChapterScope, fetchChannels])
 
-  // Deep-link: auto-select channel from ?channel= URL param (e.g. from push notification)
+  // Restore channel from URL param on load
   useEffect(() => {
     if (deepLinked.current || !channels.length) return
     const channelParam = searchParams.get('channel')
     if (channelParam && channels.some(c => c.id === channelParam)) {
       setSelectedChannelId(channelParam)
       deepLinked.current = true
-      // Clean up URL
-      window.history.replaceState({}, '', '/workspace/messaging')
     }
   }, [channels, searchParams])
 
@@ -118,6 +117,10 @@ export default function MessagingPage() {
 
   const handleSelectChannel = (channelId) => {
     setSelectedChannelId(channelId)
+    const url = channelId
+      ? `/workspace/messaging?channel=${channelId}`
+      : '/workspace/messaging'
+    window.history.replaceState({}, '', url)
   }
 
   const handleChannelCreated = (newChannel) => {
@@ -186,7 +189,7 @@ export default function MessagingPage() {
               channelId={selectedChannelId}
               channel={selectedChannel}
               currentUser={currentUser}
-              onBack={() => setSelectedChannelId(null)}
+              onBack={() => handleSelectChannel(null)}
             />
           )}
         </div>
