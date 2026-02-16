@@ -40,6 +40,7 @@ export async function GET(request) {
         mime_type,
         access_tier,
         chapter_id,
+        folder_id,
         description,
         tags,
         uploaded_by,
@@ -105,6 +106,13 @@ export async function GET(request) {
     }
     if (search) {
       query = query.ilike('original_filename', `%${search}%`)
+    }
+
+    const folderId = searchParams.get('folder_id')
+    if (folderId === 'root') {
+      query = query.is('folder_id', null)
+    } else if (folderId) {
+      query = query.eq('folder_id', folderId)
     }
 
     // Apply pagination

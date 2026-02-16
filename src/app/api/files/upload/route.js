@@ -21,7 +21,7 @@ export async function POST(request) {
 
     const adminClient = createAdminClient()
     const body = await request.json()
-    const { filename, contentType, fileSize, bucketPrefix, chapterId, description, tags } = body
+    const { filename, contentType, fileSize, bucketPrefix, chapterId, description, tags, folder_id } = body
 
     if (!filename || !contentType || !bucketPrefix) {
       return NextResponse.json({ error: 'Missing required fields: filename, contentType, bucketPrefix' }, { status: 400 })
@@ -134,6 +134,7 @@ export async function POST(request) {
         chapter_id: chapterId || null,
         description: description || null,
         tags: tags || null,
+        folder_id: folder_id || null,
         uploaded_by: user.id,
       })
       .select()
