@@ -1,11 +1,23 @@
 import webpush from 'web-push'
 import { createAdminClient } from '@/lib/supabase/server'
 
-webpush.setVapidDetails(
-  process.env.VAPID_SUBJECT || 'mailto:admin@votelabor.org',
-  process.env.NEXT_PUBLIC_VAPID_PUBLIC_KEY,
-  process.env.VAPID_PRIVATE_KEY
-)
+let vapidConfigured = false
+
+function ensureVapid() {
+  if (vapidConfigured) return
+  const publicKey = process.env.NEXT_PUBLIC_VAPID_PUBLIC_KEY
+  const privateKey = process.env.VAPID_PRIVATE_KEY
+  if (!publicKey || !privateKey) {
+    console.warn('VAPID keys not configured — push notifications disabled')
+    return
+  }
+  webpush.setVapidDetails(
+    process.env.VAPID_SUBJECT || 'mailto:admin@votelabor.org',
+    publicKey,
+    privateKey
+  )
+  vapidConfigured = true
+}
 
 /**
  * Send push notifications for a new message to channel members
@@ -17,6 +29,9 @@ export async function sendMessagePushNotifications({
   senderTeamMemberId,
   messageContent,
 }) {
+  ensureVapid()
+  if (!vapidConfigured) return
+
   const supabase = createAdminClient()
 
   // Get channel name
