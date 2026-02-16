@@ -1,5 +1,5 @@
 import { NextResponse } from 'next/server'
-import { createClient } from '@/lib/supabase/server'
+import { createAdminClient } from '@/lib/supabase/server'
 import { getCurrentTeamMember } from '@/lib/teamMember'
 import { getEffectiveChapterScope, resolveChapterIds } from '@/lib/chapterScope'
 
@@ -10,7 +10,7 @@ export async function GET(request, { params }) {
   }
 
   const { channelId } = await params
-  const supabase = await createClient()
+  const supabase = createAdminClient()
 
   // Verify requesting user is a member of this channel
   const { data: selfMembership } = await supabase
@@ -58,7 +58,7 @@ export async function POST(request, { params }) {
   }
 
   const { channelId } = await params
-  const supabase = await createClient()
+  const supabase = createAdminClient()
 
   // Get the channel to check chapter_id
   const { data: channel } = await supabase
@@ -115,7 +115,7 @@ export async function DELETE(request, { params }) {
   }
 
   const { channelId } = await params
-  const supabase = await createClient()
+  const supabase = createAdminClient()
 
   // Find the user's membership
   const { data: membership } = await supabase
