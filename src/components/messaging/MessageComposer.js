@@ -58,7 +58,7 @@ export default function MessageComposer({ onSend, disabled }) {
           disabled={disabled || sending || !text.trim()}
           className="shrink-0 rounded bg-labor-red px-3 py-2 text-sm font-medium text-white hover:bg-labor-red-600 disabled:opacity-40 disabled:cursor-not-allowed transition-colors"
         >
-          <svg className="w-4 h-4 rotate-45" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+          <svg className="w-4 h-4 rotate-90" fill="none" stroke="currentColor" viewBox="0 0 24 24">
             <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 19l9 2-9-18-9 18 9-2zm0 0v-8" />
           </svg>
         </button>
