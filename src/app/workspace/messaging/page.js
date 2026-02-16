@@ -25,6 +25,7 @@ export default function MessagingPage() {
 
   // Read current chapter scope from cookie
   const readChapterScope = useCallback(() => {
+    if (typeof document === 'undefined') return null
     const match = document.cookie.match(/chapter_scope=([^;]+)/)
     return match?.[1] || null
   }, [])
