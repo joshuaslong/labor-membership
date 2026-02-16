@@ -1,5 +1,5 @@
 import { NextResponse } from 'next/server'
-import { createClient } from '@/lib/supabase/server'
+import { createAdminClient } from '@/lib/supabase/server'
 import { getCurrentTeamMember } from '@/lib/teamMember'
 
 export async function PATCH(request, { params }) {
@@ -9,7 +9,7 @@ export async function PATCH(request, { params }) {
   }
 
   const { messageId } = await params
-  const supabase = await createClient()
+  const supabase = createAdminClient()
 
   // Get the message and verify ownership
   const { data: message } = await supabase
@@ -58,7 +58,7 @@ export async function DELETE(request, { params }) {
   }
 
   const { messageId } = await params
-  const supabase = await createClient()
+  const supabase = createAdminClient()
 
   // Get the message and verify ownership
   const { data: message } = await supabase

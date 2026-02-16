@@ -157,5 +157,36 @@ export function useChannel(channelId, currentUser) {
     }
   }, [channelId, loading, hasMore, messages])
 
-  return { messages, loading, hasMore, error, sendMessage, loadMore }
+  const editMessage = useCallback(async (messageId, content) => {
+    const res = await fetch(`/api/workspace/messaging/messages/${messageId}`, {
+      method: 'PATCH',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ content })
+    })
+    if (!res.ok) {
+      const data = await res.json().catch(() => ({}))
+      throw new Error(data.error || 'Failed to edit message')
+    }
+    const updated = await res.json()
+    setMessages(prev => prev.map(m => m.id === messageId
+      ? { ...m, content: updated.content, is_edited: true }
+      : m
+    ))
+  }, [])
+
+  const deleteMessage = useCallback(async (messageId) => {
+    const res = await fetch(`/api/workspace/messaging/messages/${messageId}`, {
+      method: 'DELETE'
+    })
+    if (!res.ok) {
+      const data = await res.json().catch(() => ({}))
+      throw new Error(data.error || 'Failed to delete message')
+    }
+    setMessages(prev => prev.map(m => m.id === messageId
+      ? { ...m, is_deleted: true, content: null }
+      : m
+    ))
+  }, [])
+
+  return { messages, loading, hasMore, error, sendMessage, editMessage, deleteMessage, loadMore }
 }

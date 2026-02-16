@@ -7,7 +7,7 @@ import MessageBubble from './MessageBubble'
 import MessageComposer from './MessageComposer'
 
 export default function ChatArea({ channelId, channel, currentUser }) {
-  const { messages, loading, hasMore, sendMessage, loadMore } = useChannel(channelId, currentUser)
+  const { messages, loading, hasMore, sendMessage, editMessage, deleteMessage, loadMore } = useChannel(channelId, currentUser)
   const messagesEndRef = useRef(null)
   const messagesContainerRef = useRef(null)
   const prevMessageCountRef = useRef(0)
@@ -63,20 +63,12 @@ export default function ChatArea({ channelId, channel, currentUser }) {
   const handleEdit = async (message) => {
     const newContent = prompt('Edit message:', message.content)
     if (newContent === null || newContent.trim() === '' || newContent === message.content) return
-
-    await fetch(`/api/workspace/messaging/messages/${message.id}`, {
-      method: 'PATCH',
-      headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify({ content: newContent.trim() })
-    })
+    await editMessage(message.id, newContent.trim())
   }
 
   const handleDelete = async (message) => {
     if (!confirm('Delete this message?')) return
-
-    await fetch(`/api/workspace/messaging/messages/${message.id}`, {
-      method: 'DELETE',
-    })
+    await deleteMessage(message.id)
   }
 
   if (!channelId) {
