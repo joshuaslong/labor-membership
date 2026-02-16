@@ -4,7 +4,8 @@ export default function ChannelHeader({ channel }) {
   if (!channel) return null
 
   return (
-    <div className="border-b border-stone-200 bg-white px-4 py-3 flex items-center justify-between">
+    <div className="border-b border-stone-200 bg-white px-4 py-3">
+      <div className="max-w-3xl mx-auto flex items-center justify-between">
       <div className="min-w-0">
         <h2 className="text-sm font-semibold text-gray-900 truncate">
           # {channel.name}
@@ -21,6 +22,7 @@ export default function ChannelHeader({ channel }) {
           <span>{channel.member_count}</span>
         </div>
       )}
+      </div>
     </div>
   )
 }
