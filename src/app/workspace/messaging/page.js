@@ -1,6 +1,7 @@
 'use client'
 
-import { useState, useEffect, useCallback } from 'react'
+import { useState, useEffect, useCallback, useRef } from 'react'
+import { useSearchParams } from 'next/navigation'
 import ChannelSidebar from '@/components/messaging/ChannelSidebar'
 import ChatArea from '@/components/messaging/ChatArea'
 import CreateChannelModal from '@/components/messaging/CreateChannelModal'
@@ -8,6 +9,9 @@ import BrowseChannelsModal from '@/components/messaging/BrowseChannelsModal'
 import { useUnreadCounts } from '@/hooks/useUnreadCounts'
 
 export default function MessagingPage() {
+  const searchParams = useSearchParams()
+  const deepLinked = useRef(false)
+
   const [channels, setChannels] = useState([])
   const [allChannels, setAllChannels] = useState([])
   const [selectedChannelId, setSelectedChannelId] = useState(null)
@@ -96,6 +100,18 @@ export default function MessagingPage() {
       clearInterval(interval)
     }
   }, [chapterScope, readChapterScope, fetchChannels])
+
+  // Deep-link: auto-select channel from ?channel= URL param (e.g. from push notification)
+  useEffect(() => {
+    if (deepLinked.current || !channels.length) return
+    const channelParam = searchParams.get('channel')
+    if (channelParam && channels.some(c => c.id === channelParam)) {
+      setSelectedChannelId(channelParam)
+      deepLinked.current = true
+      // Clean up URL
+      window.history.replaceState({}, '', '/workspace/messaging')
+    }
+  }, [channels, searchParams])
 
   const selectedChannel = channels.find(c => c.id === selectedChannelId)
 
