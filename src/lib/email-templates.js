@@ -253,6 +253,23 @@ export function formatEmailTime(dateString) {
 }
 
 /**
+ * Get timezone abbreviation (e.g., "ET", "CT", "PT") for an IANA timezone
+ */
+export function getTimezoneAbbr(timezone) {
+  if (!timezone) return ''
+  try {
+    const parts = new Intl.DateTimeFormat('en-US', {
+      timeZone: timezone,
+      timeZoneName: 'short',
+    }).formatToParts(new Date())
+    const tzPart = parts.find(p => p.type === 'timeZoneName')
+    return tzPart ? tzPart.value : ''
+  } catch {
+    return ''
+  }
+}
+
+/**
  * Format currency for display in emails
  */
 export function formatEmailCurrency(amount) {

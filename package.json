@@ -10,6 +10,7 @@
     "@aws-sdk/client-s3": "^3.974.0",
     "@aws-sdk/s3-request-presigner": "^3.974.0",
     "@sentry/nextjs": "^10.38.0",
+    "@serwist/next": "^9.5.6",
     "@supabase/ssr": "^0.5.2",
     "@supabase/supabase-js": "^2.49.4",
     "autoprefixer": "^10.4.21",
@@ -23,6 +24,7 @@
     "react-quill-new": "^3.3.3",
     "resend": "^4.0.0",
     "rrule": "^2.8.1",
+    "serwist": "^9.5.6",
     "stripe": "^20.1.2",
     "tailwindcss": "^3.4.17"
   }

@@ -1,5 +1,5 @@
 import { createAdminClient } from '@/lib/supabase/server'
-import { sendAutomatedEmail, formatEmailDate, formatEmailTime } from '@/lib/email-templates'
+import { sendAutomatedEmail, formatEmailDate, formatEmailTime, getTimezoneAbbr } from '@/lib/email-templates'
 import { describeRrule } from '@/lib/recurrence'
 
 /**
@@ -90,6 +90,7 @@ export async function sendNewEventNotifications(event) {
 
   // Format date and time
   const eventDate = formatEmailDate(event.start_date)
+  const tzAbbr = getTimezoneAbbr(event.timezone)
   let eventTime = ''
   if (event.is_all_day) {
     eventTime = 'All Day'
@@ -97,6 +98,9 @@ export async function sendNewEventNotifications(event) {
     eventTime = formatEmailTime(`${event.start_date}T${event.start_time}`)
     if (event.end_time) {
       eventTime += ` - ${formatEmailTime(`${event.start_date}T${event.end_time}`)}`
+    }
+    if (tzAbbr) {
+      eventTime += ` ${tzAbbr}`
     }
   }
 
