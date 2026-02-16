@@ -8,21 +8,21 @@ export default function ChannelHeader({ channel, onBack }) {
   const [toggling, setToggling] = useState(false)
   const { isSupported, permission, subscription, subscribe } = usePushSubscription()
 
-  if (!channel) return null
+  const channelId = channel?.id
 
   // Fetch current notification preference when channel changes
   useEffect(() => {
-    if (!channel?.id) return
-    fetch(`/api/workspace/messaging/channels/${channel.id}/notifications`)
+    if (!channelId) return
+    fetch(`/api/workspace/messaging/channels/${channelId}/notifications`)
       .then(res => res.ok ? res.json() : null)
       .then(data => {
         if (data) setNotificationsEnabled(data.notifications_enabled)
       })
       .catch(() => {})
-  }, [channel?.id])
+  }, [channelId])
 
   const handleToggle = useCallback(async () => {
-    if (toggling) return
+    if (toggling || !channelId) return
     setToggling(true)
 
     try {
@@ -34,7 +34,7 @@ export default function ChannelHeader({ channel, onBack }) {
       }
 
       const res = await fetch(
-        `/api/workspace/messaging/channels/${channel.id}/notifications`,
+        `/api/workspace/messaging/channels/${channelId}/notifications`,
         {
           method: 'PUT',
           headers: { 'Content-Type': 'application/json' },
@@ -51,7 +51,9 @@ export default function ChannelHeader({ channel, onBack }) {
     } finally {
       setToggling(false)
     }
-  }, [channel?.id, notificationsEnabled, subscription, subscribe, toggling])
+  }, [channelId, notificationsEnabled, subscription, subscribe, toggling])
+
+  if (!channel) return null
 
   const showBell = isSupported && permission !== 'denied'
 
