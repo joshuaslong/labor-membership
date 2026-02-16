@@ -17,7 +17,7 @@ export async function getCurrentTeamMember() {
 
   const { data: teamMember, error } = await supabase
     .from('team_members')
-    .select('*, chapters(id, name, level)')
+    .select('*, chapters(id, name, level), member:members(first_name, last_name)')
     .eq('user_id', user.id)
     .eq('active', true)
     .single()
