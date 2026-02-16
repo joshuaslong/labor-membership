@@ -62,12 +62,14 @@ export default function TaskDetailPage({ params }) {
   const [error, setError] = useState(null)
   const [success, setSuccess] = useState(null)
   const [teamMembers, setTeamMembers] = useState([])
+  const [volunteers, setVolunteers] = useState([])
 
   const [formData, setFormData] = useState({})
 
   useEffect(() => {
     loadTask()
     loadTeamMembers()
+    loadVolunteers()
   }, [id])
 
   const loadTask = async () => {
@@ -78,11 +80,16 @@ export default function TaskDetailPage({ params }) {
       if (!res.ok) throw new Error(data.error || 'Failed to load task')
 
       setTask(data.task)
+      // Determine assignTo value from owner or assignee
+      let assignTo = ''
+      if (data.task.owner?.id) assignTo = `tm:${data.task.owner.id}`
+      else if (data.task.assignee?.id) assignTo = `vol:${data.task.assignee.id}`
+
       setFormData({
         name: data.task.name || '',
         project: data.task.project || '',
         phase: data.task.phase || '',
-        owner: data.task.owner?.id || '',
+        assignTo,
         deliverable: data.task.deliverable || '',
         time_estimate_min: data.task.time_estimate_min || '',
         deadline: data.task.deadline || '',
@@ -129,6 +136,18 @@ export default function TaskDetailPage({ params }) {
     setTeamMembers(data || [])
   }
 
+  const loadVolunteers = async () => {
+    const supabase = createClient()
+    const { data } = await supabase
+      .from('members')
+      .select('id, first_name, last_name')
+      .eq('wants_to_volunteer', true)
+      .eq('status', 'active')
+      .order('first_name')
+
+    setVolunteers(data || [])
+  }
+
   const handleChange = (e) => {
     const { name, value } = e.target
     setFormData(prev => ({ ...prev, [name]: value }))
@@ -163,12 +182,23 @@ export default function TaskDetailPage({ params }) {
     setSuccess(null)
 
     try {
+      // Parse assignTo value
+      let owner = null
+      let assignee_member_id = null
+      if (formData.assignTo) {
+        const [type, assignId] = formData.assignTo.split(':')
+        if (type === 'tm') owner = assignId
+        else if (type === 'vol') assignee_member_id = assignId
+      }
+
+      const { assignTo, ...rest } = formData
       const res = await fetch(`/api/tasks/${id}`, {
         method: 'PUT',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({
-          ...formData,
-          owner: formData.owner || null,
+          ...rest,
+          owner,
+          assignee_member_id,
           skill_type: formData.skill_type || null,
         }),
       })
@@ -414,14 +444,25 @@ export default function TaskDetailPage({ params }) {
                 </div>
                 <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
                   <div>
-                    <label className={labelClass}>Owner</label>
-                    <select name="owner" value={formData.owner} onChange={handleChange} className={inputClass}>
+                    <label className={labelClass}>Assign To</label>
+                    <select name="assignTo" value={formData.assignTo} onChange={handleChange} className={inputClass}>
                       <option value="">Unassigned</option>
-                      {teamMembers.map(tm => (
-                        <option key={tm.id} value={tm.id}>
-                          {tm.member ? `${tm.member.first_name} ${tm.member.last_name}` : 'Unknown'}
-                        </option>
-                      ))}
+                      <optgroup label="Team Members">
+                        {teamMembers.map(tm => (
+                          <option key={`tm-${tm.id}`} value={`tm:${tm.id}`}>
+                            {tm.member ? `${tm.member.first_name} ${tm.member.last_name}` : 'Unknown'}
+                          </option>
+                        ))}
+                      </optgroup>
+                      {volunteers.length > 0 && (
+                        <optgroup label="Volunteers">
+                          {volunteers.map(v => (
+                            <option key={`vol-${v.id}`} value={`vol:${v.id}`}>
+                              {v.first_name} {v.last_name}
+                            </option>
+                          ))}
+                        </optgroup>
+                      )}
                     </select>
                   </div>
                   <div>
@@ -468,9 +509,13 @@ export default function TaskDetailPage({ params }) {
             </div>
             <div className="p-4 space-y-3">
               <div className="flex justify-between items-start">
-                <span className="text-xs text-gray-500 uppercase tracking-wide">Owner</span>
+                <span className="text-xs text-gray-500 uppercase tracking-wide">Assigned To</span>
                 <span className="text-sm text-gray-900 text-right">
-                  {task.owner?.member ? `${task.owner.member.first_name} ${task.owner.member.last_name}` : 'Unassigned'}
+                  {task.owner?.member
+                    ? `${task.owner.member.first_name} ${task.owner.member.last_name}`
+                    : task.assignee
+                      ? <>{task.assignee.first_name} {task.assignee.last_name} <span className="inline-flex items-center px-1.5 py-0.5 rounded text-[10px] font-medium bg-teal-50 text-teal-700 ml-1">Vol</span></>
+                      : 'Unassigned'}
                 </span>
               </div>
               <div className="flex justify-between items-start">

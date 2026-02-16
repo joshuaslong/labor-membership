@@ -1,5 +1,6 @@
 import { createClient, createAdminClient } from '@/lib/supabase/server'
 import { NextResponse } from 'next/server'
+import { sendNewOpportunityNotification } from '@/lib/volunteer-notifications'
 
 // GET - List volunteer opportunities
 export async function GET(request) {
@@ -207,6 +208,13 @@ export async function POST(request) {
       .single()
 
     if (error) throw error
+
+    // Send notifications if published immediately
+    if (opportunity.status === 'published') {
+      sendNewOpportunityNotification(opportunity).catch(err => {
+        console.error('Error sending volunteer notifications:', err)
+      })
+    }
 
     return NextResponse.json({ opportunity }, { status: 201 })
 

@@ -1,6 +1,6 @@
 import { createClient } from '@/lib/supabase/server'
 import { NextResponse } from 'next/server'
-import { sendNewTaskNotification } from '@/lib/task-notifications'
+import { sendNewTaskNotification, sendTaskNotificationToMember } from '@/lib/task-notifications'
 
 // POST - Create a new task
 export async function POST(request) {
@@ -29,6 +29,7 @@ export async function POST(request) {
       phase,
       name,
       owner,
+      assignee_member_id,
       deliverable,
       time_estimate_min,
       deadline,
@@ -42,6 +43,10 @@ export async function POST(request) {
       return NextResponse.json({ error: 'Project, name, deliverable, time estimate, deadline, and priority are required' }, { status: 400 })
     }
 
+    if (owner && assignee_member_id) {
+      return NextResponse.json({ error: 'Cannot assign to both a team member and a volunteer' }, { status: 400 })
+    }
+
     const { data: task, error } = await supabase
       .from('tasks')
       .insert({
@@ -49,6 +54,7 @@ export async function POST(request) {
         phase: phase || null,
         name,
         owner: owner || null,
+        assignee_member_id: assignee_member_id || null,
         deliverable,
         time_estimate_min: parseInt(time_estimate_min),
         deadline,
@@ -63,10 +69,14 @@ export async function POST(request) {
 
     if (error) throw error
 
-    // Send notification to assigned owner
+    // Send notification to assigned owner or volunteer
     if (task.owner) {
       sendNewTaskNotification(task).catch(err => {
         console.error('Error sending new task notification:', err)
+      })
+    } else if (task.assignee_member_id) {
+      sendTaskNotificationToMember(task).catch(err => {
+        console.error('Error sending task notification to volunteer:', err)
       })
     }
 

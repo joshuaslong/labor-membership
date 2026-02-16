@@ -1,5 +1,6 @@
 import { createClient, createAdminClient } from '@/lib/supabase/server'
 import { NextResponse } from 'next/server'
+import { sendNewOpportunityNotification } from '@/lib/volunteer-notifications'
 
 // GET - Single volunteer opportunity
 export async function GET(request, { params }) {
@@ -115,7 +116,7 @@ export async function PUT(request, { params }) {
     // Get existing opportunity
     const { data: existing } = await adminClient
       .from('volunteer_opportunities')
-      .select('id, chapter_id')
+      .select('id, chapter_id, status')
       .eq('id', id)
       .single()
 
@@ -163,6 +164,13 @@ export async function PUT(request, { params }) {
       .single()
 
     if (error) throw error
+
+    // Send notifications if status changed to published
+    if (updated.status === 'published' && existing.status !== 'published') {
+      sendNewOpportunityNotification(updated).catch(err => {
+        console.error('Error sending volunteer notifications:', err)
+      })
+    }
 
     return NextResponse.json({ opportunity: updated })
 

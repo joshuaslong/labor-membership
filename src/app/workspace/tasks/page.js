@@ -78,7 +78,8 @@ export default async function TasksPage({ searchParams: searchParamsPromise }) {
       phase,
       time_estimate_min,
       skill_type,
-      owner:team_members!tasks_owner_fkey(id, member:members(first_name, last_name))
+      owner:team_members!tasks_owner_fkey(id, member:members(first_name, last_name)),
+      assignee:members!tasks_assignee_member_id_fkey(id, first_name, last_name)
     `, { count: 'exact' })
     .order('deadline', { ascending: true })
     .range(from, to)
@@ -169,6 +170,11 @@ export default async function TasksPage({ searchParams: searchParamsPromise }) {
             const ownerName = task.owner?.member
               ? `${task.owner.member.first_name} ${task.owner.member.last_name}`
               : null
+            const assigneeName = task.assignee
+              ? `${task.assignee.first_name} ${task.assignee.last_name}`
+              : null
+            const displayName = ownerName || assigneeName
+            const isVolunteer = !ownerName && !!assigneeName
 
             return (
               <Link
@@ -200,10 +206,13 @@ export default async function TasksPage({ searchParams: searchParamsPromise }) {
                         <span className="text-xs text-gray-400">{task.phase}</span>
                       </>
                     )}
-                    {ownerName && (
+                    {displayName && (
                       <>
                         <span className="text-xs text-gray-300">·</span>
-                        <span className="text-xs text-gray-400">{ownerName}</span>
+                        <span className="text-xs text-gray-400">
+                          {displayName}
+                          {isVolunteer && <span className="ml-1 text-[10px] text-teal-600">(Vol)</span>}
+                        </span>
                       </>
                     )}
                   </div>
