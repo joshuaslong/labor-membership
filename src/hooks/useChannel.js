@@ -39,7 +39,8 @@ export function useChannel(channelId, currentUser) {
         const data = await res.json()
         if (!cancelled) {
           // API returns newest first; reverse so oldest is first for display
-          setMessages(data.messages?.reverse() || [])
+          const fetched = data.messages?.reverse() || []
+          setMessages(fetched.filter(m => !m.is_deleted))
           setHasMore((data.messages?.length || 0) >= PAGE_SIZE)
         }
       } catch (err) {
@@ -85,9 +86,13 @@ export function useChannel(channelId, currentUser) {
           filter: `channel_id=eq.${channelId}`
         },
         (payload) => {
-          setMessages(prev =>
-            prev.map(m => m.id === payload.new.id ? payload.new : m)
-          )
+          if (payload.new.is_deleted) {
+            setMessages(prev => prev.filter(m => m.id !== payload.new.id))
+          } else {
+            setMessages(prev =>
+              prev.map(m => m.id === payload.new.id ? payload.new : m)
+            )
+          }
         }
       )
       .subscribe((status, err) => {
@@ -182,10 +187,7 @@ export function useChannel(channelId, currentUser) {
       const data = await res.json().catch(() => ({}))
       throw new Error(data.error || 'Failed to delete message')
     }
-    setMessages(prev => prev.map(m => m.id === messageId
-      ? { ...m, is_deleted: true, content: null }
-      : m
-    ))
+    setMessages(prev => prev.filter(m => m.id !== messageId))
   }, [])
 
   return { messages, loading, hasMore, error, sendMessage, editMessage, deleteMessage, loadMore }
