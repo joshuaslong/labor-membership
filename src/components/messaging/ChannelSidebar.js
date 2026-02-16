@@ -10,7 +10,7 @@ export default function ChannelSidebar({
   unreadCounts
 }) {
   return (
-    <div className="w-64 border-r border-stone-200 bg-white flex flex-col h-full">
+    <div className="w-full md:w-64 border-r border-stone-200 bg-white flex flex-col h-full">
       {/* Header */}
       <div className="px-4 py-3 border-b border-stone-200 flex items-center justify-between shrink-0">
         <h2 className="text-sm font-semibold text-gray-900 uppercase tracking-wide">Channels</h2>

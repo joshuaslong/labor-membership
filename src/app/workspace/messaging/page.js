@@ -150,7 +150,7 @@ export default function MessagingPage() {
   const scope = readChapterScope()
   if (scope === 'all' || (!scope && !loading)) {
     return (
-      <div className="flex items-center justify-center" style={{ height: 'calc(100vh - 64px)' }}>
+      <div className="flex items-center justify-center h-[calc(100dvh-117px)] md:h-[calc(100dvh-61px)]">
         <div className="text-center">
           <p className="text-sm text-gray-500">Select a chapter to view messaging</p>
         </div>
@@ -160,31 +160,36 @@ export default function MessagingPage() {
 
   return (
     <>
-      <div className="flex" style={{ height: 'calc(100vh - 64px)' }}>
-        <ChannelSidebar
-          channels={channels}
-          selectedChannelId={selectedChannelId}
-          onSelectChannel={handleSelectChannel}
-          onCreateChannel={() => setShowCreateModal(true)}
-          onBrowseChannels={handleBrowseChannels}
-          isAdmin={isAdmin}
-          unreadCounts={unreadCounts}
-        />
-        {loading && !channels.length ? (
-          <div className="flex-1 flex items-center justify-center bg-stone-50">
-            <div className="animate-pulse space-y-3 w-48">
-              <div className="h-3 bg-stone-200 rounded w-3/4"></div>
-              <div className="h-3 bg-stone-200 rounded w-1/2"></div>
-              <div className="h-3 bg-stone-200 rounded w-2/3"></div>
-            </div>
-          </div>
-        ) : (
-          <ChatArea
-            channelId={selectedChannelId}
-            channel={selectedChannel}
-            currentUser={currentUser}
+      <div className="flex h-[calc(100dvh-117px)] md:h-[calc(100dvh-61px)]">
+        <div className={`${selectedChannelId ? 'hidden md:block' : 'block w-full md:w-auto'}`}>
+          <ChannelSidebar
+            channels={channels}
+            selectedChannelId={selectedChannelId}
+            onSelectChannel={handleSelectChannel}
+            onCreateChannel={() => setShowCreateModal(true)}
+            onBrowseChannels={handleBrowseChannels}
+            isAdmin={isAdmin}
+            unreadCounts={unreadCounts}
           />
-        )}
+        </div>
+        <div className={`${selectedChannelId ? 'flex' : 'hidden md:flex'} flex-1 min-w-0`}>
+          {loading && !channels.length ? (
+            <div className="flex-1 flex items-center justify-center bg-stone-50">
+              <div className="animate-pulse space-y-3 w-48">
+                <div className="h-3 bg-stone-200 rounded w-3/4"></div>
+                <div className="h-3 bg-stone-200 rounded w-1/2"></div>
+                <div className="h-3 bg-stone-200 rounded w-2/3"></div>
+              </div>
+            </div>
+          ) : (
+            <ChatArea
+              channelId={selectedChannelId}
+              channel={selectedChannel}
+              currentUser={currentUser}
+              onBack={() => setSelectedChannelId(null)}
+            />
+          )}
+        </div>
       </div>
 
       <CreateChannelModal

@@ -13,6 +13,14 @@ const geistMono = Geist_Mono({
   variable: '--font-geist-mono',
 })
 
+export const viewport = {
+  width: 'device-width',
+  initialScale: 1,
+  maximumScale: 1,
+  viewportFit: 'cover',
+  interactiveWidget: 'resizes-content',
+}
+
 export const metadata = {
   title: 'Labor Party Membership',
   description: 'Membership management for the Labor Party',

@@ -3,11 +3,14 @@
   "short_name": "LP Workspace",
   "description": "Internal workspace for Labor Party team members",
   "start_url": "/workspace",
+  "scope": "/",
   "display": "standalone",
+  "orientation": "any",
   "background_color": "#fafaf9",
   "theme_color": "#dc2626",
   "icons": [
     { "src": "/icons/icon-192.png", "sizes": "192x192", "type": "image/png" },
-    { "src": "/icons/icon-512.png", "sizes": "512x512", "type": "image/png" }
+    { "src": "/icons/icon-512.png", "sizes": "512x512", "type": "image/png" },
+    { "src": "/icons/icon-512.png", "sizes": "512x512", "type": "image/png", "purpose": "maskable" }
   ]
 }

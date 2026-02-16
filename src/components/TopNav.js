@@ -16,11 +16,9 @@ function TopNav({ sections = [], availableChapters = [], selectedChapterId = 'al
 
   const sectionLabels = {
     workspace: 'Workspace',
-    members: 'Members',
     events: 'Events',
     communicate: 'Email',
     messaging: 'Messaging',
-    chapters: 'Chapters',
     resources: 'Resources',
     polls: 'Polls',
     volunteers: 'Volunteers',
@@ -43,7 +41,7 @@ function TopNav({ sections = [], availableChapters = [], selectedChapterId = 'al
                 priority
               />
             </Link>
-            <nav aria-label="Main navigation" className="flex gap-4 mt-1">
+            <nav aria-label="Main navigation" className="hidden md:flex gap-4 mt-1">
               {sections.map(section => (
                 <Link
                   key={section}

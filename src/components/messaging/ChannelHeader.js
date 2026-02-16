@@ -3,7 +3,7 @@
 import { useState, useEffect, useCallback } from 'react'
 import { usePushSubscription } from '@/hooks/usePushSubscription'
 
-export default function ChannelHeader({ channel }) {
+export default function ChannelHeader({ channel, onBack }) {
   const [notificationsEnabled, setNotificationsEnabled] = useState(false)
   const [toggling, setToggling] = useState(false)
   const { isSupported, permission, subscription, subscribe } = usePushSubscription()
@@ -58,7 +58,18 @@ export default function ChannelHeader({ channel }) {
   return (
     <div className="border-b border-stone-200 bg-white px-4 py-3">
       <div className="max-w-4xl mx-auto flex items-center justify-between">
-        <div className="min-w-0">
+        <div className="min-w-0 flex items-center gap-2">
+          {onBack && (
+            <button
+              onClick={onBack}
+              className="md:hidden p-1 -ml-1 rounded hover:bg-stone-100"
+              aria-label="Back to channels"
+            >
+              <svg className="w-5 h-5 text-gray-600" fill="none" viewBox="0 0 24 24" strokeWidth={1.5} stroke="currentColor">
+                <path strokeLinecap="round" strokeLinejoin="round" d="M15.75 19.5L8.25 12l7.5-7.5" />
+              </svg>
+            </button>
+          )}
           <h2 className="text-sm font-semibold text-gray-900 truncate">
             # {channel.name}
           </h2>

@@ -1,4 +1,5 @@
 import TopNav from '@/components/TopNav'
+import MobileTabBar from '@/components/MobileTabBar'
 import OfflineBanner from '@/components/OfflineBanner'
 import { getCurrentTeamMember, getAccessibleSections } from '@/lib/teamMember'
 import { hasRole } from '@/lib/permissions'
@@ -48,7 +49,10 @@ export default async function WorkspaceLayout({ children }) {
         selectedChapterId={selectedChapterId}
         showAllOption={showAllOption}
       />
-      {children}
+      <div className="pb-14 md:pb-0">
+        {children}
+      </div>
+      <MobileTabBar sections={sections} />
     </div>
   )
 }
