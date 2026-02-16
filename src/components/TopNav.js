@@ -84,13 +84,15 @@ function TopNav({ sections = [], availableChapters = [], selectedChapterId = 'al
                 showAll={showAllOption}
               />
             )}
-            <Link
-              href="/api/auth/logout"
-              className="hidden md:inline text-sm text-gray-700 hover:text-gray-900"
-              aria-label="Log out of your account"
-            >
-              Logout
-            </Link>
+            <form action="/api/auth/logout" method="POST" className="hidden md:inline">
+              <button
+                type="submit"
+                className="text-sm text-gray-700 hover:text-gray-900"
+                aria-label="Log out of your account"
+              >
+                Logout
+              </button>
+            </form>
           </div>
         </div>
       </div>

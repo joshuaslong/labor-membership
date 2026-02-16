@@ -9,12 +9,3 @@ export async function POST(request) {
     status: 302,
   })
 }
-
-export async function GET(request) {
-  const supabase = await createClient()
-  await supabase.auth.signOut()
-
-  return NextResponse.redirect(new URL('/', request.url), {
-    status: 302,
-  })
-}
