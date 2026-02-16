@@ -67,7 +67,7 @@ function TopNav({ sections = [], availableChapters = [], selectedChapterId = 'al
             )}
             <Link
               href="/api/auth/logout"
-              className="text-sm text-gray-700 hover:text-gray-900"
+              className="hidden md:inline text-sm text-gray-700 hover:text-gray-900"
               aria-label="Log out of your account"
             >
               Logout
