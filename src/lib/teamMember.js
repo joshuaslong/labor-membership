@@ -4,7 +4,7 @@ import { canAccessSection } from '@/lib/permissions'
 /**
  * All available sections in the application
  */
-const ALL_SECTIONS = ['members', 'events', 'communicate', 'chapters', 'resources', 'polls', 'volunteers', 'tasks', 'admin']
+const ALL_SECTIONS = ['members', 'events', 'communicate', 'messaging', 'chapters', 'resources', 'polls', 'volunteers', 'tasks', 'admin']
 
 /**
  * Get team member record for current user

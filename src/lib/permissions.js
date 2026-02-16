@@ -14,6 +14,7 @@ const SECTION_PERMISSIONS = {
   polls: ['national_admin', 'state_admin', 'county_admin', 'city_admin', 'communications_lead'],
   volunteers: ['national_admin', 'state_admin', 'county_admin', 'city_admin', 'volunteer_manager', 'event_coordinator'],
   tasks: ['national_admin', 'state_admin', 'county_admin', 'city_admin', 'volunteer_manager'],
+  messaging: ['national_admin', 'state_admin', 'county_admin', 'city_admin', 'communications_lead', 'event_coordinator', 'volunteer_manager', 'membership_coordinator', 'content_creator', 'data_manager'],
   admin: ['super_admin', 'national_admin']
 }
 

@@ -1,4 +1,5 @@
 import TopNav from '@/components/TopNav'
+import OfflineBanner from '@/components/OfflineBanner'
 import { getCurrentTeamMember, getAccessibleSections } from '@/lib/teamMember'
 import { hasRole } from '@/lib/permissions'
 import { getSelectedChapterId } from '@/lib/chapterScope'
@@ -40,6 +41,7 @@ export default async function WorkspaceLayout({ children }) {
 
   return (
     <div className="min-h-screen bg-stone-50">
+      <OfflineBanner />
       <TopNav
         sections={sections}
         availableChapters={availableChapters}
