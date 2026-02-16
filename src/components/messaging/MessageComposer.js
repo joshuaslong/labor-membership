@@ -51,7 +51,7 @@ export default function MessageComposer({ onSend, disabled }) {
           placeholder={disabled ? 'Select a channel to start messaging' : 'Type a message...'}
           disabled={disabled || sending}
           rows={1}
-          className="flex-1 resize-none rounded border border-stone-200 px-3 py-2 text-sm text-gray-900 placeholder-gray-400 focus:outline-none focus:border-stone-400 disabled:bg-stone-50 disabled:text-gray-400"
+          className="flex-1 resize-none rounded border border-stone-200 px-3 py-2 text-base md:text-sm text-gray-900 placeholder-gray-400 focus:outline-none focus:border-stone-400 disabled:bg-stone-50 disabled:text-gray-400"
         />
         <button
           onClick={handleSubmit}

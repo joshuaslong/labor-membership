@@ -65,7 +65,7 @@ export default function MessageBubble({ message, isOwn, onEdit, onDelete }) {
             {message.is_edited && <span className="ml-1 text-gray-400">(edited)</span>}
           </span>
         </div>
-        <p className="text-sm text-gray-800 whitespace-pre-wrap break-words">{message.content}</p>
+        <p className="text-base md:text-sm text-gray-800 whitespace-pre-wrap break-words">{message.content}</p>
       </div>
       {isOwn && (
         <div className="absolute right-3 -top-2 hidden group-hover:flex items-center gap-0.5 bg-white border border-stone-200 rounded shadow-sm px-0.5 py-0.5">
