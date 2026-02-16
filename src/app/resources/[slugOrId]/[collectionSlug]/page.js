@@ -37,7 +37,7 @@ async function fetchCollection(supabase, collectionSlug, chapterId) {
       slug,
       description,
       chapter_id,
-      resource_collection_sections (
+      resource_sections (
         id,
         name,
         sort_order,
@@ -71,7 +71,7 @@ async function fetchCollection(supabase, collectionSlug, chapterId) {
       slug,
       description,
       chapter_id,
-      resource_collection_sections (
+      resource_sections (
         id,
         name,
         sort_order,
@@ -134,7 +134,7 @@ export default async function ChapterCollectionPage({ params }) {
   // Sort sections and files
   const sorted = {
     ...collection,
-    sections: (collection.resource_collection_sections || [])
+    sections: (collection.resource_sections || [])
       .sort((a, b) => (a.sort_order ?? 0) - (b.sort_order ?? 0))
       .map((section) => ({
         ...section,
@@ -146,7 +146,7 @@ export default async function ChapterCollectionPage({ params }) {
           })),
       })),
   }
-  delete sorted.resource_collection_sections
+  delete sorted.resource_sections
 
   const chapterSlugOrId = chapter.slug || chapter.id
 

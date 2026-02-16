@@ -74,6 +74,7 @@ export default function AssetDetailModal({ file, onClose }) {
   const isImage = file?.mime_type?.startsWith('image/')
   const [imgLoading, setImgLoading] = useState(true)
   const [imgError, setImgError] = useState(false)
+  const [downloading, setDownloading] = useState(false)
 
   // Close on Escape
   useEffect(() => {
@@ -95,8 +96,25 @@ export default function AssetDetailModal({ file, onClose }) {
   const ext = getFileExtension(file.original_filename)
   const badgeColor = getTypeBadgeColor(file.mime_type)
 
-  const handleDownload = () => {
-    window.open(`/api/files/download/${file.id}`, '_blank')
+  const handleDownload = async () => {
+    setDownloading(true)
+    try {
+      const res = await fetch(`/api/files/download/${file.id}`)
+      const data = await res.json()
+      if (!res.ok) throw new Error(data.error)
+
+      const link = document.createElement('a')
+      link.href = data.url
+      link.download = data.filename || file.original_filename
+      link.target = '_blank'
+      document.body.appendChild(link)
+      link.click()
+      document.body.removeChild(link)
+    } catch (err) {
+      console.error('Download failed:', err)
+    } finally {
+      setDownloading(false)
+    }
   }
 
   return (
@@ -175,12 +193,17 @@ export default function AssetDetailModal({ file, onClose }) {
         <div className="px-5 pb-5">
           <button
             onClick={handleDownload}
-            className="w-full inline-flex items-center justify-center gap-2 px-4 py-2.5 text-sm font-medium text-white bg-labor-red hover:bg-labor-red/90 rounded-lg transition-colors"
+            disabled={downloading}
+            className="w-full inline-flex items-center justify-center gap-2 px-4 py-2.5 text-sm font-medium text-white bg-labor-red hover:bg-labor-red/90 rounded-lg transition-colors disabled:opacity-50"
           >
-            <svg className="w-4 h-4" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-              <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M4 16v1a3 3 0 003 3h10a3 3 0 003-3v-1m-4-4l-4 4m0 0l-4-4m4 4V4" />
-            </svg>
-            Download
+            {downloading ? (
+              <div className="w-4 h-4 border-2 border-white/30 border-t-white rounded-full animate-spin" />
+            ) : (
+              <svg className="w-4 h-4" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M4 16v1a3 3 0 003 3h10a3 3 0 003-3v-1m-4-4l-4 4m0 0l-4-4m4 4V4" />
+              </svg>
+            )}
+            {downloading ? 'Downloading...' : 'Download'}
           </button>
         </div>
       </div>

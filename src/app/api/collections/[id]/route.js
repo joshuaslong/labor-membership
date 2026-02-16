@@ -181,6 +181,7 @@ export async function PUT(request, { params }) {
     }
     if (body.description !== undefined) updates.description = body.description
     if (body.sort_order !== undefined) updates.sort_order = body.sort_order
+    if (body.is_published !== undefined) updates.is_published = body.is_published
 
     updates.updated_at = new Date().toISOString()
 

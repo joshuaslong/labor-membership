@@ -36,7 +36,7 @@ async function fetchCollections(supabase, chapterId) {
       slug,
       description,
       chapter_id,
-      resource_collection_sections (
+      resource_sections (
         id,
         resource_section_files (
           id,
@@ -59,7 +59,7 @@ async function fetchCollections(supabase, chapterId) {
   }
 
   return (data || []).map((col) => {
-    const sections = col.resource_collection_sections || []
+    const sections = col.resource_sections || []
     let assetCount = 0
     let firstImageFileId = null
 
@@ -95,7 +95,7 @@ async function fetchNationalCollections(supabase) {
       name,
       slug,
       description,
-      resource_collection_sections (
+      resource_sections (
         id,
         resource_section_files (
           id,
@@ -118,7 +118,7 @@ async function fetchNationalCollections(supabase) {
   }
 
   return (data || []).map((col) => {
-    const sections = col.resource_collection_sections || []
+    const sections = col.resource_sections || []
     let assetCount = 0
     let firstImageFileId = null
 

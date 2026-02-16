@@ -198,6 +198,7 @@ export default function CollectionEditor({ collectionId }) {
   const [name, setName] = useState('')
   const [slug, setSlug] = useState('')
   const [description, setDescription] = useState('')
+  const [isPublished, setIsPublished] = useState(false)
   const [savingMeta, setSavingMeta] = useState(false)
   const [addingSection, setAddingSection] = useState(false)
   const [filePickerSection, setFilePickerSection] = useState(null)
@@ -214,6 +215,7 @@ export default function CollectionEditor({ collectionId }) {
       setName(col.name || '')
       setSlug(col.slug || '')
       setDescription(col.description || '')
+      setIsPublished(col.is_published || false)
     } catch (err) {
       setError(err.message)
     } finally {
@@ -227,7 +229,6 @@ export default function CollectionEditor({ collectionId }) {
 
   const handleSaveMeta = async () => {
     if (!name.trim() || !slug.trim()) return
-    if (name === collection.name && slug === collection.slug && description === (collection.description || '')) return
 
     setSavingMeta(true)
     try {
@@ -238,6 +239,7 @@ export default function CollectionEditor({ collectionId }) {
           name: name.trim(),
           slug: slug.trim(),
           description: description.trim() || null,
+          is_published: isPublished,
         }),
       })
       const data = await res.json()
@@ -437,6 +439,44 @@ export default function CollectionEditor({ collectionId }) {
               className="w-full px-3 py-1.5 text-sm bg-white border border-stone-200 rounded focus:outline-none focus:ring-1 focus:ring-labor-red focus:border-labor-red resize-none"
               placeholder="Brief description..."
             />
+          </div>
+          <div className="flex items-center justify-between">
+            <div>
+              <label className="block text-xs font-medium text-gray-500">Published</label>
+              <p className="text-xs text-gray-400 mt-0.5">Visible on the public resources portal</p>
+            </div>
+            <button
+              type="button"
+              role="switch"
+              aria-checked={isPublished}
+              onClick={async () => {
+                const newVal = !isPublished
+                setIsPublished(newVal)
+                setSavingMeta(true)
+                try {
+                  const res = await fetch(`/api/collections/${collectionId}`, {
+                    method: 'PUT',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify({ is_published: newVal }),
+                  })
+                  const data = await res.json()
+                  if (!res.ok) throw new Error(data.error)
+                  setCollection(prev => ({ ...prev, is_published: newVal }))
+                } catch (err) {
+                  setIsPublished(!newVal)
+                  alert(`Failed to update: ${err.message}`)
+                } finally {
+                  setSavingMeta(false)
+                }
+              }}
+              className={`relative inline-flex h-5 w-9 flex-shrink-0 cursor-pointer rounded-full border-2 border-transparent transition-colors ${
+                isPublished ? 'bg-labor-red' : 'bg-gray-200'
+              }`}
+            >
+              <span className={`pointer-events-none inline-block h-4 w-4 transform rounded-full bg-white shadow transition-transform ${
+                isPublished ? 'translate-x-4' : 'translate-x-0'
+              }`} />
+            </button>
           </div>
           {savingMeta && (
             <p className="text-xs text-gray-400">Saving...</p>

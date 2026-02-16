@@ -132,6 +132,11 @@ export default function CollectionsList({ isTopAdmin = false }) {
                 {collection.chapter_id === null && (
                   <span className="text-xs bg-stone-100 text-gray-500 px-1.5 py-0.5 rounded">National</span>
                 )}
+                {collection.is_published ? (
+                  <span className="text-xs bg-emerald-50 text-emerald-700 px-1.5 py-0.5 rounded">Published</span>
+                ) : (
+                  <span className="text-xs bg-amber-50 text-amber-700 px-1.5 py-0.5 rounded">Draft</span>
+                )}
               </div>
             </Link>
           ))}

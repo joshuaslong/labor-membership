@@ -16,7 +16,7 @@ export default async function NationalResourcesPage() {
       name,
       slug,
       description,
-      resource_collection_sections (
+      resource_sections (
         id,
         resource_section_files (
           id,
@@ -39,7 +39,7 @@ export default async function NationalResourcesPage() {
 
   // Transform to add asset counts and first image thumbnail
   const enriched = (collections || []).map((col) => {
-    const sections = col.resource_collection_sections || []
+    const sections = col.resource_sections || []
     let assetCount = 0
     let firstImageFileId = null
 

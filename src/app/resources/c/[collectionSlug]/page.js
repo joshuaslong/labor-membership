@@ -32,7 +32,7 @@ export default async function NationalCollectionPage({ params }) {
       name,
       slug,
       description,
-      resource_collection_sections (
+      resource_sections (
         id,
         name,
         sort_order,
@@ -62,7 +62,7 @@ export default async function NationalCollectionPage({ params }) {
   // Sort sections by sort_order, and files within each section
   const sorted = {
     ...collection,
-    sections: (collection.resource_collection_sections || [])
+    sections: (collection.resource_sections || [])
       .sort((a, b) => (a.sort_order ?? 0) - (b.sort_order ?? 0))
       .map((section) => ({
         ...section,
@@ -74,7 +74,7 @@ export default async function NationalCollectionPage({ params }) {
           })),
       })),
   }
-  delete sorted.resource_collection_sections
+  delete sorted.resource_sections
 
   return (
     <CollectionPage
