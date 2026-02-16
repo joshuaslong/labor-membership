@@ -13,6 +13,13 @@ export default function ResponsiveSidebarWrapper({ children }) {
     setIsOpen(false)
   }, [pathname, searchParams])
 
+  // Listen for toggle event from TopNav hamburger
+  useEffect(() => {
+    const handleToggle = () => setIsOpen(prev => !prev)
+    window.addEventListener('toggle-sidebar', handleToggle)
+    return () => window.removeEventListener('toggle-sidebar', handleToggle)
+  }, [])
+
   // Lock body scroll when open
   useEffect(() => {
     if (isOpen) {
@@ -26,21 +33,6 @@ export default function ResponsiveSidebarWrapper({ children }) {
       {/* Desktop: sidebar in normal flow */}
       <div className="hidden md:block shrink-0">
         {children}
-      </div>
-
-      {/* Mobile: hamburger column (in-flow, takes up space so content shifts right) */}
-      <div className="md:hidden shrink-0 w-11">
-        <div className="sticky top-[61px] py-3 pl-3">
-          <button
-            onClick={() => setIsOpen(true)}
-            className="p-1.5 rounded-lg bg-white border border-stone-200 shadow-sm active:bg-stone-50"
-            aria-label="Open section menu"
-          >
-            <svg className="w-5 h-5 text-gray-600" fill="none" viewBox="0 0 24 24" strokeWidth={1.5} stroke="currentColor">
-              <path strokeLinecap="round" strokeLinejoin="round" d="M3.75 6.75h16.5M3.75 12h16.5m-16.5 5.25h16.5" />
-            </svg>
-          </button>
-        </div>
       </div>
 
       {/* Mobile drawer overlay */}

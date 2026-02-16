@@ -6,6 +6,9 @@ import { usePathname } from 'next/navigation'
 import PropTypes from 'prop-types'
 import ChapterSwitcher from '@/components/ChapterSwitcher'
 
+// Sections that have a contextual sidebar on their pages
+const SECTIONS_WITH_SIDEBAR = ['events', 'communicate', 'resources', 'polls', 'volunteers', 'tasks', 'admin', 'members', 'chapters']
+
 function TopNav({ sections = [], availableChapters = [], selectedChapterId = 'all', showAllOption = false }) {
   const pathname = usePathname()
 
@@ -13,6 +16,10 @@ function TopNav({ sections = [], availableChapters = [], selectedChapterId = 'al
     if (section === 'workspace') return pathname === '/workspace'
     return pathname.startsWith(`/workspace/${section}`)
   }
+
+  // Show hamburger on mobile when current section has a sidebar
+  const currentSection = pathname.split('/')[2] || ''
+  const hasSidebar = SECTIONS_WITH_SIDEBAR.includes(currentSection)
 
   const sectionLabels = {
     workspace: 'Workspace',
@@ -31,6 +38,18 @@ function TopNav({ sections = [], availableChapters = [], selectedChapterId = 'al
       <div className="px-4 sm:px-6">
         <div className="flex items-center justify-between py-4">
           <div className="flex items-center gap-6">
+            {/* Mobile sidebar hamburger */}
+            {hasSidebar && (
+              <button
+                className="md:hidden p-1.5 -ml-1.5 rounded-lg hover:bg-stone-100 active:bg-stone-200"
+                onClick={() => window.dispatchEvent(new CustomEvent('toggle-sidebar'))}
+                aria-label="Open section menu"
+              >
+                <svg className="w-5 h-5 text-gray-600" fill="none" viewBox="0 0 24 24" strokeWidth={1.5} stroke="currentColor">
+                  <path strokeLinecap="round" strokeLinejoin="round" d="M3.75 6.75h16.5M3.75 12h16.5m-16.5 5.25h16.5" />
+                </svg>
+              </button>
+            )}
             <Link href="/workspace" className="flex-shrink-0">
               <Image
                 src="/logo-workspace.png"

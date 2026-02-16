@@ -4,6 +4,7 @@ import { useState, useEffect, useRef, useCallback } from 'react'
 import { createClient } from '@/lib/supabase/client'
 
 const PAGE_SIZE = 50
+const POLL_INTERVAL = 3000
 
 export function useChannel(channelId, currentUser) {
   const [messages, setMessages] = useState([])
@@ -17,6 +18,44 @@ export function useChannel(channelId, currentUser) {
   if (!supabaseRef.current) {
     supabaseRef.current = createClient()
   }
+
+  // Fetch recent messages from API and merge into state (with sender info)
+  const fetchNewMessages = useCallback(async () => {
+    if (!channelId) return
+    try {
+      const res = await fetch(
+        `/api/workspace/messaging/channels/${channelId}/messages?limit=20`
+      )
+      if (!res.ok) return
+      const data = await res.json()
+      const latest = (data.messages || []).reverse().filter(m => !m.is_deleted)
+
+      setMessages(prev => {
+        const existingMap = new Map(prev.map(m => [m.id, m]))
+        let changed = false
+
+        // Update any existing messages that were edited
+        const updated = prev.map(m => {
+          const fresh = latest.find(f => f.id === m.id)
+          if (fresh && (fresh.content !== m.content || fresh.is_edited !== m.is_edited)) {
+            changed = true
+            return { ...m, content: fresh.content, is_edited: fresh.is_edited }
+          }
+          return m
+        })
+
+        // Add any new messages not in our state
+        const newMsgs = latest.filter(m => !existingMap.has(m.id))
+        if (newMsgs.length > 0) {
+          return [...updated, ...newMsgs]
+        }
+
+        return changed ? updated : prev
+      })
+    } catch {
+      // Silent — polling failures are expected (offline, etc.)
+    }
+  }, [channelId])
 
   // Fetch initial messages
   useEffect(() => {
@@ -54,7 +93,7 @@ export function useChannel(channelId, currentUser) {
     return () => { cancelled = true }
   }, [channelId])
 
-  // Set up Realtime subscription
+  // Set up Realtime subscription — used as a fast trigger to fetch from API
   useEffect(() => {
     if (!channelId) return
 
@@ -69,12 +108,9 @@ export function useChannel(channelId, currentUser) {
           table: 'messages',
           filter: `channel_id=eq.${channelId}`
         },
-        (payload) => {
-          setMessages(prev => {
-            // Avoid duplicates (optimistic update may have already added it)
-            if (prev.some(m => m.id === payload.new.id)) return prev
-            return [...prev, payload.new]
-          })
+        () => {
+          // Fetch from API to get complete message with sender info
+          fetchNewMessages()
         }
       )
       .on(
@@ -89,8 +125,12 @@ export function useChannel(channelId, currentUser) {
           if (payload.new.is_deleted) {
             setMessages(prev => prev.filter(m => m.id !== payload.new.id))
           } else {
+            // Keep existing sender info, only update content/flags
             setMessages(prev =>
-              prev.map(m => m.id === payload.new.id ? payload.new : m)
+              prev.map(m => m.id === payload.new.id
+                ? { ...m, content: payload.new.content, is_edited: payload.new.is_edited }
+                : m
+              )
             )
           }
         }
@@ -107,7 +147,16 @@ export function useChannel(channelId, currentUser) {
       supabase.removeChannel(realtimeChannel)
       channelRef.current = null
     }
-  }, [channelId])
+  }, [channelId, fetchNewMessages])
+
+  // Polling fallback — fetch new messages every few seconds
+  useEffect(() => {
+    if (!channelId) return
+    const interval = setInterval(() => {
+      if (!document.hidden) fetchNewMessages()
+    }, POLL_INTERVAL)
+    return () => clearInterval(interval)
+  }, [channelId, fetchNewMessages])
 
   const sendMessage = useCallback(async (content) => {
     if (!channelId || !content.trim()) return
