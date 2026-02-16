@@ -90,7 +90,11 @@ export function useChannel(channelId, currentUser) {
           )
         }
       )
-      .subscribe()
+      .subscribe((status, err) => {
+        if (status === 'CHANNEL_ERROR' || status === 'TIMED_OUT') {
+          console.warn(`Realtime subscription ${status}`, err)
+        }
+      })
 
     channelRef.current = realtimeChannel
 

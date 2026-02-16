@@ -73,6 +73,8 @@ export const config = {
   matcher: [
     '/dashboard/:path*',
     '/admin/:path*',
+    '/workspace/:path*',
+    '/api/workspace/:path*',
     '/login',
   ],
 }
