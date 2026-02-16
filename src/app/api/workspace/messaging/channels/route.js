@@ -1,18 +1,28 @@
 import { NextResponse } from 'next/server'
-import { createClient } from '@/lib/supabase/server'
+import { createAdminClient } from '@/lib/supabase/server'
 import { getCurrentTeamMember } from '@/lib/teamMember'
-import { getEffectiveChapterScope, resolveChapterIds, applyChapterFilter } from '@/lib/chapterScope'
+import { resolveChapterIds, applyChapterFilter } from '@/lib/chapterScope'
 import { isAdmin } from '@/lib/permissions'
 
-export async function GET() {
+export async function GET(request) {
   const teamMember = await getCurrentTeamMember()
   if (!teamMember) {
     return NextResponse.json({ error: 'Unauthorized' }, { status: 401 })
   }
 
-  const supabase = await createClient()
-  const scope = await getEffectiveChapterScope(teamMember)
-  const chapterIds = await resolveChapterIds(scope, supabase)
+  const supabase = createAdminClient()
+
+  // Read chapter scope from query param (client passes it explicitly)
+  const url = new URL(request.url)
+  const chapterParam = url.searchParams.get('chapter')
+
+  let chapterIds = null
+  if (chapterParam && chapterParam !== 'all') {
+    chapterIds = await resolveChapterIds(
+      { chapterId: chapterParam, includeDescendants: true },
+      supabase
+    )
+  }
 
   let query = supabase
     .from('channels')
@@ -73,20 +83,17 @@ export async function POST(request) {
   }
 
   const body = await request.json()
-  const { name, description } = body
+  const { name, description, chapter_id: chapterId } = body
 
   if (!name || typeof name !== 'string' || !name.trim()) {
     return NextResponse.json({ error: 'Channel name is required' }, { status: 400 })
   }
 
-  const supabase = await createClient()
-  const scope = await getEffectiveChapterScope(teamMember)
-
-  if (!scope || !scope.chapterId) {
+  if (!chapterId) {
     return NextResponse.json({ error: 'Select a chapter to create a channel' }, { status: 400 })
   }
 
-  const chapterId = scope.chapterId
+  const supabase = createAdminClient()
 
   // Create channel
   const { data: channel, error } = await supabase
@@ -101,6 +108,9 @@ export async function POST(request) {
     .single()
 
   if (error) {
+    if (error.code === '23505') {
+      return NextResponse.json({ error: 'A channel with this name already exists in this chapter' }, { status: 409 })
+    }
     return NextResponse.json({ error: 'Failed to create channel' }, { status: 500 })
   }
 

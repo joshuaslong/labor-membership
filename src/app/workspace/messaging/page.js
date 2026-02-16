@@ -35,11 +35,12 @@ export default function MessagingPage() {
       .catch(() => {})
   }, [])
 
-  // Fetch channels (API returns flat array, filter joined client-side)
-  const fetchChannels = useCallback(async () => {
+  // Fetch channels — pass chapter scope as query param so API doesn't depend on cookie
+  const fetchChannels = useCallback(async (scope) => {
     setLoading(true)
     try {
-      const res = await fetch('/api/workspace/messaging/channels')
+      const params = scope ? `?chapter=${encodeURIComponent(scope)}` : ''
+      const res = await fetch(`/api/workspace/messaging/channels${params}`)
       if (!res.ok) throw new Error('Failed to load channels')
       const data = await res.json()
       const all = Array.isArray(data) ? data : []
@@ -54,9 +55,10 @@ export default function MessagingPage() {
   }, [])
 
   // Refresh all channels for browse modal
-  const fetchAllChannels = useCallback(async () => {
+  const fetchAllChannels = useCallback(async (scope) => {
     try {
-      const res = await fetch('/api/workspace/messaging/channels')
+      const params = scope ? `?chapter=${encodeURIComponent(scope)}` : ''
+      const res = await fetch(`/api/workspace/messaging/channels${params}`)
       if (!res.ok) throw new Error('Failed to load channels')
       const data = await res.json()
       setAllChannels(Array.isArray(data) ? data : [])
@@ -69,7 +71,7 @@ export default function MessagingPage() {
   useEffect(() => {
     const scope = readChapterScope()
     setChapterScope(scope)
-    fetchChannels()
+    fetchChannels(scope)
   }, [readChapterScope, fetchChannels])
 
   // Listen for chapter scope changes (cookie changes via custom event or polling)
@@ -79,7 +81,7 @@ export default function MessagingPage() {
       if (newScope !== chapterScope) {
         setChapterScope(newScope)
         setSelectedChannelId(null)
-        fetchChannels()
+        fetchChannels(newScope)
       }
     }
 
@@ -102,12 +104,13 @@ export default function MessagingPage() {
   }
 
   const handleChannelCreated = (newChannel) => {
-    setChannels(prev => [...prev, newChannel])
+    setChannels(prev => [...prev, { ...newChannel, is_member: true, member_count: 1 }])
+    setAllChannels(prev => [...prev, { ...newChannel, is_member: true, member_count: 1 }])
     setSelectedChannelId(newChannel.id)
   }
 
   const handleBrowseChannels = async () => {
-    await fetchAllChannels()
+    await fetchAllChannels(chapterScope)
     setShowBrowseModal(true)
   }
 
@@ -118,7 +121,7 @@ export default function MessagingPage() {
     if (!res.ok) return
 
     // Refresh channels
-    await fetchChannels()
+    await fetchChannels(chapterScope)
     setSelectedChannelId(channelId)
   }
 
@@ -171,6 +174,7 @@ export default function MessagingPage() {
         isOpen={showCreateModal}
         onClose={() => setShowCreateModal(false)}
         onCreated={handleChannelCreated}
+        chapterId={chapterScope}
       />
       <BrowseChannelsModal
         isOpen={showBrowseModal}
