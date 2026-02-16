@@ -5,7 +5,7 @@ import { createClient } from '@/lib/supabase/client'
 
 const PAGE_SIZE = 50
 
-export function useChannel(channelId) {
+export function useChannel(channelId, currentUser) {
   const [messages, setMessages] = useState([])
   const [loading, setLoading] = useState(false)
   const [hasMore, setHasMore] = useState(true)
@@ -69,7 +69,11 @@ export function useChannel(channelId) {
           filter: `channel_id=eq.${channelId}`
         },
         (payload) => {
-          setMessages(prev => [...prev, payload.new])
+          setMessages(prev => {
+            // Avoid duplicates (optimistic update may have already added it)
+            if (prev.some(m => m.id === payload.new.id)) return prev
+            return [...prev, payload.new]
+          })
         }
       )
       .on(
@@ -111,8 +115,22 @@ export function useChannel(channelId) {
       const data = await res.json().catch(() => ({}))
       throw new Error(data.error || 'Failed to send message')
     }
-    // Message will arrive via Realtime subscription
-  }, [channelId])
+
+    const message = await res.json()
+
+    // Optimistically add to local state with sender info for display
+    setMessages(prev => {
+      if (prev.some(m => m.id === message.id)) return prev
+      return [...prev, {
+        ...message,
+        sender: {
+          team_member_id: message.sender_id,
+          first_name: currentUser?.first_name || null,
+          last_name: currentUser?.last_name || null,
+        }
+      }]
+    })
+  }, [channelId, currentUser])
 
   const loadMore = useCallback(async () => {
     if (!channelId || loading || !hasMore || messages.length === 0) return

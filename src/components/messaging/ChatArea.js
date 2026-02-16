@@ -7,7 +7,7 @@ import MessageBubble from './MessageBubble'
 import MessageComposer from './MessageComposer'
 
 export default function ChatArea({ channelId, channel, currentUser }) {
-  const { messages, loading, hasMore, sendMessage, loadMore } = useChannel(channelId)
+  const { messages, loading, hasMore, sendMessage, loadMore } = useChannel(channelId, currentUser)
   const messagesEndRef = useRef(null)
   const messagesContainerRef = useRef(null)
   const prevMessageCountRef = useRef(0)

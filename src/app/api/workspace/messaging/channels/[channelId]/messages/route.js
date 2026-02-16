@@ -1,5 +1,5 @@
 import { NextResponse } from 'next/server'
-import { createClient } from '@/lib/supabase/server'
+import { createAdminClient } from '@/lib/supabase/server'
 import { getCurrentTeamMember } from '@/lib/teamMember'
 
 export async function GET(request, { params }) {
@@ -9,7 +9,7 @@ export async function GET(request, { params }) {
   }
 
   const { channelId } = await params
-  const supabase = await createClient()
+  const supabase = createAdminClient()
 
   // Verify user is a channel member
   const { data: membership } = await supabase
@@ -85,7 +85,7 @@ export async function POST(request, { params }) {
   }
 
   const { channelId } = await params
-  const supabase = await createClient()
+  const supabase = createAdminClient()
 
   // Verify user is a channel member
   const { data: membership } = await supabase
