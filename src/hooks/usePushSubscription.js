@@ -66,28 +66,24 @@ export function usePushSubscription() {
       }
 
       const reg = await navigator.serviceWorker.ready
+      const serverKey = urlBase64ToUint8Array(vapidKey)
 
-      // Check for existing browser subscription
-      let sub = await reg.pushManager.getSubscription()
-
-      if (sub) {
-        // Existing subscription — sync it to server and return
-        try {
-          await syncSubscriptionToServer(sub)
-          setSubscription(sub)
-          return sub
-        } catch (syncErr) {
-          // Sync failed — unsubscribe stale one and create fresh
-          console.warn('Push sync failed, recreating:', syncErr.message)
-          await sub.unsubscribe().catch(() => {})
-        }
+      // Always clear any existing subscription first to avoid stale key conflicts
+      const existing = await reg.pushManager.getSubscription()
+      if (existing) {
+        await existing.unsubscribe().catch(() => {})
       }
 
-      // Create new subscription
-      sub = await reg.pushManager.subscribe({
-        userVisibleOnly: true,
-        applicationServerKey: urlBase64ToUint8Array(vapidKey),
-      })
+      // Create fresh subscription
+      let sub
+      try {
+        sub = await reg.pushManager.subscribe({
+          userVisibleOnly: true,
+          applicationServerKey: serverKey,
+        })
+      } catch (pushErr) {
+        throw new Error('Registration failed \u2013 push service error')
+      }
 
       setSubscription(sub)
       await syncSubscriptionToServer(sub)

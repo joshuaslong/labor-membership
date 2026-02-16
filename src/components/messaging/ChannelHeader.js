@@ -49,6 +49,8 @@ export default function ChannelHeader({ channel, onBack }) {
               ? 'Notification permission is denied. Close the app, go to Settings → Notifications → find this app → enable, then reopen.'
               : 'Notification permission is blocked. Click the lock icon in your address bar, set Notifications to "Allow", then try again.'
             )
+          } else if (err.message.includes('push service')) {
+            setPushError('Push registration failed. Check that notifications are enabled in your OS settings (Windows: Settings → System → Notifications → Chrome). Then clear site data and retry.')
           } else {
             setPushError(err.message || 'Could not enable push notifications.')
           }
