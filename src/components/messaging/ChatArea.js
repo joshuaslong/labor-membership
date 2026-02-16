@@ -113,7 +113,7 @@ export default function ChatArea({ channelId, channel, currentUser }) {
         )}
 
         {/* Messages list */}
-        <div className="max-w-3xl mx-auto py-2">
+        <div className="max-w-4xl mx-auto py-2">
           {messages.map(message => (
             <MessageBubble
               key={message.id}
