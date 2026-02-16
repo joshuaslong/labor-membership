@@ -2,17 +2,19 @@ import { createClient, createAdminClient } from '@/lib/supabase/server'
 import { NextResponse } from 'next/server'
 
 async function checkCollectionAccess(adminClient, userId, chapterId) {
-  const { data: adminRecords } = await adminClient
-    .from('admin_users')
-    .select('role, chapter_id')
+  const { data: teamMember } = await adminClient
+    .from('team_members')
+    .select('roles, chapter_id')
     .eq('user_id', userId)
+    .eq('active', true)
+    .single()
 
-  if (!adminRecords || adminRecords.length === 0) {
+  if (!teamMember || !teamMember.roles?.length) {
     return false
   }
 
-  const isTopAdmin = adminRecords.some(a =>
-    ['super_admin', 'national_admin'].includes(a.role)
+  const isTopAdmin = teamMember.roles.some(r =>
+    ['super_admin', 'national_admin'].includes(r)
   )
 
   if (!chapterId) {
@@ -21,17 +23,13 @@ async function checkCollectionAccess(adminClient, userId, chapterId) {
 
   if (isTopAdmin) return true
 
-  for (const admin of adminRecords) {
-    if (!admin.chapter_id) continue
-    if (admin.chapter_id === chapterId) return true
+  if (!teamMember.chapter_id) return false
+  if (teamMember.chapter_id === chapterId) return true
 
-    const { data: descendants } = await adminClient
-      .rpc('get_chapter_descendants', { chapter_uuid: admin.chapter_id })
-    const descendantIds = descendants?.map(d => d.id) || []
-    if (descendantIds.includes(chapterId)) return true
-  }
-
-  return false
+  const { data: descendants } = await adminClient
+    .rpc('get_chapter_descendants', { chapter_uuid: teamMember.chapter_id })
+  const descendantIds = descendants?.map(d => d.id) || []
+  return descendantIds.includes(chapterId)
 }
 
 async function getCollectionForSection(adminClient, collectionId, sectionId) {

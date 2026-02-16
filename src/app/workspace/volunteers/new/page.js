@@ -44,19 +44,18 @@ export default function CreateVolunteerOpportunityPage() {
     const { data: { user } } = await supabase.auth.getUser()
     if (!user) return
 
-    const { data: adminRecords } = await supabase
-      .from('admin_users')
-      .select('id, role, chapter_id, chapters(id, name)')
+    const { data: teamMember } = await supabase
+      .from('team_members')
+      .select('id, roles, chapter_id, is_media_team')
       .eq('user_id', user.id)
+      .eq('active', true)
+      .single()
 
     let admin = null
-    if (adminRecords && adminRecords.length > 0) {
+    if (teamMember && teamMember.roles?.length) {
       const roleHierarchy = ['super_admin', 'national_admin', 'state_admin', 'county_admin', 'city_admin']
-      admin = adminRecords.reduce((highest, current) => {
-        const currentIndex = roleHierarchy.indexOf(current.role)
-        const highestIndex = roleHierarchy.indexOf(highest.role)
-        return currentIndex < highestIndex ? current : highest
-      }, adminRecords[0])
+      const highestRole = roleHierarchy.find(r => teamMember.roles.includes(r)) || teamMember.roles[0]
+      admin = { id: teamMember.id, role: highestRole, chapter_id: teamMember.chapter_id }
     }
 
     if (['super_admin', 'national_admin'].includes(admin?.role)) {

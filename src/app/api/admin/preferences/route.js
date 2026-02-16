@@ -10,14 +10,15 @@ export async function GET() {
     return NextResponse.json({ error: 'Unauthorized' }, { status: 401 })
   }
 
-  // Verify user is an admin (user may have multiple admin records)
-  const { data: adminRecords } = await supabase
-    .from('admin_users')
-    .select('id')
+  // Verify user is an admin
+  const { data: teamMember } = await supabase
+    .from('team_members')
+    .select('id, roles, chapter_id, is_media_team')
     .eq('user_id', user.id)
-    .limit(1)
+    .eq('active', true)
+    .single()
 
-  if (!adminRecords || adminRecords.length === 0) {
+  if (!teamMember) {
     return NextResponse.json({ error: 'Not an admin' }, { status: 403 })
   }
 
@@ -46,14 +47,15 @@ export async function PUT(request) {
     return NextResponse.json({ error: 'Unauthorized' }, { status: 401 })
   }
 
-  // Verify user is an admin (user may have multiple admin records)
-  const { data: adminRecords } = await supabase
-    .from('admin_users')
-    .select('id')
+  // Verify user is an admin
+  const { data: teamMember } = await supabase
+    .from('team_members')
+    .select('id, roles, chapter_id, is_media_team')
     .eq('user_id', user.id)
-    .limit(1)
+    .eq('active', true)
+    .single()
 
-  if (!adminRecords || adminRecords.length === 0) {
+  if (!teamMember) {
     return NextResponse.json({ error: 'Not an admin' }, { status: 403 })
   }
 

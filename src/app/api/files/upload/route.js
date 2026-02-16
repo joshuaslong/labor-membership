@@ -96,16 +96,17 @@ export async function POST(request) {
           .single()
         stateCode = chapter?.state_code || 'general'
       } else {
-        // Get admin's chapter if no chapter specified
-        const { data: adminRecords } = await adminClient
-          .from('admin_users')
+        // Get team member's chapter if no chapter specified
+        const { data: uploadTeamMember } = await adminClient
+          .from('team_members')
           .select('chapter_id, chapters(state_code)')
           .eq('user_id', user.id)
+          .eq('active', true)
           .not('chapter_id', 'is', null)
-          .limit(1)
+          .single()
 
-        if (adminRecords?.[0]?.chapters?.state_code) {
-          stateCode = adminRecords[0].chapters.state_code
+        if (uploadTeamMember?.chapters?.state_code) {
+          stateCode = uploadTeamMember.chapters.state_code
         } else {
           stateCode = 'general'
         }

@@ -48,14 +48,18 @@ export async function middleware(request) {
       return NextResponse.redirect(new URL('/login', request.url))
     }
 
-    // Check admin role (user can have multiple admin records)
-    const { data: adminRecords } = await supabase
-      .from('admin_users')
-      .select('role')
+    // Check admin role from team_members
+    const { data: teamMember } = await supabase
+      .from('team_members')
+      .select('roles')
       .eq('user_id', user.id)
-      .limit(1)
+      .eq('active', true)
+      .single()
 
-    if (!adminRecords || adminRecords.length === 0) {
+    const ADMIN_ROLES = ['super_admin', 'national_admin', 'state_admin', 'county_admin', 'city_admin']
+    const isAdmin = teamMember?.roles?.some(r => ADMIN_ROLES.includes(r))
+
+    if (!isAdmin) {
       // Not an admin - redirect to dashboard
       return NextResponse.redirect(new URL('/dashboard', request.url))
     }

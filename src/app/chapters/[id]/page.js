@@ -52,12 +52,14 @@ export default async function ChapterDetailPage({ params }) {
   let memberId = null
 
   if (user) {
-    // Check for any admin record (user can have multiple)
-    const { data: adminRecords } = await supabase
-      .from('admin_users')
-      .select('role')
+    // Check for team member with admin roles
+    const { data: teamMember } = await supabase
+      .from('team_members')
+      .select('id, roles, chapter_id, is_media_team')
       .eq('user_id', user.id)
-    isAdmin = adminRecords && adminRecords.length > 0
+      .eq('active', true)
+      .single()
+    isAdmin = teamMember?.roles?.some(r => ['super_admin', 'national_admin', 'state_admin', 'county_admin', 'city_admin'].includes(r))
 
     // Check if user is a member of this chapter
     const { data: memberRecord } = await supabase

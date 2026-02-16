@@ -160,21 +160,23 @@ export async function POST(request) {
       return NextResponse.json({ error: 'Unauthorized' }, { status: 401 })
     }
 
-    // Check if user is admin (user can have multiple admin records)
+    // Check if user is admin
     const adminClient = createAdminClient()
-    const { data: adminRecords } = await adminClient
-      .from('admin_users')
-      .select('id, role')
+    const { data: teamMember } = await adminClient
+      .from('team_members')
+      .select('id, roles, chapter_id, is_media_team')
       .eq('user_id', user.id)
+      .eq('active', true)
+      .single()
 
-    // Check if any admin record has sufficient permissions
-    const hasAdminAccess = adminRecords?.some(a => ['admin', 'super_admin', 'national_admin'].includes(a.role))
+    // Check if team member has sufficient permissions
+    const hasAdminAccess = teamMember?.roles?.some(r => ['super_admin', 'national_admin'].includes(r))
     if (!hasAdminAccess) {
       return NextResponse.json({ error: 'Admin access required' }, { status: 403 })
     }
 
-    // Get admin user ID for segment applied_by tracking
-    const adminUserId = adminRecords?.[0]?.id || null
+    // Get team member ID for segment applied_by tracking
+    const adminUserId = teamMember?.id || null
 
     // Get CSV data from request
     const formData = await request.formData()

@@ -15,12 +15,14 @@ export async function GET(request, { params }) {
     const adminClient = createAdminClient()
 
     // Verify admin
-    const { data: adminRecords } = await adminClient
-      .from('admin_users')
-      .select('id, role, chapter_id')
+    const { data: teamMember } = await adminClient
+      .from('team_members')
+      .select('id, roles, chapter_id, is_media_team')
       .eq('user_id', user.id)
+      .eq('active', true)
+      .single()
 
-    if (!adminRecords || adminRecords.length === 0) {
+    if (!teamMember) {
       return NextResponse.json({ error: 'Not an admin' }, { status: 403 })
     }
 
@@ -37,20 +39,20 @@ export async function GET(request, { params }) {
 
     // Check jurisdiction
     const roleHierarchy = ['super_admin', 'national_admin', 'state_admin', 'county_admin', 'city_admin']
-    const currentAdmin = adminRecords.reduce((highest, current) => {
-      const currentIndex = roleHierarchy.indexOf(current.role)
-      const highestIndex = roleHierarchy.indexOf(highest.role)
-      return currentIndex < highestIndex ? current : highest
-    }, adminRecords[0])
+    const highestRole = roleHierarchy.find(r => (teamMember.roles || []).includes(r)) || null
 
-    const isSuperAdmin = ['super_admin', 'national_admin'].includes(currentAdmin.role)
+    if (!highestRole) {
+      return NextResponse.json({ error: 'Not an admin' }, { status: 403 })
+    }
+
+    const isSuperAdmin = ['super_admin', 'national_admin'].includes(highestRole)
 
     if (!isSuperAdmin) {
       const { data: descendants } = await adminClient
-        .rpc('get_chapter_descendants', { chapter_uuid: currentAdmin.chapter_id })
+        .rpc('get_chapter_descendants', { chapter_uuid: teamMember.chapter_id })
       const allowedChapterIds = descendants?.map(d => d.id) || []
 
-      if (!allowedChapterIds.includes(poll.chapter_id) && currentAdmin.chapter_id !== poll.chapter_id) {
+      if (!allowedChapterIds.includes(poll.chapter_id) && teamMember.chapter_id !== poll.chapter_id) {
         return NextResponse.json({ error: 'You do not have access to this poll' }, { status: 403 })
       }
     }

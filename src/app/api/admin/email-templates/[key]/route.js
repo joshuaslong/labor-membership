@@ -15,13 +15,14 @@ export async function GET(request, { params }) {
   const supabase = createAdminClient()
 
   // Check if user is super_admin or national_admin
-  const { data: adminRecords } = await supabase
-    .from('admin_users')
-    .select('role')
+  const { data: teamMember } = await supabase
+    .from('team_members')
+    .select('id, roles, chapter_id, is_media_team')
     .eq('user_id', user.id)
-    .in('role', ['super_admin', 'national_admin'])
+    .eq('active', true)
+    .single()
 
-  if (!adminRecords || adminRecords.length === 0) {
+  if (!teamMember || !teamMember.roles.some(r => ['super_admin', 'national_admin'].includes(r))) {
     return NextResponse.json({ error: 'Access denied' }, { status: 403 })
   }
 
@@ -55,13 +56,14 @@ export async function PUT(request, { params }) {
   const supabase = createAdminClient()
 
   // Check if user is super_admin (only super_admins can edit templates)
-  const { data: adminRecords } = await supabase
-    .from('admin_users')
-    .select('role')
+  const { data: teamMember } = await supabase
+    .from('team_members')
+    .select('id, roles, chapter_id, is_media_team')
     .eq('user_id', user.id)
-    .eq('role', 'super_admin')
+    .eq('active', true)
+    .single()
 
-  if (!adminRecords || adminRecords.length === 0) {
+  if (!teamMember || !teamMember.roles.includes('super_admin')) {
     return NextResponse.json({ error: 'Only super admins can edit email templates' }, { status: 403 })
   }
 

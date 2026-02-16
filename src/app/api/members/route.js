@@ -12,23 +12,24 @@ export async function GET(request) {
 
   const supabase = createAdminClient()
 
-  // Get current admin's role and chapter (user may have multiple admin records)
-  const { data: adminRecords } = await supabase
-    .from('admin_users')
-    .select('id, role, chapter_id')
+  // Get current admin's role and chapter
+  const { data: teamMember } = await supabase
+    .from('team_members')
+    .select('id, roles, chapter_id, is_media_team')
     .eq('user_id', user.id)
+    .eq('active', true)
+    .single()
 
-  if (!adminRecords || adminRecords.length === 0) {
+  if (!teamMember) {
     return NextResponse.json({ error: 'Not an admin' }, { status: 403 })
   }
 
-  // Pick highest privilege admin record
   const roleHierarchy = ['super_admin', 'national_admin', 'state_admin', 'county_admin', 'city_admin']
-  const currentAdmin = adminRecords.reduce((highest, current) => {
-    const currentIndex = roleHierarchy.indexOf(current.role)
-    const highestIndex = roleHierarchy.indexOf(highest.role)
-    return currentIndex < highestIndex ? current : highest
-  }, adminRecords[0])
+  const highestRole = roleHierarchy.find(r => (teamMember.roles || []).includes(r)) || null
+
+  if (!highestRole) {
+    return NextResponse.json({ error: 'Not an admin' }, { status: 403 })
+  }
 
   const { searchParams } = new URL(request.url)
   const chapter_id = searchParams.get('chapter_id')
@@ -37,9 +38,9 @@ export async function GET(request) {
   // Get chapter IDs this admin can access
   // super_admin and national_admin have access to all data
   let allowedChapterIds = null
-  if (!['super_admin', 'national_admin'].includes(currentAdmin.role)) {
+  if (!['super_admin', 'national_admin'].includes(highestRole)) {
     const { data: descendants } = await supabase
-      .rpc('get_chapter_descendants', { chapter_uuid: currentAdmin.chapter_id })
+      .rpc('get_chapter_descendants', { chapter_uuid: teamMember.chapter_id })
     allowedChapterIds = descendants?.map(d => d.id) || []
   }
 

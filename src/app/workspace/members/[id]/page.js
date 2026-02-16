@@ -76,18 +76,20 @@ export default function MemberDetailPage() {
         return
       }
 
-      const { data: adminUsers } = await supabase
-        .from('admin_users')
-        .select('role, chapter_id')
+      const { data: currentTeamMember } = await supabase
+        .from('team_members')
+        .select('id, roles, chapter_id, is_media_team')
         .eq('user_id', user.id)
+        .eq('active', true)
+        .single()
 
-      if (!adminUsers || adminUsers.length === 0) {
+      if (!currentTeamMember || !currentTeamMember.roles?.some(r => ['super_admin', 'national_admin', 'state_admin', 'county_admin', 'city_admin'].includes(r))) {
         router.push('/dashboard')
         return
       }
 
       setIsAdmin(true)
-      setCurrentUserRoles(adminUsers.map(a => a.role))
+      setCurrentUserRoles(currentTeamMember.roles)
 
       const { data: memberData, error: memberError } = await supabase
         .from('members')
@@ -120,14 +122,26 @@ export default function MemberDetailPage() {
       setMemberChapters(mcData || [])
 
       if (memberData.user_id) {
-        const { data: memberAdmins } = await supabase
-          .from('admin_users')
-          .select('id, role, chapter_id, chapters(id, name, level)')
+        const { data: memberTeamRecord } = await supabase
+          .from('team_members')
+          .select('id, roles, chapter_id, is_media_team, chapters:chapter_id(id, name, level)')
           .eq('user_id', memberData.user_id)
-          .order('created_at', { ascending: false })
+          .eq('active', true)
+          .single()
 
-        if (memberAdmins && memberAdmins.length > 0) {
-          setMemberAdminRecords(memberAdmins)
+        if (memberTeamRecord && memberTeamRecord.roles?.length) {
+          // Convert single team_members record to admin record format for display
+          const records = memberTeamRecord.roles
+            .filter(r => ['super_admin', 'national_admin', 'state_admin', 'county_admin', 'city_admin'].includes(r))
+            .map(role => ({
+              id: `${memberTeamRecord.id}-${role}`,
+              role,
+              chapter_id: memberTeamRecord.chapter_id,
+              chapters: memberTeamRecord.chapters,
+            }))
+          if (records.length > 0) {
+            setMemberAdminRecords(records)
+          }
         }
       }
 
@@ -225,13 +239,26 @@ export default function MemberDetailPage() {
       if (!res.ok) throw new Error(data.error || 'Failed to grant access')
 
       const supabase = createClient()
-      const { data: memberAdmins } = await supabase
-        .from('admin_users')
-        .select('id, role, chapter_id, chapters(id, name, level)')
+      const { data: memberTeamRecord } = await supabase
+        .from('team_members')
+        .select('id, roles, chapter_id, is_media_team, chapters:chapter_id(id, name, level)')
         .eq('user_id', member.user_id)
-        .order('created_at', { ascending: false })
+        .eq('active', true)
+        .single()
 
-      setMemberAdminRecords(memberAdmins || [])
+      if (memberTeamRecord && memberTeamRecord.roles?.length) {
+        const records = memberTeamRecord.roles
+          .filter(r => ['super_admin', 'national_admin', 'state_admin', 'county_admin', 'city_admin'].includes(r))
+          .map(role => ({
+            id: `${memberTeamRecord.id}-${role}`,
+            role,
+            chapter_id: memberTeamRecord.chapter_id,
+            chapters: memberTeamRecord.chapters,
+          }))
+        setMemberAdminRecords(records)
+      } else {
+        setMemberAdminRecords([])
+      }
       setSelectedAdminChapter('')
       setSuccess('Admin access granted')
       setTimeout(() => setSuccess(null), 3000)
@@ -258,13 +285,26 @@ export default function MemberDetailPage() {
       if (!res.ok) throw new Error(data.error || 'Failed to remove admin')
 
       const supabase = createClient()
-      const { data: memberAdmins } = await supabase
-        .from('admin_users')
-        .select('id, role, chapter_id, chapters(id, name, level)')
+      const { data: memberTeamRecord } = await supabase
+        .from('team_members')
+        .select('id, roles, chapter_id, is_media_team, chapters:chapter_id(id, name, level)')
         .eq('user_id', member.user_id)
-        .order('created_at', { ascending: false })
+        .eq('active', true)
+        .single()
 
-      setMemberAdminRecords(memberAdmins || [])
+      if (memberTeamRecord && memberTeamRecord.roles?.length) {
+        const records = memberTeamRecord.roles
+          .filter(r => ['super_admin', 'national_admin', 'state_admin', 'county_admin', 'city_admin'].includes(r))
+          .map(role => ({
+            id: `${memberTeamRecord.id}-${role}`,
+            role,
+            chapter_id: memberTeamRecord.chapter_id,
+            chapters: memberTeamRecord.chapters,
+          }))
+        setMemberAdminRecords(records)
+      } else {
+        setMemberAdminRecords([])
+      }
       setSuccess('Admin access removed')
       setTimeout(() => setSuccess(null), 3000)
     } catch (err) {

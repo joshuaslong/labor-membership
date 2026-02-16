@@ -227,23 +227,29 @@ export async function POST(request) {
 
     const adminClient = createAdminClient()
 
-    // Verify admin access (user may have multiple admin records)
-    const { data: adminRecords } = await adminClient
-      .from('admin_users')
-      .select('id, role, chapter_id')
+    // Verify admin access
+    const { data: teamMember } = await adminClient
+      .from('team_members')
+      .select('id, roles, chapter_id')
       .eq('user_id', user.id)
+      .eq('active', true)
+      .single()
 
-    if (!adminRecords || adminRecords.length === 0) {
+    if (!teamMember || !teamMember.roles?.length) {
       return NextResponse.json({ error: 'Not an admin' }, { status: 403 })
     }
 
-    // Pick the highest-privilege admin record
     const roleHierarchy = ['super_admin', 'national_admin', 'state_admin', 'county_admin', 'city_admin']
-    const currentAdmin = adminRecords.reduce((highest, current) => {
-      const currentIndex = roleHierarchy.indexOf(current.role)
-      const highestIndex = roleHierarchy.indexOf(highest.role)
-      return currentIndex < highestIndex ? current : highest
-    }, adminRecords[0])
+    const currentAdmin = { ...teamMember }
+    // Determine highest role for permission checks
+    let bestIndex = Infinity
+    for (const r of teamMember.roles) {
+      const idx = roleHierarchy.indexOf(r)
+      if (idx !== -1 && idx < bestIndex) {
+        bestIndex = idx
+        currentAdmin.role = r
+      }
+    }
 
     const body = await request.json()
     const {
@@ -280,7 +286,7 @@ export async function POST(request) {
     }
 
     // Check if admin can create events for this chapter
-    const isSuperAdmin = ['super_admin', 'national_admin'].includes(currentAdmin.role)
+    const isSuperAdmin = teamMember.roles.some(r => ['super_admin', 'national_admin'].includes(r))
 
     if (!isSuperAdmin) {
       // Check if chapter is in admin's jurisdiction (their own chapter or descendants)

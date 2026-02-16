@@ -15,12 +15,12 @@ export async function GET() {
 
     const adminClient = createAdminClient()
 
-    // Get all admin records for the user
-    const { data: adminRecords, error } = await adminClient
-      .from('admin_users')
+    // Get team member record for the user
+    const { data: teamMember, error } = await adminClient
+      .from('team_members')
       .select(`
         id,
-        role,
+        roles,
         chapter_id,
         is_media_team,
         chapters (
@@ -31,35 +31,42 @@ export async function GET() {
         )
       `)
       .eq('user_id', user.id)
+      .eq('active', true)
+      .single()
 
     if (error) throw error
 
-    if (!adminRecords || adminRecords.length === 0) {
+    if (!teamMember) {
       return NextResponse.json({ error: 'Not an admin' }, { status: 403 })
     }
 
     // Find highest privilege role
-    const highestRecord = adminRecords.reduce((highest, current) => {
-      const currentIndex = roleHierarchy.indexOf(current.role)
-      const highestIndex = roleHierarchy.indexOf(highest.role)
-      return currentIndex < highestIndex ? current : highest
-    }, adminRecords[0])
+    let highestRole = null
+    let bestIndex = Infinity
+    for (const r of (teamMember.roles || [])) {
+      const idx = roleHierarchy.indexOf(r)
+      if (idx !== -1 && idx < bestIndex) {
+        bestIndex = idx
+        highestRole = r
+      }
+    }
 
-    // Check if user is on media team
-    const isMediaTeam = adminRecords.some(a => a.is_media_team)
+    if (!highestRole) {
+      return NextResponse.json({ error: 'Not an admin' }, { status: 403 })
+    }
 
     return NextResponse.json({
       userId: user.id,
       email: user.email,
-      highestRole: highestRecord.role,
-      chapterId: highestRecord.chapter_id,
-      chapter: highestRecord.chapters,
-      isMediaTeam,
-      allRoles: adminRecords.map(a => ({
-        role: a.role,
-        chapterId: a.chapter_id,
-        chapterName: a.chapters?.name,
-        isMediaTeam: a.is_media_team,
+      highestRole,
+      chapterId: teamMember.chapter_id,
+      chapter: teamMember.chapters,
+      isMediaTeam: teamMember.is_media_team || false,
+      allRoles: (teamMember.roles || []).map(role => ({
+        role,
+        chapterId: teamMember.chapter_id,
+        chapterName: teamMember.chapters?.name,
+        isMediaTeam: teamMember.is_media_team,
       })),
     })
 
