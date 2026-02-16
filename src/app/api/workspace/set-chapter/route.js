@@ -12,7 +12,7 @@ export async function POST(request) {
   const { chapterId } = await request.json()
 
   const cookieOptions = {
-    path: '/workspace',
+    path: '/',
     maxAge: 60 * 60 * 24 * 365,
     sameSite: 'lax',
   }
