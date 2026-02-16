@@ -397,7 +397,7 @@ export default function MemberDetailPage() {
             <div className="px-4 py-3 border-b border-stone-200">
               <h2 className="text-sm font-semibold text-gray-900">Contact Information</h2>
             </div>
-            <div className="p-4 grid grid-cols-2 gap-x-6 gap-y-2">
+            <div className="p-4 grid grid-cols-1 sm:grid-cols-2 gap-x-6 gap-y-2">
               <DetailRow label="Phone" value={member.phone || '-'} />
               <DetailRow label="Joined" value={new Date(member.joined_date).toLocaleDateString()} />
               <DetailRow label="Address" value={member.address_line1 || '-'} />

@@ -160,7 +160,37 @@ export default async function VolunteersPage({ searchParams: searchParamsPromise
             <p>No volunteer opportunities found.</p>
           </div>
         ) : (
-          <table className="min-w-full divide-y divide-stone-200" aria-label="Volunteer opportunities list">
+          <>
+          {/* Mobile card view */}
+          <div className="md:hidden divide-y divide-stone-100">
+            {opportunities.map(opp => {
+              const counts = appCounts[opp.id] || { pending: 0, approved: 0, total: 0 }
+              return (
+                <Link key={opp.id} href={`/workspace/volunteers/${opp.id}`} className="block px-4 py-3 hover:bg-stone-50">
+                  <div className="flex items-start justify-between gap-2">
+                    <div className="min-w-0">
+                      <p className="text-sm font-medium text-gray-900 truncate">{opp.title}</p>
+                      <p className="text-xs text-gray-500 mt-0.5">
+                        {opp.opportunity_type === 'one_time' ? 'One-time' : 'Ongoing'}
+                        {opp.event_date && ` · ${formatDate(opp.event_date)}`}
+                      </p>
+                    </div>
+                    <span className={`shrink-0 inline-flex items-center px-2 py-0.5 rounded text-xs font-medium ${statusBadge[opp.status] || 'bg-gray-50 text-gray-700'}`}>
+                      {opp.status}
+                    </span>
+                  </div>
+                  <div className="mt-1.5 flex items-center gap-3 text-xs text-gray-400">
+                    {opp.chapters?.name && <span>{opp.chapters.name}</span>}
+                    <span>{counts.total} application{counts.total !== 1 ? 's' : ''}</span>
+                    {counts.pending > 0 && <span className="text-amber-600">{counts.pending} pending</span>}
+                  </div>
+                </Link>
+              )
+            })}
+          </div>
+
+          {/* Desktop table */}
+          <table className="hidden md:table min-w-full divide-y divide-stone-200" aria-label="Volunteer opportunities list">
             <caption className="sr-only">List of volunteer opportunities</caption>
             <thead className="bg-stone-50">
               <tr>
@@ -230,6 +260,7 @@ export default async function VolunteersPage({ searchParams: searchParamsPromise
               })}
             </tbody>
           </table>
+          </>
         )}
       </div>
 

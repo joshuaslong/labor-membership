@@ -578,7 +578,7 @@ export default function ResourceBrowser({ allowedBuckets = ['public'], chapterId
               </div>
 
               {/* Actions */}
-              <div className="flex items-center gap-1 flex-shrink-0 opacity-0 group-hover:opacity-100 transition-opacity" onClick={(e) => e.stopPropagation()}>
+              <div className="flex items-center gap-1 flex-shrink-0 sm:opacity-0 sm:group-hover:opacity-100 transition-opacity" onClick={(e) => e.stopPropagation()}>
                 {/* Move to folder */}
                 {chapterId && (
                   <button

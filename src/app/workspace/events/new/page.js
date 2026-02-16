@@ -401,7 +401,7 @@ export default function CreateEventPage() {
                       />
                     </div>
 
-                    <div className="grid grid-cols-2 sm:grid-cols-4 gap-4">
+                    <div className="grid grid-cols-1 sm:grid-cols-4 gap-4">
                       <div className="col-span-2">
                         <label className={labelClass}>City</label>
                         <input

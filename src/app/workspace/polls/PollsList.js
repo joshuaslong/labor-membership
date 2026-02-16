@@ -96,7 +96,37 @@ export default function PollsList() {
             <p>No polls found.</p>
           </div>
         ) : (
-          <table className="min-w-full divide-y divide-stone-200" aria-label="Polls list">
+          <>
+          {/* Mobile card view */}
+          <div className="md:hidden divide-y divide-stone-100">
+            {filteredPolls.map(poll => (
+              <Link key={poll.id} href={`/workspace/polls/${poll.id}`} className="block px-4 py-3 hover:bg-stone-50">
+                <div className="flex items-start justify-between gap-2">
+                  <div className="min-w-0">
+                    <p className="text-sm font-medium text-gray-900 truncate">{poll.title}</p>
+                    {poll.description && (
+                      <p className="text-xs text-gray-500 mt-0.5 truncate">{poll.description}</p>
+                    )}
+                  </div>
+                  {poll.has_voted ? (
+                    <span className="shrink-0 inline-flex items-center px-2 py-0.5 rounded text-xs font-medium bg-green-50 text-green-700">Voted</span>
+                  ) : poll.status === 'active' ? (
+                    <span className="shrink-0 inline-flex items-center px-2 py-0.5 rounded text-xs font-medium bg-amber-50 text-amber-700">Needs Vote</span>
+                  ) : (
+                    <span className="shrink-0 inline-flex items-center px-2 py-0.5 rounded text-xs font-medium bg-gray-100 text-gray-600">Closed</span>
+                  )}
+                </div>
+                <div className="mt-1.5 flex items-center gap-3 text-xs text-gray-400">
+                  {poll.target_name && <span>{poll.target_name}</span>}
+                  <span>{poll.question_count} question{poll.question_count !== 1 ? 's' : ''}</span>
+                  <span>Closes {formatDate(poll.closes_at)}</span>
+                </div>
+              </Link>
+            ))}
+          </div>
+
+          {/* Desktop table */}
+          <table className="hidden md:table min-w-full divide-y divide-stone-200" aria-label="Polls list">
             <caption className="sr-only">List of polls</caption>
             <thead className="bg-stone-50">
               <tr>
@@ -146,6 +176,7 @@ export default function PollsList() {
               ))}
             </tbody>
           </table>
+          </>
         )}
       </div>
     </div>
