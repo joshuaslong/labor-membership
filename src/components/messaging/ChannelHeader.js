@@ -39,18 +39,12 @@ export default function ChannelHeader({ channel, onBack }) {
           return
         }
 
-        if (permission === 'denied') {
-          setPushError('Notification permission was denied. Check your browser settings.')
-          setToggling(false)
-          return
-        }
-
-        // Create or re-sync push subscription
+        // Always attempt subscribe — it re-checks permission live from the OS
         try {
           await subscribe()
         } catch (err) {
           if (err.message === 'Permission denied') {
-            setPushError('Notification permission was denied. Check your browser settings.')
+            setPushError('Notification permission is denied. On iPhone: close the app, go to Settings → Notifications → find this app → enable, then reopen.')
           } else {
             setPushError('Could not enable push notifications. Try installing the app to your home screen first.')
           }
