@@ -82,7 +82,7 @@ export function usePushSubscription() {
           applicationServerKey: serverKey,
         })
       } catch (pushErr) {
-        throw new Error('Registration failed \u2013 push service error')
+        throw new Error(`Registration failed: ${pushErr.name} - ${pushErr.message}`)
       }
 
       setSubscription(sub)
