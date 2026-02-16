@@ -51,6 +51,11 @@ export function usePushSubscription() {
       throw new Error('Push notifications not supported')
     }
 
+    const vapidKey = process.env.NEXT_PUBLIC_VAPID_PUBLIC_KEY
+    if (!vapidKey) {
+      throw new Error('Push configuration missing — contact admin')
+    }
+
     setLoading(true)
     try {
       const result = await Notification.requestPermission()
@@ -71,8 +76,9 @@ export function usePushSubscription() {
           await syncSubscriptionToServer(sub)
           setSubscription(sub)
           return sub
-        } catch {
+        } catch (syncErr) {
           // Sync failed — unsubscribe stale one and create fresh
+          console.warn('Push sync failed, recreating:', syncErr.message)
           await sub.unsubscribe().catch(() => {})
         }
       }
@@ -80,9 +86,7 @@ export function usePushSubscription() {
       // Create new subscription
       sub = await reg.pushManager.subscribe({
         userVisibleOnly: true,
-        applicationServerKey: urlBase64ToUint8Array(
-          process.env.NEXT_PUBLIC_VAPID_PUBLIC_KEY
-        ),
+        applicationServerKey: urlBase64ToUint8Array(vapidKey),
       })
 
       setSubscription(sub)

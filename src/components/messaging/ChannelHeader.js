@@ -46,7 +46,7 @@ export default function ChannelHeader({ channel, onBack }) {
           if (err.message === 'Permission denied') {
             setPushError('Notification permission is denied. On iPhone: close the app, go to Settings → Notifications → find this app → enable, then reopen.')
           } else {
-            setPushError('Could not enable push notifications. Try installing the app to your home screen first.')
+            setPushError(err.message || 'Could not enable push notifications.')
           }
           setToggling(false)
           return
@@ -67,6 +67,7 @@ export default function ChannelHeader({ channel, onBack }) {
 
       if (!res.ok) {
         setNotificationsEnabled(!newEnabled)
+        setPushError('Failed to save notification preference.')
       }
     } catch (err) {
       setNotificationsEnabled(!newEnabled)
