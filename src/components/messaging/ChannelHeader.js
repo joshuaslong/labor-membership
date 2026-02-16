@@ -44,7 +44,11 @@ export default function ChannelHeader({ channel, onBack }) {
           await subscribe()
         } catch (err) {
           if (err.message === 'Permission denied') {
-            setPushError('Notification permission is denied. On iPhone: close the app, go to Settings → Notifications → find this app → enable, then reopen.')
+            const isIOS = /iPad|iPhone|iPod/.test(navigator.userAgent)
+            setPushError(isIOS
+              ? 'Notification permission is denied. Close the app, go to Settings → Notifications → find this app → enable, then reopen.'
+              : 'Notification permission is blocked. Click the lock icon in your address bar, set Notifications to "Allow", then try again.'
+            )
           } else {
             setPushError(err.message || 'Could not enable push notifications.')
           }
