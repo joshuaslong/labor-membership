@@ -172,7 +172,7 @@ export default function MessagingPage() {
             unreadCounts={unreadCounts}
           />
         </div>
-        <div className={`${selectedChannelId ? 'flex' : 'hidden md:flex'} flex-1 min-w-0`}>
+        <div className={`${selectedChannelId ? 'flex flex-col' : 'hidden md:flex md:flex-col'} flex-1 min-w-0 min-h-0`}>
           {loading && !channels.length ? (
             <div className="flex-1 flex items-center justify-center bg-stone-50">
               <div className="animate-pulse space-y-3 w-48">

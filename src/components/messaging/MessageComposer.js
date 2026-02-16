@@ -41,7 +41,7 @@ export default function MessageComposer({ onSend, disabled }) {
   }
 
   return (
-    <div className="border-t border-stone-200 bg-white px-4 py-3">
+    <div className="border-t border-stone-200 bg-white px-4 py-3 shrink-0">
       <div className="max-w-4xl mx-auto flex items-end gap-2">
         <textarea
           ref={textareaRef}
