@@ -26,6 +26,7 @@ export const metadata = {
   description: 'Membership management for the Labor Party',
   icons: {
     icon: '/favicon.png',
+    apple: '/apple-touch-icon.png',
   },
 }
 
