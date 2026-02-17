@@ -10,11 +10,12 @@ const roleLabels = {
   state_admin: 'State Admin',
   county_admin: 'County Admin',
   city_admin: 'City Admin',
+  team_member: 'Team Member',
   membership_coordinator: 'Membership',
   event_coordinator: 'Events',
   communications_lead: 'Comms',
   content_creator: 'Content',
-  volunteer_manager: 'Volunteers',
+  volunteer_manager: 'Organizing',
   data_manager: 'Data',
 }
 
@@ -24,6 +25,7 @@ const roleBadgeColor = {
   state_admin: 'text-blue-700 bg-blue-50 border-blue-200',
   county_admin: 'text-green-700 bg-green-50 border-green-200',
   city_admin: 'text-amber-700 bg-amber-50 border-amber-200',
+  team_member: 'text-gray-700 bg-stone-50 border-stone-200',
   membership_coordinator: 'text-teal-700 bg-teal-50 border-teal-200',
   event_coordinator: 'text-indigo-700 bg-indigo-50 border-indigo-200',
   communications_lead: 'text-pink-700 bg-pink-50 border-pink-200',
@@ -161,6 +163,13 @@ export default async function TeamPage({ searchParams: searchParamsPromise }) {
       {/* Filters */}
       <div className="flex items-center gap-2 mb-4 flex-wrap">
         <FilterPill href="/workspace/admin/team" label="All" active={!searchParams?.role && searchParams?.active !== 'false'} />
+        <FilterPill href="/workspace/admin/team?role=team_member" label="Team Member" active={searchParams?.role === 'team_member'} />
+        <span className="text-gray-300">|</span>
+        <FilterPill href="/workspace/admin/team?role=event_coordinator" label="Events" active={searchParams?.role === 'event_coordinator'} />
+        <FilterPill href="/workspace/admin/team?role=volunteer_manager" label="Organizing" active={searchParams?.role === 'volunteer_manager'} />
+        <FilterPill href="/workspace/admin/team?role=membership_coordinator" label="Membership" active={searchParams?.role === 'membership_coordinator'} />
+        <FilterPill href="/workspace/admin/team?role=communications_lead" label="Comms" active={searchParams?.role === 'communications_lead'} />
+        <span className="text-gray-300">|</span>
         <FilterPill href="/workspace/admin/team?role=super_admin" label="Super Admin" active={searchParams?.role === 'super_admin'} />
         <FilterPill href="/workspace/admin/team?role=national_admin" label="National" active={searchParams?.role === 'national_admin'} />
         <FilterPill href="/workspace/admin/team?role=state_admin" label="State" active={searchParams?.role === 'state_admin'} />
