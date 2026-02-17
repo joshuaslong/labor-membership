@@ -12,7 +12,7 @@ const SECTION_PERMISSIONS = {
   chapters: ['national_admin', 'state_admin', 'county_admin', 'city_admin'],
   resources: ['national_admin', 'state_admin', 'county_admin', 'city_admin', 'content_creator', 'team_member'],
   polls: ['national_admin', 'state_admin', 'county_admin', 'city_admin', 'communications_lead'],
-  volunteers: ['national_admin', 'state_admin', 'county_admin', 'city_admin', 'volunteer_manager', 'event_coordinator', 'team_member'],
+  organize: ['national_admin', 'state_admin', 'county_admin', 'city_admin', 'volunteer_manager', 'event_coordinator', 'team_member'],
   tasks: ['national_admin', 'state_admin', 'county_admin', 'city_admin', 'volunteer_manager', 'team_member'],
   messaging: ['national_admin', 'state_admin', 'county_admin', 'city_admin', 'communications_lead', 'event_coordinator', 'volunteer_manager', 'membership_coordinator', 'content_creator', 'data_manager', 'team_member'],
   admin: ['super_admin', 'national_admin']

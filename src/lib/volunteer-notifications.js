@@ -59,7 +59,7 @@ export async function sendNewOpportunityNotification(opportunity) {
 
   // Build template variables
   const appUrl = process.env.NEXT_PUBLIC_APP_URL || 'https://members.votelabor.org'
-  const opportunityUrl = `${appUrl}/volunteers/${opportunity.id}`
+  const opportunityUrl = `${appUrl}/organize/${opportunity.id}`
 
   const typeLabel = opportunity.opportunity_type === 'one_time' ? 'One-time' : 'Ongoing'
 

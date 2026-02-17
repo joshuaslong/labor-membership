@@ -131,7 +131,7 @@ export default async function VolunteersPage({ searchParams: searchParamsPromise
     if (searchParams?.type) params.set('type', searchParams.type)
     if (p > 1) params.set('page', String(p))
     const qs = params.toString()
-    return qs ? `/workspace/volunteers?${qs}` : '/workspace/volunteers'
+    return qs ? `/workspace/organize?${qs}` : '/workspace/organize'
   }
 
   function formatDate(dateStr) {
@@ -166,7 +166,7 @@ export default async function VolunteersPage({ searchParams: searchParamsPromise
             {opportunities.map(opp => {
               const counts = appCounts[opp.id] || { pending: 0, approved: 0, total: 0 }
               return (
-                <Link key={opp.id} href={`/workspace/volunteers/${opp.id}`} className="block px-4 py-3 hover:bg-stone-50">
+                <Link key={opp.id} href={`/workspace/organize/${opp.id}`} className="block px-4 py-3 hover:bg-stone-50">
                   <div className="flex items-start justify-between gap-2">
                     <div className="min-w-0">
                       <p className="text-sm font-medium text-gray-900 truncate">{opp.title}</p>
@@ -209,7 +209,7 @@ export default async function VolunteersPage({ searchParams: searchParamsPromise
                 return (
                   <tr key={opp.id} className="hover:bg-stone-50">
                     <td className="px-4 py-3 text-sm">
-                      <Link href={`/workspace/volunteers/${opp.id}`} className="text-gray-900 hover:text-labor-red font-medium">
+                      <Link href={`/workspace/organize/${opp.id}`} className="text-gray-900 hover:text-labor-red font-medium">
                         {opp.title}
                       </Link>
                       {(opp.skills_needed || []).length > 0 && (

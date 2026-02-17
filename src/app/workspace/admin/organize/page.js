@@ -87,7 +87,7 @@ export default async function AdminVolunteersPage({ searchParams: searchParamsPr
     if (searchParams?.search) params.set('search', searchParams.search)
     if (p > 1) params.set('page', String(p))
     const qs = params.toString()
-    return qs ? `/workspace/admin/volunteers?${qs}` : '/workspace/admin/volunteers'
+    return qs ? `/workspace/admin/organize?${qs}` : '/workspace/admin/organize'
   }
 
   function formatDate(dateStr) {

@@ -74,8 +74,8 @@ export default async function WorkspacePage() {
   if (canAccessSection(teamMember.roles, 'resources')) {
     quickLinks.push({ label: 'View Resources', href: '/workspace/resources' })
   }
-  if (canAccessSection(teamMember.roles, 'volunteers')) {
-    quickLinks.push({ label: 'Volunteer Opportunities', href: '/workspace/volunteers' })
+  if (canAccessSection(teamMember.roles, 'organize')) {
+    quickLinks.push({ label: 'Organize', href: '/workspace/organize' })
   }
   if (canAccessSection(teamMember.roles, 'communicate')) {
     quickLinks.push({ label: 'Send Email', href: '/workspace/communicate' })
@@ -250,7 +250,7 @@ export default async function WorkspacePage() {
           <div className="bg-white border border-stone-200 rounded">
             <div className="px-4 py-3 border-b border-stone-200 flex items-center justify-between">
               <h2 className="text-sm font-semibold text-gray-900 uppercase tracking-wide">My Shifts</h2>
-              <Link href="/workspace/volunteers" className="text-xs text-gray-500 hover:text-gray-700">Browse</Link>
+              <Link href="/workspace/organize" className="text-xs text-gray-500 hover:text-gray-700">Browse</Link>
             </div>
             {shifts.length === 0 ? (
               <div className="px-4 py-8 text-center text-sm text-gray-500">
@@ -260,7 +260,7 @@ export default async function WorkspacePage() {
               <ul className="divide-y divide-stone-100">
                 {shifts.map(shift => (
                   <li key={shift.id}>
-                    <Link href={`/workspace/volunteers/${shift.id}`} className="block px-4 py-3 hover:bg-stone-50">
+                    <Link href={`/workspace/organize/${shift.id}`} className="block px-4 py-3 hover:bg-stone-50">
                       <p className="text-sm font-medium text-gray-900">{shift.title}</p>
                       <div className="flex items-center gap-2 mt-0.5">
                         <span className="text-xs text-gray-500">

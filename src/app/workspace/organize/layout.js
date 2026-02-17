@@ -7,21 +7,21 @@ import { canAccessSection } from '@/lib/permissions'
 export default async function VolunteersLayout({ children }) {
   const teamMember = await getCurrentTeamMember()
 
-  if (!teamMember || !canAccessSection(teamMember.roles, 'volunteers')) {
+  if (!teamMember || !canAccessSection(teamMember.roles, 'organize')) {
     redirect('/workspace')
   }
 
   const sidebarItems = [
-    { type: 'link', label: 'Create Opportunity', href: '/workspace/volunteers/new', variant: 'primary' },
+    { type: 'link', label: 'Create Opportunity', href: '/workspace/organize/new', variant: 'primary' },
     { type: 'divider' },
-    { type: 'link', label: 'All Opportunities', href: '/workspace/volunteers' },
-    { type: 'link', label: 'One-time', href: '/workspace/volunteers?type=one_time' },
-    { type: 'link', label: 'Ongoing', href: '/workspace/volunteers?type=ongoing' },
+    { type: 'link', label: 'All Opportunities', href: '/workspace/organize' },
+    { type: 'link', label: 'One-time', href: '/workspace/organize?type=one_time' },
+    { type: 'link', label: 'Ongoing', href: '/workspace/organize?type=ongoing' },
     { type: 'header', label: 'By Status' },
-    { type: 'link', label: 'Draft', href: '/workspace/volunteers?status=draft' },
-    { type: 'link', label: 'Published', href: '/workspace/volunteers?status=published' },
-    { type: 'link', label: 'Filled', href: '/workspace/volunteers?status=filled' },
-    { type: 'link', label: 'Cancelled', href: '/workspace/volunteers?status=cancelled' }
+    { type: 'link', label: 'Draft', href: '/workspace/organize?status=draft' },
+    { type: 'link', label: 'Published', href: '/workspace/organize?status=published' },
+    { type: 'link', label: 'Filled', href: '/workspace/organize?status=filled' },
+    { type: 'link', label: 'Cancelled', href: '/workspace/organize?status=cancelled' }
   ]
 
   return (

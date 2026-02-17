@@ -7,7 +7,7 @@ import PropTypes from 'prop-types'
 import ChapterSwitcher from '@/components/ChapterSwitcher'
 
 // Sections that have a contextual sidebar on their pages
-const SECTIONS_WITH_SIDEBAR = ['events', 'communicate', 'resources', 'polls', 'volunteers', 'tasks', 'admin', 'members', 'chapters']
+const SECTIONS_WITH_SIDEBAR = ['events', 'communicate', 'resources', 'polls', 'organize', 'tasks', 'admin', 'members', 'chapters']
 
 function TopNav({ sections = [], availableChapters = [], selectedChapterId = 'all', showAllOption = false }) {
   const pathname = usePathname()
@@ -28,7 +28,7 @@ function TopNav({ sections = [], availableChapters = [], selectedChapterId = 'al
     messaging: 'Messages',
     resources: 'Resources',
     polls: 'Polls',
-    volunteers: 'Volunteers',
+    organize: 'Organize',
     tasks: 'Tasks',
     admin: 'Admin'
   }

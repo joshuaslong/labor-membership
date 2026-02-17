@@ -68,7 +68,7 @@ function VolunteerDetailContent() {
       setMember(memberData)
     }
 
-    const res = await fetch(`/api/volunteers/${params.id}`)
+    const res = await fetch(`/api/organize/${params.id}`)
     if (!res.ok) {
       setLoading(false)
       setError('Opportunity not found')
@@ -86,7 +86,7 @@ function VolunteerDetailContent() {
     setError(null)
 
     try {
-      const res = await fetch(`/api/volunteers/${params.id}/apply`, {
+      const res = await fetch(`/api/organize/${params.id}/apply`, {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({ message, availability_notes: availabilityNotes })
@@ -111,7 +111,7 @@ function VolunteerDetailContent() {
     setError(null)
 
     try {
-      const res = await fetch(`/api/volunteers/${params.id}/apply`, {
+      const res = await fetch(`/api/organize/${params.id}/apply`, {
         method: 'DELETE'
       })
 
@@ -147,7 +147,7 @@ function VolunteerDetailContent() {
         <div className="text-center">
           <h1 className="text-2xl font-bold text-gray-900 mb-4">Opportunity Not Found</h1>
           <p className="text-gray-600 mb-6">This opportunity may have been removed or is not yet published.</p>
-          <Link href="/volunteers" className="text-labor-red hover:underline">
+          <Link href="/organize" className="text-labor-red hover:underline">
             &larr; Back to Opportunities
           </Link>
         </div>
@@ -161,7 +161,7 @@ function VolunteerDetailContent() {
 
   return (
     <div className="max-w-4xl mx-auto px-4 py-8">
-      <Link href="/volunteers" className="text-gray-500 hover:text-gray-700 text-sm mb-6 inline-block">
+      <Link href="/organize" className="text-gray-500 hover:text-gray-700 text-sm mb-6 inline-block">
         &larr; Back to Opportunities
       </Link>
 
@@ -373,7 +373,7 @@ function VolunteerDetailContent() {
               // Not logged in
               <div className="space-y-3">
                 <Link
-                  href={`/login?redirect=/volunteers/${params.id}`}
+                  href={`/login?redirect=/organize/${params.id}`}
                   className="block w-full text-center py-2 px-4 bg-labor-red text-white rounded-lg hover:bg-labor-red/90 transition-colors font-medium"
                 >
                   Log in to Apply
