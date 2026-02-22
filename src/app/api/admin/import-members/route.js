@@ -138,6 +138,9 @@ function mapMemberstackToMember(row) {
     zip_code: row.zip_code || row.zipcode || null,
     bio: row.member_bio || null,
     wants_to_volunteer: isVolunteer,
+    volunteer_experience: row.volunteer_experience || null,
+    volunteer_skills: row.volunteer_skills || null,
+    volunteer_interests: row.volunteer_interests || null,
     // Default mailing list to TRUE (as requested)
     mailing_list_opted_in: true,
     joined_date: row.createdat ? new Date(row.createdat).toISOString() : new Date().toISOString(),
@@ -272,6 +275,9 @@ export async function POST(request) {
               bio: memberData.bio || undefined,
               // Only set to true, never overwrite true->false
               wants_to_volunteer: memberData.wants_to_volunteer || undefined,
+              volunteer_experience: memberData.volunteer_experience || undefined,
+              volunteer_skills: memberData.volunteer_skills || undefined,
+              volunteer_interests: memberData.volunteer_interests || undefined,
               // Don't overwrite mailing list preference for existing members
               memberstack_id: memberData.memberstack_id || undefined,
               last_login_at: memberData.last_login_at || undefined,
@@ -330,8 +336,8 @@ export async function POST(request) {
 
 // GET endpoint to download a sample CSV template
 export async function GET() {
-  const template = `email,CreatedAt,Last Login,First Name,Last Name,State,Zip Code,Phone-Number,Member Bio,Volunteering,Mailing List,Donor,Organizer
-john@example.com,2024-01-15,2024-06-01,John,Doe,Pennsylvania,15213,5551234567,"Union organizer for 10 years",true,true,false,true`
+  const template = `email,CreatedAt,Last Login,First Name,Last Name,State,Zip Code,Phone-Number,Member Bio,Volunteering,Volunteer Experience,Volunteer Skills,Volunteer Interests,Mailing List,Donor,Organizer
+john@example.com,2024-01-15,2024-06-01,John,Doe,Pennsylvania,15213,5551234567,"Union organizer for 10 years",true,"5 years canvassing and phone banking","Public speaking, Data entry","Electoral campaigns, Community outreach",true,false,true`
 
   return new Response(template, {
     headers: {
