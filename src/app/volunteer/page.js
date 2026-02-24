@@ -139,7 +139,7 @@ function VolunteersContent() {
           {filtered.map(opp => (
             <Link
               key={opp.id}
-              href={`/organize/${opp.id}`}
+              href={`/volunteer/${opp.id}`}
               className="card block hover:shadow-md transition-shadow"
             >
               <div className="flex items-start justify-between gap-2 mb-2">
