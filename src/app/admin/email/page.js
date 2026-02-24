@@ -21,6 +21,7 @@ import EmailActions from './components/EmailActions'
 import EmailSentModal from './components/EmailSentModal'
 
 export default function EmailComposePage() {
+  console.log('=== EmailComposePage RENDER ===')
   const [showPreferencesModal, setShowPreferencesModal] = useState(false)
 
   // Initialize hooks
