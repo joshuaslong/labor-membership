@@ -1,5 +1,4 @@
 import { useState, useCallback } from 'react'
-import { formatFileSize } from '@/lib/r2'
 
 const ALLOWED_TYPES = [
   'image/jpeg', 'image/png', 'image/gif', 'image/webp',
@@ -42,7 +41,7 @@ export function useEmailAttachments() {
           size: file.size,
           mimeType: file.type,
           uploading: false,
-          error: `File too large (max ${formatFileSize(MAX_FILE_SIZE)})`,
+          error: `File too large (max 25MB)`,
           fileId: null,
           r2Key: null,
         }])

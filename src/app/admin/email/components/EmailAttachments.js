@@ -1,5 +1,12 @@
 import { useRef } from 'react'
-import { formatFileSize } from '@/lib/r2'
+
+function formatFileSize(bytes) {
+  if (!bytes) return 'Unknown'
+  if (bytes < 1024) return `${bytes} B`
+  if (bytes < 1024 * 1024) return `${(bytes / 1024).toFixed(1)} KB`
+  if (bytes < 1024 * 1024 * 1024) return `${(bytes / 1024 / 1024).toFixed(1)} MB`
+  return `${(bytes / 1024 / 1024 / 1024).toFixed(2)} GB`
+}
 
 const FILE_TYPE_ICONS = {
   'application/pdf': 'PDF',
@@ -83,7 +90,7 @@ export default function EmailAttachments({
       </div>
 
       {/* Attachment list */}
-      {attachments.length > 0 && (
+      {attachments?.length > 0 && (
         <div className="space-y-1.5">
           {attachments.map((attachment) => (
             <div
@@ -141,7 +148,7 @@ export default function EmailAttachments({
       )}
 
       {/* Insert links button */}
-      {uploadedAttachments.length > 0 && (
+      {uploadedAttachments?.length > 0 && (
         <button
           type="button"
           onClick={onInsertLinks}
