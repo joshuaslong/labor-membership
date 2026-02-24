@@ -16,6 +16,7 @@ import PreferencesModal from '@/app/admin/email/components/PreferencesModal'
 import RecipientSelector from '@/app/admin/email/components/RecipientSelector'
 import SenderSection from '@/app/admin/email/components/SenderSection'
 import EmailContentForm from '@/app/admin/email/components/EmailContentForm'
+import EmailAttachments from '@/app/admin/email/components/EmailAttachments'
 import EmailPreview from '@/app/admin/email/components/EmailPreview'
 import EmailActions from '@/app/admin/email/components/EmailActions'
 import EmailSentModal from '@/app/admin/email/components/EmailSentModal'
@@ -163,10 +164,12 @@ function CommunicateContent() {
   // Insert attachment download links into email content
   const handleInsertAttachmentLinks = () => {
     if (emailAttachments.uploadedAttachments.length === 0) return
+
     const baseUrl = typeof window !== 'undefined' ? window.location.origin : ''
     const linksHtml = emailAttachments.uploadedAttachments
       .map(a => `<li><a href="${baseUrl}/shared/${a.fileId}" target="_blank" rel="noopener">${a.filename}</a></li>`)
       .join('')
+
     const attachmentBlock = `<p><br></p><p><strong>Attachments:</strong></p><ul>${linksHtml}</ul>`
     emailForm.setContent(emailForm.content + attachmentBlock)
   }
@@ -296,100 +299,14 @@ function CommunicateContent() {
             setContent={emailForm.setContent}
           />
 
-          {/* Attachments */}
-          <div className="space-y-2">
-            <h3 className="text-xs font-semibold text-gray-500 uppercase tracking-wide">
-              Attachments
-            </h3>
-            <label className="border-2 border-dashed border-gray-200 rounded-lg p-4 text-center hover:border-gray-300 transition-colors cursor-pointer block">
-              <input
-                type="file"
-                multiple
-                className="sr-only"
-                onChange={(e) => {
-                  const files = e.target.files
-                  if (!files || files.length === 0) return
-                  const fileArray = Array.from(files)
-                  e.target.value = ''
-                  emailAttachments.addFiles(fileArray)
-                }}
-              />
-              <svg className="w-6 h-6 mx-auto text-gray-400 mb-1" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={1.5} d="M18.375 12.739l-7.693 7.693a4.5 4.5 0 01-6.364-6.364l10.94-10.94A3 3 0 1119.5 7.372L8.552 18.32m.009-.01l-.01.01m5.699-9.941l-7.81 7.81a1.5 1.5 0 002.112 2.13" />
-              </svg>
-              <p className="text-sm text-gray-500">
-                Drop files here or <span className="text-labor-red font-medium">browse</span>
-              </p>
-              <p className="text-xs text-gray-400 mt-0.5">
-                PDF, Word, Excel, PowerPoint, images, CSV, TXT (max 25MB each)
-              </p>
-            </label>
-
-            {emailAttachments.attachments.length > 0 && (
-              <div className="space-y-1.5">
-                {emailAttachments.attachments.map((attachment) => (
-                  <div
-                    key={attachment.id}
-                    className={`flex items-center gap-2 p-2 rounded-lg text-sm ${
-                      attachment.error
-                        ? 'bg-red-50 border border-red-100'
-                        : 'bg-gray-50 border border-gray-100'
-                    }`}
-                  >
-                    <span className={`text-[10px] font-bold px-1.5 py-0.5 rounded shrink-0 ${
-                      attachment.error
-                        ? 'bg-red-100 text-red-600'
-                        : 'bg-gray-200 text-gray-600'
-                    }`}>
-                      {attachment.filename?.split('.').pop()?.toUpperCase() || 'FILE'}
-                    </span>
-                    <div className="flex-1 min-w-0">
-                      <p className="text-gray-900 truncate text-xs">{attachment.filename}</p>
-                      {attachment.error ? (
-                        <p className="text-red-500 text-xs">{attachment.error}</p>
-                      ) : attachment.uploading ? (
-                        <p className="text-gray-400 text-xs">Uploading...</p>
-                      ) : (
-                        <p className="text-gray-400 text-xs">
-                          {attachment.size < 1024 * 1024
-                            ? `${(attachment.size / 1024).toFixed(1)} KB`
-                            : `${(attachment.size / 1024 / 1024).toFixed(1)} MB`}
-                        </p>
-                      )}
-                    </div>
-                    {attachment.uploading && (
-                      <svg className="animate-spin h-4 w-4 text-gray-400 shrink-0" viewBox="0 0 24 24">
-                        <circle className="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" strokeWidth="4" fill="none" />
-                        <path className="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4z" />
-                      </svg>
-                    )}
-                    {!attachment.uploading && (
-                      <button
-                        type="button"
-                        onClick={() => emailAttachments.removeFile(attachment.id)}
-                        className="text-gray-400 hover:text-red-500 shrink-0"
-                      >
-                        <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                          <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M6 18L18 6M6 6l12 12" />
-                        </svg>
-                      </button>
-                    )}
-                  </div>
-                ))}
-              </div>
-            )}
-
-            {emailAttachments.uploadedAttachments.length > 0 && (
-              <button
-                type="button"
-                onClick={handleInsertAttachmentLinks}
-                disabled={emailAttachments.isUploading}
-                className="w-full text-sm py-1.5 px-3 rounded-lg border border-gray-200 text-gray-700 hover:bg-gray-50 transition-colors disabled:opacity-50"
-              >
-                Insert download links into email ({emailAttachments.uploadedAttachments.length} file{emailAttachments.uploadedAttachments.length !== 1 ? 's' : ''})
-              </button>
-            )}
-          </div>
+          <EmailAttachments
+            attachments={emailAttachments.attachments}
+            uploadedAttachments={emailAttachments.uploadedAttachments}
+            isUploading={emailAttachments.isUploading}
+            onAddFiles={emailAttachments.addFiles}
+            onRemoveFile={emailAttachments.removeFile}
+            onInsertLinks={handleInsertAttachmentLinks}
+          />
         </EmailComposerLayout>
       </form>
     </>
