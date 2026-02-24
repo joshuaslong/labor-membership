@@ -49,7 +49,7 @@ export default async function SharedFilePage({ params }) {
 
   const { data: file, error } = await supabase
     .from('files')
-    .select('id, original_filename, file_size_bytes, mime_type, access_tier, deleted_at, created_at')
+    .select('id, original_filename, file_size_bytes, mime_type, access_tier, deleted_at, uploaded_at')
     .eq('id', id)
     .single()
 
