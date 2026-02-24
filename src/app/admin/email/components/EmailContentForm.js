@@ -1,3 +1,5 @@
+'use client'
+
 import EmailEditor from '@/components/EmailEditor'
 import { EMAIL_TEMPLATES } from '../utils/emailTemplates'
 import EmailAttachments from './EmailAttachments'
