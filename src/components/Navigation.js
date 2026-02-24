@@ -76,10 +76,10 @@ export default async function Navigation() {
             Events
           </Link>
           <Link
-            href="/organize"
+            href="/volunteer"
             className="px-3 py-2 text-sm font-medium text-white/80 hover:text-white hover:bg-white/10 rounded-md transition-colors"
           >
-            Organize
+            Volunteer
           </Link>
 
           {user ? (
