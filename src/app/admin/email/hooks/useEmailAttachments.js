@@ -19,8 +19,10 @@ export function useEmailAttachments() {
   const addFiles = useCallback(async (fileList) => {
     // Accept both FileList and Array
     const files = Array.isArray(fileList) ? fileList : Array.from(fileList)
+    console.log('[addFiles] called with', files.length, 'files:', files.map(f => `${f.name} (${f.type})`))
 
     for (const file of files) {
+      console.log('[addFiles] processing:', file.name, 'type:', file.type, 'size:', file.size)
       // Validate type
       if (!ALLOWED_TYPES.includes(file.type) && file.type !== 'application/octet-stream') {
         setAttachments(prev => [...prev, {

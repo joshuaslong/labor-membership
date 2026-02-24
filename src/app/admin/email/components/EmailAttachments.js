@@ -40,6 +40,7 @@ export default function EmailAttachments({
 }) {
   const handleFileChange = (e) => {
     const files = e.target.files
+    console.log('[Attachments] onChange fired, files:', files?.length, 'onAddFiles type:', typeof onAddFiles)
     if (!files || files.length === 0) return
 
     // Copy files to array immediately before clearing input
@@ -47,7 +48,10 @@ export default function EmailAttachments({
     e.target.value = ''
 
     if (typeof onAddFiles === 'function') {
+      console.log('[Attachments] calling onAddFiles with', fileArray.length, 'files')
       onAddFiles(fileArray)
+    } else {
+      console.error('[Attachments] onAddFiles is not a function:', onAddFiles)
     }
   }
 
