@@ -2,8 +2,6 @@
 
 import EmailEditor from '@/components/EmailEditor'
 import { EMAIL_TEMPLATES } from '../utils/emailTemplates'
-import EmailAttachments from './EmailAttachments'
-
 /**
  * Email content composition form - template, subject, and editor
  */
@@ -14,12 +12,6 @@ export default function EmailContentForm({
   setSubject,
   content,
   setContent,
-  attachments,
-  uploadedAttachments,
-  isUploading,
-  onAddFiles,
-  onRemoveFile,
-  onInsertLinks,
 }) {
   return (
     <div className="space-y-3">
@@ -74,14 +66,6 @@ export default function EmailContentForm({
         </p>
       </div>
 
-      <EmailAttachments
-        attachments={attachments}
-        uploadedAttachments={uploadedAttachments}
-        isUploading={isUploading}
-        onAddFiles={onAddFiles}
-        onRemoveFile={onRemoveFile}
-        onInsertLinks={onInsertLinks}
-      />
     </div>
   )
 }

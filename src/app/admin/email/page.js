@@ -16,6 +16,7 @@ import PreferencesModal from './components/PreferencesModal'
 import RecipientSelector from './components/RecipientSelector'
 import SenderSection from './components/SenderSection'
 import EmailContentForm from './components/EmailContentForm'
+import EmailAttachments from './components/EmailAttachments'
 import EmailPreview from './components/EmailPreview'
 import EmailActions from './components/EmailActions'
 import EmailSentModal from './components/EmailSentModal'
@@ -287,6 +288,9 @@ export default function EmailComposePage() {
             setSubject={emailForm.setSubject}
             content={emailForm.content}
             setContent={emailForm.setContent}
+          />
+
+          <EmailAttachments
             attachments={emailAttachments.attachments}
             uploadedAttachments={emailAttachments.uploadedAttachments}
             isUploading={emailAttachments.isUploading}
