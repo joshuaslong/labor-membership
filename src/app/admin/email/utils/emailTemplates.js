@@ -2,7 +2,7 @@
  * Email template utilities and constants
  */
 
-export const LOGO_HEADER = `<p style="text-align: center; margin-bottom: 24px;"><img src="https://members.votelabor.org/logo-dark.png" alt="Labor Party" width="200" style="max-width: 200px; height: auto;" /></p>`
+export const LOGO_HEADER = `<p style="text-align: center; margin-bottom: 24px;"><img src="https://members.votelabor.org/logo-workspace.png" alt="Labor Party" width="200" style="max-width: 200px; height: auto;" /></p>`
 
 // Default signature if user hasn't set a custom one
 export const DEFAULT_SIGNATURE = 'In solidarity,<br>Labor Party'

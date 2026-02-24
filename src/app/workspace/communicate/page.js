@@ -8,6 +8,7 @@ import { useEmailForm } from '@/app/admin/email/hooks/useEmailForm'
 import { useRecipients } from '@/app/admin/email/hooks/useRecipients'
 import { useEmailActions } from '@/app/admin/email/hooks/useEmailActions'
 import { useEmailDraft } from '@/app/admin/email/hooks/useEmailDraft'
+import { useEmailAttachments } from '@/app/admin/email/hooks/useEmailAttachments'
 import { EMAIL_TEMPLATES } from '@/app/admin/email/utils/emailTemplates'
 
 import EmailComposerLayout from '@/components/EmailComposerLayout'
@@ -15,6 +16,7 @@ import PreferencesModal from '@/app/admin/email/components/PreferencesModal'
 import RecipientSelector from '@/app/admin/email/components/RecipientSelector'
 import SenderSection from '@/app/admin/email/components/SenderSection'
 import EmailContentForm from '@/app/admin/email/components/EmailContentForm'
+import EmailAttachments from '@/app/admin/email/components/EmailAttachments'
 import EmailPreview from '@/app/admin/email/components/EmailPreview'
 import EmailActions from '@/app/admin/email/components/EmailActions'
 import EmailSentModal from '@/app/admin/email/components/EmailSentModal'
@@ -35,6 +37,7 @@ function CommunicateContent() {
   )
   const recipients = useRecipients()
   const actions = useEmailActions()
+  const emailAttachments = useEmailAttachments()
   const draft = useEmailDraft({
     subject: emailForm.subject,
     content: emailForm.content,
@@ -45,7 +48,8 @@ function CommunicateContent() {
     recipientType: recipients.recipientType,
     selectedChapterId: recipients.selectedChapterId,
     selectedGroupId: recipients.selectedGroupId,
-    groupChapterId: recipients.groupChapterId
+    groupChapterId: recipients.groupChapterId,
+    attachments: emailAttachments.attachments,
   })
 
   // Apply template from URL param
@@ -72,6 +76,9 @@ function CommunicateContent() {
       recipients.setSelectedGroupId(savedDraft.selectedGroupId || '')
       if (savedDraft.groupChapterId) {
         recipients.handleGroupChapterChange(savedDraft.groupChapterId)
+      }
+      if (savedDraft.attachments) {
+        emailAttachments.restoreAttachments(savedDraft.attachments)
       }
     } else {
       // No draft — pre-populate from chapter switcher if a chapter is selected
@@ -127,6 +134,7 @@ function CommunicateContent() {
     if (result.success) {
       draft.clearDraft()
       emailForm.resetForm()
+      emailAttachments.clearAll()
     }
   }
 
@@ -146,10 +154,24 @@ function CommunicateContent() {
     if (confirm('Clear draft? This will reset the form to defaults.')) {
       draft.clearDraft()
       emailForm.resetForm()
+      emailAttachments.clearAll()
       recipients.setRecipientType('my_chapter')
       recipients.setSelectedChapterId('')
       recipients.setSelectedGroupId('')
     }
+  }
+
+  // Insert attachment download links into email content
+  const handleInsertAttachmentLinks = () => {
+    if (emailAttachments.uploadedAttachments.length === 0) return
+
+    const baseUrl = typeof window !== 'undefined' ? window.location.origin : ''
+    const linksHtml = emailAttachments.uploadedAttachments
+      .map(a => `<li><a href="${baseUrl}/shared/${a.fileId}" target="_blank" rel="noopener">${a.filename}</a></li>`)
+      .join('')
+
+    const attachmentBlock = `<p><br></p><p><strong>Attachments:</strong></p><ul>${linksHtml}</ul>`
+    emailForm.setContent(emailForm.content + attachmentBlock)
   }
 
   return (
@@ -275,6 +297,15 @@ function CommunicateContent() {
             setSubject={emailForm.setSubject}
             content={emailForm.content}
             setContent={emailForm.setContent}
+          />
+
+          <EmailAttachments
+            attachments={emailAttachments.attachments}
+            uploadedAttachments={emailAttachments.uploadedAttachments}
+            isUploading={emailAttachments.isUploading}
+            onAddFiles={emailAttachments.addFiles}
+            onRemoveFile={emailAttachments.removeFile}
+            onInsertLinks={handleInsertAttachmentLinks}
           />
         </EmailComposerLayout>
       </form>

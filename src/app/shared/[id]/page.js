@@ -1,7 +1,6 @@
 import { createAdminClient } from '@/lib/supabase/server'
 import { formatFileSize } from '@/lib/r2'
 import Link from 'next/link'
-import Image from 'next/image'
 
 const FILE_TYPE_LABELS = {
   'application/pdf': 'PDF Document',
@@ -49,7 +48,7 @@ export default async function SharedFilePage({ params }) {
 
   const { data: file, error } = await supabase
     .from('files')
-    .select('id, original_filename, file_size_bytes, mime_type, access_tier, deleted_at, created_at')
+    .select('id, original_filename, file_size_bytes, mime_type, access_tier, deleted_at, uploaded_at')
     .eq('id', id)
     .single()
 
@@ -78,17 +77,6 @@ export default async function SharedFilePage({ params }) {
           </div>
         ) : (
           <div className="bg-white rounded-xl shadow-sm border border-gray-200 p-8">
-            {/* Logo */}
-            <div className="flex justify-center mb-6">
-              <Image
-                src="/logo-dark.png"
-                alt="Labor Party"
-                width={140}
-                height={40}
-                className="h-8 w-auto"
-              />
-            </div>
-
             {/* File info */}
             <div className="text-center mb-6">
               <div className="w-14 h-14 bg-red-50 rounded-full flex items-center justify-center mx-auto mb-4">
