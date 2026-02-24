@@ -1,3 +1,5 @@
+'use client'
+
 import { useState, useCallback } from 'react'
 
 const ALLOWED_TYPES = [
@@ -15,7 +17,8 @@ export function useEmailAttachments() {
   const [attachments, setAttachments] = useState([])
 
   const addFiles = useCallback(async (fileList) => {
-    const files = Array.from(fileList)
+    // Accept both FileList and Array
+    const files = Array.isArray(fileList) ? fileList : Array.from(fileList)
 
     for (const file of files) {
       // Validate type

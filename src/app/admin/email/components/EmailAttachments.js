@@ -1,4 +1,4 @@
-import { useRef } from 'react'
+'use client'
 
 function formatFileSize(bytes) {
   if (!bytes) return 'Unknown'
@@ -38,21 +38,24 @@ export default function EmailAttachments({
   onRemoveFile,
   onInsertLinks,
 }) {
-  const fileInputRef = useRef(null)
-
   const handleFileChange = (e) => {
-    if (e.target.files?.length && typeof onAddFiles === 'function') {
-      onAddFiles(e.target.files)
-    }
-    // Reset so the same file can be selected again
+    const files = e.target.files
+    if (!files || files.length === 0) return
+
+    // Copy files to array immediately before clearing input
+    const fileArray = Array.from(files)
     e.target.value = ''
+
+    if (typeof onAddFiles === 'function') {
+      onAddFiles(fileArray)
+    }
   }
 
   const handleDrop = (e) => {
     e.preventDefault()
     e.stopPropagation()
     if (e.dataTransfer.files?.length && typeof onAddFiles === 'function') {
-      onAddFiles(e.dataTransfer.files)
+      onAddFiles(Array.from(e.dataTransfer.files))
     }
   }
 
@@ -67,22 +70,18 @@ export default function EmailAttachments({
         Attachments
       </h3>
 
-      {/* Hidden file input - kept outside clickable div to prevent event bubbling */}
-      <input
-        ref={fileInputRef}
-        type="file"
-        multiple
-        className="hidden"
-        onChange={handleFileChange}
-      />
-
-      {/* Drop zone / file picker */}
-      <div
+      {/* Drop zone / file picker - uses label to natively trigger the input */}
+      <label
         onDrop={handleDrop}
         onDragOver={handleDragOver}
-        onClick={() => fileInputRef.current?.click()}
-        className="border-2 border-dashed border-gray-200 rounded-lg p-4 text-center hover:border-gray-300 transition-colors cursor-pointer"
+        className="border-2 border-dashed border-gray-200 rounded-lg p-4 text-center hover:border-gray-300 transition-colors cursor-pointer block"
       >
+        <input
+          type="file"
+          multiple
+          className="sr-only"
+          onChange={handleFileChange}
+        />
         <svg className="w-6 h-6 mx-auto text-gray-400 mb-1" fill="none" stroke="currentColor" viewBox="0 0 24 24">
           <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={1.5} d="M18.375 12.739l-7.693 7.693a4.5 4.5 0 01-6.364-6.364l10.94-10.94A3 3 0 1119.5 7.372L8.552 18.32m.009-.01l-.01.01m5.699-9.941l-7.81 7.81a1.5 1.5 0 002.112 2.13" />
         </svg>
@@ -92,7 +91,7 @@ export default function EmailAttachments({
         <p className="text-xs text-gray-400 mt-0.5">
           PDF, Word, Excel, PowerPoint, images, CSV, TXT (max 25MB each)
         </p>
-      </div>
+      </label>
 
       {/* Attachment list */}
       {attachments.length > 0 && (
@@ -106,7 +105,6 @@ export default function EmailAttachments({
                   : 'bg-gray-50 border border-gray-100'
               }`}
             >
-              {/* File type badge */}
               <span className={`text-[10px] font-bold px-1.5 py-0.5 rounded shrink-0 ${
                 attachment.error
                   ? 'bg-red-100 text-red-600'
@@ -115,7 +113,6 @@ export default function EmailAttachments({
                 {getFileTypeLabel(attachment.mimeType, attachment.filename)}
               </span>
 
-              {/* File info */}
               <div className="flex-1 min-w-0">
                 <p className="text-gray-900 truncate text-xs">{attachment.filename}</p>
                 {attachment.error ? (
@@ -127,7 +124,6 @@ export default function EmailAttachments({
                 )}
               </div>
 
-              {/* Upload spinner */}
               {attachment.uploading && (
                 <svg className="animate-spin h-4 w-4 text-gray-400 shrink-0" viewBox="0 0 24 24">
                   <circle className="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" strokeWidth="4" fill="none" />
@@ -135,7 +131,6 @@ export default function EmailAttachments({
                 </svg>
               )}
 
-              {/* Remove button */}
               {!attachment.uploading && (
                 <button
                   type="button"
@@ -152,7 +147,6 @@ export default function EmailAttachments({
         </div>
       )}
 
-      {/* Insert links button */}
       {uploadedAttachments.length > 0 && (
         <button
           type="button"
