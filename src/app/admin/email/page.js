@@ -289,10 +289,7 @@ export default function EmailComposePage() {
             setContent={emailForm.setContent}
           />
 
-          {/* Version check - remove after debugging */}
-          <p className="text-xs text-red-500 font-bold">BUILD: 3ec4c52-v2</p>
-
-          {/* Attachments - inline to avoid component rendering issues */}
+          {/* Attachments */}
           <div className="space-y-2">
             <h3 className="text-xs font-semibold text-gray-500 uppercase tracking-wide">
               Attachments
