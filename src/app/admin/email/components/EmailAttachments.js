@@ -26,24 +26,32 @@ const FILE_TYPE_ICONS = {
 
 function getFileTypeLabel(mimeType, filename) {
   if (FILE_TYPE_ICONS[mimeType]) return FILE_TYPE_ICONS[mimeType]
-  const ext = filename.split('.').pop()?.toUpperCase()
+  const ext = filename?.split('.').pop()?.toUpperCase()
   return ext || 'FILE'
 }
 
 export default function EmailAttachments({
-  attachments,
-  uploadedAttachments,
-  isUploading,
+  attachments = [],
+  uploadedAttachments = [],
+  isUploading = false,
   onAddFiles,
   onRemoveFile,
   onInsertLinks,
 }) {
   const fileInputRef = useRef(null)
 
+  const handleFileChange = (e) => {
+    if (e.target.files?.length && typeof onAddFiles === 'function') {
+      onAddFiles(e.target.files)
+    }
+    // Reset so the same file can be selected again
+    e.target.value = ''
+  }
+
   const handleDrop = (e) => {
     e.preventDefault()
     e.stopPropagation()
-    if (e.dataTransfer.files?.length) {
+    if (e.dataTransfer.files?.length && typeof onAddFiles === 'function') {
       onAddFiles(e.dataTransfer.files)
     }
   }
@@ -59,25 +67,22 @@ export default function EmailAttachments({
         Attachments
       </h3>
 
+      {/* Hidden file input - kept outside clickable div to prevent event bubbling */}
+      <input
+        ref={fileInputRef}
+        type="file"
+        multiple
+        className="hidden"
+        onChange={handleFileChange}
+      />
+
       {/* Drop zone / file picker */}
       <div
         onDrop={handleDrop}
         onDragOver={handleDragOver}
-        className="border-2 border-dashed border-gray-200 rounded-lg p-4 text-center hover:border-gray-300 transition-colors cursor-pointer"
         onClick={() => fileInputRef.current?.click()}
+        className="border-2 border-dashed border-gray-200 rounded-lg p-4 text-center hover:border-gray-300 transition-colors cursor-pointer"
       >
-        <input
-          ref={fileInputRef}
-          type="file"
-          multiple
-          className="hidden"
-          onChange={(e) => {
-            if (e.target.files?.length) {
-              onAddFiles(e.target.files)
-              e.target.value = ''
-            }
-          }}
-        />
         <svg className="w-6 h-6 mx-auto text-gray-400 mb-1" fill="none" stroke="currentColor" viewBox="0 0 24 24">
           <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={1.5} d="M18.375 12.739l-7.693 7.693a4.5 4.5 0 01-6.364-6.364l10.94-10.94A3 3 0 1119.5 7.372L8.552 18.32m.009-.01l-.01.01m5.699-9.941l-7.81 7.81a1.5 1.5 0 002.112 2.13" />
         </svg>
@@ -90,7 +95,7 @@ export default function EmailAttachments({
       </div>
 
       {/* Attachment list */}
-      {attachments?.length > 0 && (
+      {attachments.length > 0 && (
         <div className="space-y-1.5">
           {attachments.map((attachment) => (
             <div
@@ -134,7 +139,7 @@ export default function EmailAttachments({
               {!attachment.uploading && (
                 <button
                   type="button"
-                  onClick={() => onRemoveFile(attachment.id)}
+                  onClick={() => typeof onRemoveFile === 'function' && onRemoveFile(attachment.id)}
                   className="text-gray-400 hover:text-red-500 shrink-0"
                 >
                   <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
@@ -148,10 +153,10 @@ export default function EmailAttachments({
       )}
 
       {/* Insert links button */}
-      {uploadedAttachments?.length > 0 && (
+      {uploadedAttachments.length > 0 && (
         <button
           type="button"
-          onClick={onInsertLinks}
+          onClick={() => typeof onInsertLinks === 'function' && onInsertLinks()}
           disabled={isUploading}
           className="w-full text-sm py-1.5 px-3 rounded-lg border border-gray-200 text-gray-700 hover:bg-gray-50 transition-colors disabled:opacity-50"
         >
