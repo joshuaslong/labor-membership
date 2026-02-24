@@ -8,6 +8,7 @@ import { useEmailForm } from './hooks/useEmailForm'
 import { useRecipients } from './hooks/useRecipients'
 import { useEmailActions } from './hooks/useEmailActions'
 import { useEmailDraft } from './hooks/useEmailDraft'
+import { useEmailAttachments } from './hooks/useEmailAttachments'
 import { EMAIL_TEMPLATES } from './utils/emailTemplates'
 
 import EmailComposerLayout from '@/components/EmailComposerLayout'
@@ -33,6 +34,7 @@ export default function EmailComposePage() {
   )
   const recipients = useRecipients()
   const actions = useEmailActions()
+  const emailAttachments = useEmailAttachments()
   const draft = useEmailDraft({
     subject: emailForm.subject,
     content: emailForm.content,
@@ -43,7 +45,8 @@ export default function EmailComposePage() {
     recipientType: recipients.recipientType,
     selectedChapterId: recipients.selectedChapterId,
     selectedGroupId: recipients.selectedGroupId,
-    groupChapterId: recipients.groupChapterId
+    groupChapterId: recipients.groupChapterId,
+    attachments: emailAttachments.attachments,
   })
 
   // Load draft on mount (only once when draft is loaded)
@@ -63,6 +66,9 @@ export default function EmailComposePage() {
       recipients.setSelectedGroupId(savedDraft.selectedGroupId || '')
       if (savedDraft.groupChapterId) {
         recipients.handleGroupChapterChange(savedDraft.groupChapterId)
+      }
+      if (savedDraft.attachments) {
+        emailAttachments.restoreAttachments(savedDraft.attachments)
       }
     }
     // eslint-disable-next-line react-hooks/exhaustive-deps
@@ -113,6 +119,7 @@ export default function EmailComposePage() {
     if (result.success) {
       draft.clearDraft()
       emailForm.resetForm()
+      emailAttachments.clearAll()
     }
   }
 
@@ -132,10 +139,24 @@ export default function EmailComposePage() {
     if (confirm('Clear draft? This will reset the form to defaults.')) {
       draft.clearDraft()
       emailForm.resetForm()
+      emailAttachments.clearAll()
       recipients.setRecipientType('my_chapter')
       recipients.setSelectedChapterId('')
       recipients.setSelectedGroupId('')
     }
+  }
+
+  // Insert attachment download links into email content
+  const handleInsertAttachmentLinks = () => {
+    if (emailAttachments.uploadedAttachments.length === 0) return
+
+    const baseUrl = typeof window !== 'undefined' ? window.location.origin : ''
+    const linksHtml = emailAttachments.uploadedAttachments
+      .map(a => `<li><a href="${baseUrl}/shared/${a.fileId}" target="_blank" rel="noopener">${a.filename}</a></li>`)
+      .join('')
+
+    const attachmentBlock = `<p><br></p><p><strong>Attachments:</strong></p><ul>${linksHtml}</ul>`
+    emailForm.setContent(emailForm.content + attachmentBlock)
   }
 
   return (
@@ -266,6 +287,12 @@ export default function EmailComposePage() {
             setSubject={emailForm.setSubject}
             content={emailForm.content}
             setContent={emailForm.setContent}
+            attachments={emailAttachments.attachments}
+            uploadedAttachments={emailAttachments.uploadedAttachments}
+            isUploading={emailAttachments.isUploading}
+            onAddFiles={emailAttachments.addFiles}
+            onRemoveFile={emailAttachments.removeFile}
+            onInsertLinks={handleInsertAttachmentLinks}
           />
         </EmailComposerLayout>
       </form>

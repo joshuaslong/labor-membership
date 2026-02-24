@@ -17,7 +17,8 @@ export function useEmailDraft({
   recipientType,
   selectedChapterId,
   selectedGroupId,
-  groupChapterId
+  groupChapterId,
+  attachments
 }) {
   const [lastSaved, setLastSaved] = useState(null)
   const [isDraftLoaded, setIsDraftLoaded] = useState(false)
@@ -48,6 +49,14 @@ export function useEmailDraft({
     }
 
     try {
+      // Only save attachment metadata (not uploading state)
+      const savedAttachments = (attachments || [])
+        .filter(a => a.fileId && !a.uploading && !a.error)
+        .map(({ id, filename, size, mimeType, fileId, r2Key }) => ({
+          id, filename, size, mimeType, fileId, r2Key,
+          uploading: false, error: null,
+        }))
+
       const draft = {
         subject,
         content,
@@ -59,6 +68,7 @@ export function useEmailDraft({
         selectedChapterId,
         selectedGroupId,
         groupChapterId,
+        attachments: savedAttachments,
         savedAt: new Date().toISOString()
       }
       localStorage.setItem(DRAFT_KEY, JSON.stringify(draft))
@@ -66,7 +76,7 @@ export function useEmailDraft({
     } catch (error) {
       console.error('Failed to save draft:', error)
     }
-  }, [subject, content, senderName, replyTo, selectedTemplate, testEmail, recipientType, selectedChapterId, selectedGroupId, groupChapterId])
+  }, [subject, content, senderName, replyTo, selectedTemplate, testEmail, recipientType, selectedChapterId, selectedGroupId, groupChapterId, attachments])
 
   // Clear draft from localStorage
   const clearDraft = useCallback(() => {
@@ -99,7 +109,7 @@ export function useEmailDraft({
         clearTimeout(autosaveTimerRef.current)
       }
     }
-  }, [subject, content, senderName, replyTo, selectedTemplate, testEmail, recipientType, selectedChapterId, selectedGroupId, groupChapterId, saveDraft, isDraftLoaded])
+  }, [subject, content, senderName, replyTo, selectedTemplate, testEmail, recipientType, selectedChapterId, selectedGroupId, groupChapterId, attachments, saveDraft, isDraftLoaded])
 
   return {
     loadDraft,

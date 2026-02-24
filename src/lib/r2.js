@@ -179,6 +179,11 @@ export function isAllowedFileType(prefix, mimeType, filename = '') {
     [BUCKET_PREFIXES.PUBLIC]: [
       'image/jpeg', 'image/png', 'image/gif', 'image/svg+xml', 'image/webp',
       'application/pdf',
+      'application/msword', 'application/vnd.openxmlformats-officedocument.wordprocessingml.document',
+      'application/vnd.ms-excel', 'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet',
+      'application/vnd.ms-powerpoint', 'application/vnd.openxmlformats-officedocument.presentationml.presentation',
+      'text/csv', 'text/plain',
+      'application/octet-stream',
     ],
     [BUCKET_PREFIXES.CHAPTERS]: [
       'image/jpeg', 'image/png', 'image/gif', 'image/webp',
@@ -218,6 +223,9 @@ export function isAllowedFileType(prefix, mimeType, filename = '') {
   if (allowed.includes(mimeType)) {
     // For octet-stream, also validate by extension
     if (mimeType === 'application/octet-stream' && filename) {
+      if (prefix === BUCKET_PREFIXES.PUBLIC) {
+        return [...documentExtensions, ...imageExtensions].includes(ext)
+      }
       if (prefix === BUCKET_PREFIXES.CHAPTERS || prefix === BUCKET_PREFIXES.INTERNAL_DOCS) {
         return [...documentExtensions, ...imageExtensions].includes(ext)
       }
@@ -239,7 +247,7 @@ export function isAllowedFileType(prefix, mimeType, filename = '') {
  */
 export function getMaxFileSize(prefix) {
   const maxSizes = {
-    [BUCKET_PREFIXES.PUBLIC]: 10 * 1024 * 1024,           // 10MB
+    [BUCKET_PREFIXES.PUBLIC]: 25 * 1024 * 1024,           // 25MB
     [BUCKET_PREFIXES.CHAPTERS]: 50 * 1024 * 1024,         // 50MB
     [BUCKET_PREFIXES.MEDIA_SOCIAL]: 500 * 1024 * 1024,    // 500MB
     [BUCKET_PREFIXES.MEDIA_PODCAST]: 2 * 1024 * 1024 * 1024, // 2GB
