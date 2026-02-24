@@ -15,13 +15,14 @@ export async function DELETE(request, { params }) {
     const adminClient = createAdminClient()
 
     // Check if current user is a super_admin
-    const { data: currentAdmin } = await adminClient
-      .from('admin_users')
-      .select('id, role')
+    const { data: teamMember } = await adminClient
+      .from('team_members')
+      .select('id, roles, chapter_id, is_media_team')
       .eq('user_id', user.id)
+      .eq('active', true)
       .single()
 
-    if (!currentAdmin || currentAdmin.role !== 'super_admin') {
+    if (!teamMember || !teamMember.roles.includes('super_admin')) {
       return NextResponse.json({ error: 'Only super admins can delete members' }, { status: 403 })
     }
 
@@ -42,11 +43,11 @@ export async function DELETE(request, { params }) {
       .delete()
       .eq('member_id', id)
 
-    // Check if member is an admin and remove admin record
+    // Deactivate team_members record if exists
     if (member.user_id) {
       await adminClient
-        .from('admin_users')
-        .delete()
+        .from('team_members')
+        .update({ active: false })
         .eq('user_id', member.user_id)
     }
 

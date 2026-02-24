@@ -1,7 +1,9 @@
 'use client'
 
-import { useState, useEffect, use } from 'react'
+import { useState, useEffect } from 'react'
 import { useRouter } from 'next/navigation'
+import { createClient } from '@/lib/supabase/client'
+import ChapterSelect from '@/components/ChapterSelect'
 
 const SKILL_OPTIONS = [
   'Canvassing', 'Phone Banking', 'Data Entry', 'Social Media',
@@ -10,18 +12,17 @@ const SKILL_OPTIONS = [
   'Fundraising', 'Community Organizing', 'Public Speaking', 'Other'
 ]
 
-export default function EditVolunteerOpportunityPage({ params }) {
-  const { id } = use(params)
+export default function CreateVolunteerOpportunityPage() {
   const router = useRouter()
-  const [loading, setLoading] = useState(true)
-  const [saving, setSaving] = useState(false)
+  const [loading, setLoading] = useState(false)
   const [error, setError] = useState(null)
-  const [success, setSuccess] = useState(null)
+  const [chapters, setChapters] = useState([])
 
   const [formData, setFormData] = useState({
     title: '',
     description: '',
     opportunity_type: 'one_time',
+    chapter_id: '',
     event_date: '',
     start_time: '',
     end_time: '',
@@ -34,73 +35,52 @@ export default function EditVolunteerOpportunityPage({ params }) {
     status: 'draft',
   })
 
-  // Applications state
-  const [applications, setApplications] = useState([])
-  const [loadingApps, setLoadingApps] = useState(true)
-  const [reviewingId, setReviewingId] = useState(null)
-  const [adminNotes, setAdminNotes] = useState('')
-
   useEffect(() => {
-    loadOpportunity()
-  }, [id])
+    loadChapters()
+  }, [])
 
-  const loadOpportunity = async () => {
-    try {
-      const res = await fetch(`/api/volunteers/${id}`)
-      const data = await res.json()
+  const loadChapters = async () => {
+    const supabase = createClient()
+    const { data: { user } } = await supabase.auth.getUser()
+    if (!user) return
 
-      if (!res.ok) {
-        throw new Error(data.error || 'Failed to load opportunity')
-      }
+    const { data: teamMember } = await supabase
+      .from('team_members')
+      .select('id, roles, chapter_id, is_media_team')
+      .eq('user_id', user.id)
+      .eq('active', true)
+      .single()
 
-      const opp = data.opportunity
-      setFormData({
-        title: opp.title || '',
-        description: opp.description || '',
-        opportunity_type: opp.opportunity_type || 'one_time',
-        event_date: opp.event_date || '',
-        start_time: opp.start_time || '',
-        end_time: opp.end_time || '',
-        location_name: opp.location_name || '',
-        is_remote: opp.is_remote || false,
-        skills_needed: opp.skills_needed || [],
-        spots_available: opp.spots_available || '',
-        time_commitment: opp.time_commitment || '',
-        deadline: opp.deadline || '',
-        status: opp.status || 'draft',
-      })
-
-      // Load applications
-      await loadApplications()
-    } catch (err) {
-      setError(err.message)
-    } finally {
-      setLoading(false)
+    let admin = null
+    if (teamMember && teamMember.roles?.length) {
+      const roleHierarchy = ['super_admin', 'national_admin', 'state_admin', 'county_admin', 'city_admin']
+      const highestRole = roleHierarchy.find(r => teamMember.roles.includes(r)) || teamMember.roles[0]
+      admin = { id: teamMember.id, role: highestRole, chapter_id: teamMember.chapter_id }
     }
-  }
 
-  const loadApplications = async () => {
-    setLoadingApps(true)
-    try {
-      const res = await fetch(`/api/volunteers/${id}?include_applications=true`)
-      const data = await res.json()
+    if (['super_admin', 'national_admin'].includes(admin?.role)) {
+      const { data: allChapters } = await supabase
+        .from('chapters')
+        .select('id, name, level')
+        .order('name')
+      setChapters(allChapters || [])
+    } else if (admin?.chapter_id) {
+      const { data: descendants } = await supabase
+        .rpc('get_chapter_descendants', { chapter_uuid: admin.chapter_id })
 
-      // Applications come from a separate endpoint — fetch via admin client
-      const appsRes = await fetch(`/api/volunteers?status=all&include_apps_for=${id}`)
-      // Fallback: just use what we have from the opportunity endpoint
-      // The applications will be loaded through a dedicated query
-      setApplications([])
+      const chapterIds = [admin.chapter_id, ...(descendants?.map(d => d.id) || [])]
 
-      // Actually fetch applications directly
-      const appRes = await fetch(`/api/volunteers/${id}/applications`)
-      if (appRes.ok) {
-        const appData = await appRes.json()
-        setApplications(appData.applications || [])
+      const { data: accessibleChapters } = await supabase
+        .from('chapters')
+        .select('id, name, level')
+        .in('id', chapterIds)
+        .order('name')
+
+      setChapters(accessibleChapters || [])
+
+      if (admin.chapter_id && !formData.chapter_id) {
+        setFormData(prev => ({ ...prev, chapter_id: admin.chapter_id }))
       }
-    } catch {
-      // Applications will be empty
-    } finally {
-      setLoadingApps(false)
     }
   }
 
@@ -123,9 +103,8 @@ export default function EditVolunteerOpportunityPage({ params }) {
 
   const handleSubmit = async (e) => {
     e.preventDefault()
-    setSaving(true)
+    setLoading(true)
     setError(null)
-    setSuccess(null)
 
     try {
       const payload = {
@@ -137,8 +116,8 @@ export default function EditVolunteerOpportunityPage({ params }) {
         deadline: formData.deadline || null,
       }
 
-      const res = await fetch(`/api/volunteers/${id}`, {
-        method: 'PUT',
+      const res = await fetch('/api/volunteers', {
+        method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify(payload)
       })
@@ -146,98 +125,35 @@ export default function EditVolunteerOpportunityPage({ params }) {
       const data = await res.json()
 
       if (!res.ok) {
-        throw new Error(data.error || 'Failed to update opportunity')
+        throw new Error(data.error || 'Failed to create opportunity')
       }
 
-      setSuccess('Opportunity updated successfully!')
+      router.push('/workspace/organize')
     } catch (err) {
       setError(err.message)
     } finally {
-      setSaving(false)
-    }
-  }
-
-  const handleReview = async (applicationId, status) => {
-    setReviewingId(applicationId)
-    try {
-      const res = await fetch(`/api/volunteers/${id}/applications/${applicationId}`, {
-        method: 'PUT',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ status, admin_notes: adminNotes })
-      })
-
-      if (!res.ok) {
-        const data = await res.json()
-        throw new Error(data.error || 'Failed to update application')
-      }
-
-      setAdminNotes('')
-      await loadApplications()
-    } catch (err) {
-      setError(err.message)
-    } finally {
-      setReviewingId(null)
+      setLoading(false)
     }
   }
 
   const inputClass = "w-full px-3 py-2 text-sm border border-stone-200 rounded bg-white text-gray-900 placeholder:text-gray-400 focus:outline-none focus:ring-1 focus:ring-labor-red focus:border-labor-red"
   const labelClass = "block text-xs font-medium text-gray-500 uppercase tracking-wide mb-1"
 
-  if (loading) {
-    return (
-      <div className="max-w-4xl mx-auto px-4 sm:px-6 py-6">
-        <div className="text-center py-12">
-          <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-labor-red mx-auto"></div>
-          <p className="mt-4 text-sm text-gray-500">Loading opportunity...</p>
-        </div>
-      </div>
-    )
-  }
-
-  const statusBadge = {
-    pending: 'bg-amber-50 text-amber-700 border-amber-200',
-    approved: 'bg-green-50 text-green-700 border-green-200',
-    rejected: 'bg-red-50 text-red-700 border-red-200',
-    withdrawn: 'bg-gray-50 text-gray-500 border-gray-200',
-  }
-
-  // Group applications by status
-  const pendingApps = applications.filter(a => a.status === 'pending')
-  const approvedApps = applications.filter(a => a.status === 'approved')
-  const rejectedApps = applications.filter(a => a.status === 'rejected')
-  const withdrawnApps = applications.filter(a => a.status === 'withdrawn')
-
   return (
     <div className="max-w-4xl mx-auto px-4 sm:px-6 py-6">
       <div className="mb-6">
-        <h1 className="text-sm font-semibold text-gray-900 uppercase tracking-wide">Edit Opportunity</h1>
+        <h1 className="text-sm font-semibold text-gray-900 uppercase tracking-wide">Create Volunteer Opportunity</h1>
       </div>
 
       {error && (
-        <div className="bg-red-50 border border-red-200 text-red-700 px-4 py-3 rounded mb-6 text-sm flex justify-between items-center">
-          <span>{error}</span>
-          <button onClick={() => setError(null)} className="text-red-600 hover:text-red-800">
-            <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-              <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M6 18L18 6M6 6l12 12" />
-            </svg>
-          </button>
+        <div className="bg-red-50 border border-red-200 text-red-700 px-4 py-3 rounded mb-6 text-sm">
+          {error}
         </div>
       )}
 
-      {success && (
-        <div className="bg-green-50 border border-green-200 text-green-700 px-4 py-3 rounded mb-6 text-sm flex justify-between items-center">
-          <span>{success}</span>
-          <button onClick={() => setSuccess(null)} className="text-green-600 hover:text-green-800">
-            <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-              <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M6 18L18 6M6 6l12 12" />
-            </svg>
-          </button>
-        </div>
-      )}
-
-      {/* Edit Form */}
-      <form onSubmit={handleSubmit} className="space-y-6 mb-8">
+      <form onSubmit={handleSubmit} className="space-y-6">
         <div className="grid lg:grid-cols-3 gap-6">
+          {/* Main content - 2/3 */}
           <div className="lg:col-span-2 space-y-6">
             {/* Details */}
             <div className="bg-white border border-stone-200 rounded">
@@ -253,6 +169,7 @@ export default function EditVolunteerOpportunityPage({ params }) {
                     value={formData.title}
                     onChange={handleChange}
                     className={inputClass}
+                    placeholder="e.g., Door-to-Door Canvassing"
                     required
                   />
                 </div>
@@ -263,6 +180,7 @@ export default function EditVolunteerOpportunityPage({ params }) {
                     value={formData.description}
                     onChange={handleChange}
                     className={`${inputClass} min-h-24`}
+                    placeholder="Describe the opportunity, what volunteers will do, and any requirements..."
                     rows={5}
                     required
                   />
@@ -304,13 +222,14 @@ export default function EditVolunteerOpportunityPage({ params }) {
                 {formData.opportunity_type === 'one_time' && (
                   <div className="grid grid-cols-1 sm:grid-cols-3 gap-4">
                     <div>
-                      <label className={labelClass}>Event Date</label>
+                      <label className={labelClass}>Event Date *</label>
                       <input
                         type="date"
                         name="event_date"
                         value={formData.event_date}
                         onChange={handleChange}
                         className={inputClass}
+                        required={formData.opportunity_type === 'one_time'}
                       />
                     </div>
                     <div>
@@ -353,7 +272,7 @@ export default function EditVolunteerOpportunityPage({ params }) {
                     onChange={handleChange}
                     className="w-4 h-4 text-labor-red border-gray-300 rounded focus:ring-labor-red"
                   />
-                  <label htmlFor="is_remote" className="text-sm text-gray-700">Remote opportunity</label>
+                  <label htmlFor="is_remote" className="text-sm text-gray-700">This is a remote opportunity</label>
                 </div>
                 {!formData.is_remote && (
                   <div>
@@ -364,6 +283,7 @@ export default function EditVolunteerOpportunityPage({ params }) {
                       value={formData.location_name}
                       onChange={handleChange}
                       className={inputClass}
+                      placeholder="e.g., Campaign HQ, City Hall"
                     />
                   </div>
                 )}
@@ -393,9 +313,24 @@ export default function EditVolunteerOpportunityPage({ params }) {
             </div>
           </div>
 
-          {/* Sidebar */}
+          {/* Sidebar - 1/3 */}
           <div className="space-y-6">
-            {/* Capacity */}
+            {/* Chapter */}
+            <div className="bg-white border border-stone-200 rounded">
+              <div className="px-4 py-3 border-b border-stone-200">
+                <h2 className="text-sm font-semibold text-gray-900">Chapter</h2>
+              </div>
+              <div className="p-4">
+                <ChapterSelect
+                  chapters={chapters}
+                  value={formData.chapter_id}
+                  onChange={(value) => setFormData(prev => ({ ...prev, chapter_id: value }))}
+                  required
+                />
+              </div>
+            </div>
+
+            {/* Capacity & Deadline */}
             <div className="bg-white border border-stone-200 rounded">
               <div className="px-4 py-3 border-b border-stone-200">
                 <h2 className="text-sm font-semibold text-gray-900">Capacity</h2>
@@ -451,9 +386,10 @@ export default function EditVolunteerOpportunityPage({ params }) {
                 >
                   <option value="draft">Draft</option>
                   <option value="published">Published</option>
-                  <option value="filled">Filled</option>
-                  <option value="cancelled">Cancelled</option>
                 </select>
+                <p className="text-xs text-gray-400 mt-1">
+                  Draft opportunities are only visible to admins.
+                </p>
               </div>
             </div>
 
@@ -461,104 +397,22 @@ export default function EditVolunteerOpportunityPage({ params }) {
             <div className="flex flex-col gap-2">
               <button
                 type="submit"
-                disabled={saving}
+                disabled={loading}
                 className="w-full px-4 py-2 text-sm font-medium text-white bg-labor-red rounded hover:bg-labor-red/90 disabled:opacity-50"
               >
-                {saving ? 'Saving...' : 'Save Changes'}
+                {loading ? 'Creating...' : 'Create Opportunity'}
               </button>
               <button
                 type="button"
-                onClick={() => router.push('/workspace/volunteers')}
+                onClick={() => router.push('/workspace/organize')}
                 className="w-full px-4 py-2 text-sm font-medium text-gray-700 bg-white border border-stone-200 rounded hover:bg-stone-50"
               >
-                Back to List
+                Cancel
               </button>
             </div>
           </div>
         </div>
       </form>
-
-      {/* Applications Section */}
-      <div className="bg-white border border-stone-200 rounded">
-        <div className="px-4 py-3 border-b border-stone-200 flex items-center justify-between">
-          <h2 className="text-sm font-semibold text-gray-900">Applications ({applications.length})</h2>
-          {pendingApps.length > 0 && (
-            <span className="inline-flex items-center px-2 py-0.5 rounded text-xs font-medium bg-amber-50 text-amber-700">
-              {pendingApps.length} pending
-            </span>
-          )}
-        </div>
-
-        {loadingApps ? (
-          <div className="p-6 text-center">
-            <div className="animate-spin rounded-full h-6 w-6 border-b-2 border-labor-red mx-auto"></div>
-          </div>
-        ) : applications.length === 0 ? (
-          <div className="p-6 text-center text-sm text-gray-500">
-            No applications yet.
-          </div>
-        ) : (
-          <div className="divide-y divide-stone-100">
-            {[...pendingApps, ...approvedApps, ...rejectedApps, ...withdrawnApps].map(app => (
-              <div key={app.id} className="p-4">
-                <div className="flex items-start justify-between gap-4">
-                  <div className="min-w-0 flex-1">
-                    <div className="flex items-center gap-2 mb-1">
-                      <span className="font-medium text-sm text-gray-900">
-                        {app.members?.first_name} {app.members?.last_name}
-                      </span>
-                      <span className={`inline-flex items-center px-1.5 py-0.5 rounded text-[10px] font-medium border ${statusBadge[app.status]}`}>
-                        {app.status}
-                      </span>
-                    </div>
-                    <div className="text-xs text-gray-500">{app.members?.email}</div>
-                    {app.message && (
-                      <p className="mt-2 text-sm text-gray-700">{app.message}</p>
-                    )}
-                    {app.availability_notes && (
-                      <p className="mt-1 text-xs text-gray-500">Availability: {app.availability_notes}</p>
-                    )}
-                    {app.admin_notes && (
-                      <p className="mt-1 text-xs text-gray-400">Admin notes: {app.admin_notes}</p>
-                    )}
-                    <div className="mt-1 text-xs text-gray-400">
-                      Applied {new Date(app.created_at).toLocaleDateString('en-US', { month: 'short', day: 'numeric', year: 'numeric' })}
-                    </div>
-                  </div>
-                  {app.status === 'pending' && (
-                    <div className="flex items-center gap-2 flex-shrink-0">
-                      <input
-                        type="text"
-                        placeholder="Notes (optional)"
-                        value={reviewingId === app.id ? adminNotes : ''}
-                        onChange={(e) => {
-                          setReviewingId(app.id)
-                          setAdminNotes(e.target.value)
-                        }}
-                        className="px-2 py-1 text-xs border border-stone-200 rounded w-32"
-                      />
-                      <button
-                        onClick={() => handleReview(app.id, 'approved')}
-                        disabled={reviewingId === app.id && saving}
-                        className="px-2.5 py-1 text-xs font-medium text-green-700 bg-green-50 border border-green-200 rounded hover:bg-green-100"
-                      >
-                        Approve
-                      </button>
-                      <button
-                        onClick={() => handleReview(app.id, 'rejected')}
-                        disabled={reviewingId === app.id && saving}
-                        className="px-2.5 py-1 text-xs font-medium text-red-700 bg-red-50 border border-red-200 rounded hover:bg-red-100"
-                      >
-                        Reject
-                      </button>
-                    </div>
-                  )}
-                </div>
-              </div>
-            ))}
-          </div>
-        )}
-      </div>
     </div>
   )
 }

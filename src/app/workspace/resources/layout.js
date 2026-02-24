@@ -1,4 +1,5 @@
 import ContextualSidebar from '@/components/ContextualSidebar'
+import ResponsiveSidebarWrapper from '@/components/ResponsiveSidebarWrapper'
 import { getCurrentTeamMember } from '@/lib/teamMember'
 import { redirect } from 'next/navigation'
 import { canAccessSection, hasRole } from '@/lib/permissions'
@@ -18,6 +19,7 @@ export default async function ResourcesLayout({ children }) {
     { type: 'link', label: 'Upload Files', href: '/workspace/resources/upload', variant: 'primary' },
     { type: 'divider' },
     { type: 'link', label: 'All Files', href: '/workspace/resources' },
+    { type: 'link', label: 'Collections', href: '/workspace/resources/collections' },
     { type: 'header', label: 'By Category' },
     { type: 'link', label: 'Public Files', href: '/workspace/resources?bucket=public' },
     ...(teamMember.chapter_id || isTopAdmin ? [
@@ -34,8 +36,14 @@ export default async function ResourcesLayout({ children }) {
 
   return (
     <div className="flex">
-      <ContextualSidebar items={sidebarItems} />
-      <main className="flex-1 min-h-[calc(100vh-61px)] overflow-y-auto">
+      <ResponsiveSidebarWrapper>
+        <ContextualSidebar items={sidebarItems} />
+      </ResponsiveSidebarWrapper>
+      <main
+        className="flex-1 min-h-[calc(100vh-61px)] overflow-y-auto"
+        data-chapter-id={teamMember.chapter_id || ''}
+        data-is-top-admin={isTopAdmin ? 'true' : 'false'}
+      >
         {children}
       </main>
     </div>

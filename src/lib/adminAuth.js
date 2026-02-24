@@ -18,13 +18,11 @@ export const ROLE_HIERARCHY = [
  *
  * @param {Object} options - Configuration options
  * @param {boolean} options.includeChapter - Include chapter details in response (default: false)
- * @param {boolean} options.includeAllRoles - Include all admin role records (default: false)
  * @returns {Promise<Object|null>} Admin info object or null if not authorized
  */
 export async function getAuthenticatedAdmin(options = {}) {
   const {
-    includeChapter = false,
-    includeAllRoles = false
+    includeChapter = false
   } = options
 
   try {
@@ -36,59 +34,43 @@ export async function getAuthenticatedAdmin(options = {}) {
       return null
     }
 
-    // Query admin records
+    // Query team_members (single row per user)
     const supabase = createAdminClient()
-    const query = supabase
-      .from('admin_users')
-      .select(includeChapter
-        ? `id, role, chapter_id, is_media_team, chapters(id, name, state_code, level)`
-        : 'id, role, chapter_id, is_media_team'
-      )
+    const { data: record, error } = await supabase
+      .from('team_members')
+      .select('id, user_id, roles, chapter_id, is_media_team, member_id, chapters(id, name, state_code, level)')
       .eq('user_id', user.id)
+      .eq('active', true)
+      .single()
 
-    const { data: adminRecords, error } = await query
-
-    if (error) {
-      console.error('Admin auth query error:', error)
+    if (error || !record) {
+      if (error && error.code !== 'PGRST116') {
+        console.error('Admin auth query error:', error)
+      }
       return null
     }
 
-    if (!adminRecords || adminRecords.length === 0) {
+    // Find highest admin role from roles array
+    const highestAdminRole = ROLE_HIERARCHY.find(r => record.roles?.includes(r)) || null
+
+    // User must have at least one admin role
+    if (!highestAdminRole) {
       return null
     }
-
-    // Find highest privilege role
-    const highestRecord = adminRecords.reduce((highest, current) => {
-      const currentIndex = ROLE_HIERARCHY.indexOf(current.role)
-      const highestIndex = ROLE_HIERARCHY.indexOf(highest.role)
-      return currentIndex < highestIndex ? current : highest
-    }, adminRecords[0])
-
-    // Check if user is on media team
-    const isMediaTeam = adminRecords.some(a => a.is_media_team)
 
     // Build response object
     const adminInfo = {
-      id: highestRecord.id,
       userId: user.id,
       email: user.email,
-      role: highestRecord.role,
-      chapterId: highestRecord.chapter_id,
-      isMediaTeam
+      role: highestAdminRole,
+      roles: record.roles,
+      chapterId: record.chapter_id,
+      isMediaTeam: record.is_media_team || false,
+      teamMemberId: record.id
     }
 
-    if (includeChapter && highestRecord.chapters) {
-      adminInfo.chapter = highestRecord.chapters
-    }
-
-    if (includeAllRoles) {
-      adminInfo.allRoles = adminRecords.map(a => ({
-        id: a.id,
-        role: a.role,
-        chapterId: a.chapter_id,
-        chapterName: a.chapters?.name,
-        isMediaTeam: a.is_media_team
-      }))
+    if (includeChapter && record.chapters) {
+      adminInfo.chapter = record.chapters
     }
 
     return adminInfo
@@ -150,27 +132,31 @@ export function isSuperAdmin(role) {
 }
 
 /**
- * Get all admin records for a user (useful when checking multiple chapter access)
+ * Get the team member record for a user
  *
  * @param {string} userId - The user ID to query
- * @returns {Promise<Array>} Array of admin records or empty array
+ * @returns {Promise<Object|null>} Team member record or null
  */
 export async function getAdminRecords(userId) {
   try {
     const supabase = createAdminClient()
-    const { data: adminRecords, error } = await supabase
-      .from('admin_users')
-      .select('id, role, chapter_id, is_media_team')
+    const { data: record, error } = await supabase
+      .from('team_members')
+      .select('id, user_id, roles, chapter_id, is_media_team, member_id')
       .eq('user_id', userId)
+      .eq('active', true)
+      .single()
 
-    if (error) {
-      console.error('Get admin records error:', error)
-      return []
+    if (error || !record) {
+      if (error && error.code !== 'PGRST116') {
+        console.error('Get admin records error:', error)
+      }
+      return null
     }
 
-    return adminRecords || []
+    return record
   } catch (error) {
     console.error('Get admin records error:', error)
-    return []
+    return null
   }
 }

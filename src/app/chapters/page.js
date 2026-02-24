@@ -30,14 +30,16 @@ export default function ChaptersPage() {
     const loadData = async () => {
       const supabase = createClient()
 
-      // Check if current user is an admin (user can have multiple admin records)
+      // Check if current user is an admin
       const { data: { user } } = await supabase.auth.getUser()
       if (user) {
-        const { data: adminRecords } = await supabase
-          .from('admin_users')
-          .select('role')
+        const { data: teamMember } = await supabase
+          .from('team_members')
+          .select('id, roles, chapter_id, is_media_team')
           .eq('user_id', user.id)
-        setIsAdmin(adminRecords && adminRecords.length > 0)
+          .eq('active', true)
+          .single()
+        setIsAdmin(teamMember?.roles?.some(r => ['super_admin', 'national_admin', 'state_admin', 'county_admin', 'city_admin'].includes(r)))
       }
 
       // Fetch chapters

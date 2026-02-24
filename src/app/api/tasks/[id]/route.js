@@ -17,7 +17,8 @@ export async function GET(request, { params }) {
       .select(`
         *,
         owner:team_members!tasks_owner_fkey(id, member:members(first_name, last_name)),
-        creator:team_members!tasks_created_by_fkey(id, member:members(first_name, last_name))
+        creator:team_members!tasks_created_by_fkey(id, member:members(first_name, last_name)),
+        assignee:members!tasks_assignee_member_id_fkey(id, first_name, last_name, email)
       `)
       .eq('id', id)
       .single()
@@ -48,6 +49,7 @@ export async function PUT(request, { params }) {
       project,
       phase,
       owner,
+      assignee_member_id,
       deliverable,
       time_estimate_min,
       deadline,
@@ -61,7 +63,16 @@ export async function PUT(request, { params }) {
     if (name !== undefined) updates.name = name
     if (project !== undefined) updates.project = project
     if (phase !== undefined) updates.phase = phase || null
-    if (owner !== undefined) updates.owner = owner || null
+    if (owner !== undefined) {
+      updates.owner = owner || null
+      // Clear volunteer assignee when setting team member owner
+      if (owner) updates.assignee_member_id = null
+    }
+    if (assignee_member_id !== undefined) {
+      updates.assignee_member_id = assignee_member_id || null
+      // Clear team member owner when setting volunteer assignee
+      if (assignee_member_id) updates.owner = null
+    }
     if (deliverable !== undefined) updates.deliverable = deliverable
     if (time_estimate_min !== undefined) updates.time_estimate_min = parseInt(time_estimate_min)
     if (deadline !== undefined) updates.deadline = deadline

@@ -10,7 +10,7 @@ export default function ChannelSidebar({
   unreadCounts
 }) {
   return (
-    <div className="w-64 border-r border-stone-200 bg-white flex flex-col h-full">
+    <div className="w-full md:w-64 border-r border-stone-200 bg-white flex flex-col h-full">
       {/* Header */}
       <div className="px-4 py-3 border-b border-stone-200 flex items-center justify-between shrink-0">
         <h2 className="text-sm font-semibold text-gray-900 uppercase tracking-wide">Channels</h2>
@@ -20,9 +20,9 @@ export default function ChannelSidebar({
       <div className="px-3 py-2 space-y-1 border-b border-stone-100 shrink-0">
         <button
           onClick={onBrowseChannels}
-          className="w-full text-left px-2 py-1.5 text-xs text-gray-600 hover:text-gray-900 hover:bg-stone-50 rounded flex items-center gap-1.5"
+          className="w-full text-left px-2 py-1.5 text-sm md:text-xs text-gray-600 hover:text-gray-900 hover:bg-stone-50 rounded flex items-center gap-1.5"
         >
-          <svg className="w-3.5 h-3.5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+          <svg className="w-4 h-4 md:w-3.5 md:h-3.5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
             <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M21 21l-6-6m2-5a7 7 0 11-14 0 7 7 0 0114 0z" />
           </svg>
           Browse Channels
@@ -30,9 +30,9 @@ export default function ChannelSidebar({
         {isAdmin && (
           <button
             onClick={onCreateChannel}
-            className="w-full text-left px-2 py-1.5 text-xs text-gray-600 hover:text-gray-900 hover:bg-stone-50 rounded flex items-center gap-1.5"
+            className="w-full text-left px-2 py-1.5 text-sm md:text-xs text-gray-600 hover:text-gray-900 hover:bg-stone-50 rounded flex items-center gap-1.5"
           >
-            <svg className="w-3.5 h-3.5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+            <svg className="w-4 h-4 md:w-3.5 md:h-3.5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
               <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 4v16m8-8H4" />
             </svg>
             Create Channel
@@ -55,13 +55,13 @@ export default function ChannelSidebar({
               <button
                 key={channel.id}
                 onClick={() => onSelectChannel(channel.id)}
-                className={`w-full text-left px-3 py-1.5 flex items-center gap-2 text-sm transition-colors ${
+                className={`w-full text-left px-3 py-2.5 md:py-1.5 flex items-center gap-2 text-base md:text-sm transition-colors ${
                   isSelected
                     ? 'bg-stone-200 text-gray-900 font-medium'
                     : 'text-gray-700 hover:bg-stone-50'
                 }`}
               >
-                <span className="text-gray-400 text-xs">#</span>
+                <span className="text-gray-400 text-sm md:text-xs">#</span>
                 <span className="truncate flex-1">{channel.name}</span>
                 {unread > 0 && (
                   <span className="shrink-0 bg-labor-red text-white text-xs font-medium rounded-full min-w-[18px] h-[18px] flex items-center justify-center px-1">

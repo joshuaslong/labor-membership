@@ -4,7 +4,7 @@ import { canAccessSection } from '@/lib/permissions'
 /**
  * All available sections in the application
  */
-const ALL_SECTIONS = ['members', 'events', 'communicate', 'messaging', 'chapters', 'resources', 'polls', 'volunteers', 'tasks', 'admin']
+const ALL_SECTIONS = ['events', 'communicate', 'messaging', 'resources', 'polls', 'organize', 'tasks', 'admin']
 
 /**
  * Get team member record for current user
@@ -17,7 +17,7 @@ export async function getCurrentTeamMember() {
 
   const { data: teamMember, error } = await supabase
     .from('team_members')
-    .select('*, chapters(id, name, level)')
+    .select('*, chapters(id, name, level), member:members(first_name, last_name)')
     .eq('user_id', user.id)
     .eq('active', true)
     .single()

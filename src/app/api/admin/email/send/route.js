@@ -198,7 +198,7 @@ export async function POST(request) {
     // Log the email send (ignore errors if table doesn't exist)
     try {
       await supabase.from('email_logs').insert({
-        admin_id: admin.id,
+        admin_id: admin.teamMemberId,
         subject,
         recipient_type: recipientType,
         chapter_id: chapterId || admin.chapterId,

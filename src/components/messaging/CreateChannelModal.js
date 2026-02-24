@@ -2,7 +2,7 @@
 
 import { useState } from 'react'
 
-export default function CreateChannelModal({ isOpen, onClose, onCreated }) {
+export default function CreateChannelModal({ isOpen, onClose, onCreated, chapterId }) {
   const [name, setName] = useState('')
   const [description, setDescription] = useState('')
   const [error, setError] = useState(null)
@@ -27,7 +27,8 @@ export default function CreateChannelModal({ isOpen, onClose, onCreated }) {
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({
           name: trimmedName,
-          description: description.trim() || null
+          description: description.trim() || null,
+          chapter_id: chapterId
         })
       })
 

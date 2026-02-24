@@ -26,10 +26,10 @@ export async function PUT(request, { params }) {
       return NextResponse.json({ error: 'Not a team member' }, { status: 403 })
     }
 
-    // Get the opportunity to check chapter permission
+    // Get the opportunity to check chapter permission and workspace access grant
     const { data: opportunity } = await adminClient
       .from('volunteer_opportunities')
-      .select('id, chapter_id')
+      .select('id, chapter_id, grants_workspace_access')
       .eq('id', id)
       .single()
 
@@ -90,6 +90,48 @@ export async function PUT(request, { params }) {
       .single()
 
     if (error) throw error
+
+    // Auto-create team_member record when approved and opportunity grants workspace access
+    if (status === 'approved' && opportunity?.grants_workspace_access) {
+      // Get the applicant's user_id from their member record
+      const { data: appWithMember } = await adminClient
+        .from('volunteer_applications')
+        .select('member_id, members(user_id)')
+        .eq('id', applicationId)
+        .single()
+
+      if (appWithMember?.members?.user_id) {
+        const userId = appWithMember.members.user_id
+
+        // Check if team_member already exists
+        const { data: existing } = await adminClient
+          .from('team_members')
+          .select('id, roles, active')
+          .eq('user_id', userId)
+          .single()
+
+        if (existing) {
+          // Reactivate and ensure team_member role is present
+          const roles = existing.roles || []
+          if (!roles.includes('team_member')) roles.push('team_member')
+          await adminClient
+            .from('team_members')
+            .update({ roles, active: true, updated_at: new Date().toISOString() })
+            .eq('id', existing.id)
+        } else {
+          // Create new team_member
+          await adminClient
+            .from('team_members')
+            .insert({
+              user_id: userId,
+              member_id: appWithMember.member_id,
+              chapter_id: opportunity.chapter_id,
+              roles: ['team_member'],
+              active: true
+            })
+        }
+      }
+    }
 
     return NextResponse.json({ application: updated })
 

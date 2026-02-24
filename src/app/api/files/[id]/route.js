@@ -4,13 +4,18 @@ import { deleteFile } from '@/lib/r2'
 
 const roleHierarchy = ['super_admin', 'national_admin', 'state_admin', 'county_admin', 'city_admin']
 
-function getHighestPrivilegeAdmin(adminRecords) {
-  if (!adminRecords || adminRecords.length === 0) return null
-  return adminRecords.reduce((highest, current) => {
-    const currentIndex = roleHierarchy.indexOf(current.role)
-    const highestIndex = roleHierarchy.indexOf(highest.role)
-    return currentIndex < highestIndex ? current : highest
-  }, adminRecords[0])
+function getHighestRole(roles) {
+  if (!roles || roles.length === 0) return null
+  let bestIndex = Infinity
+  let bestRole = null
+  for (const r of roles) {
+    const idx = roleHierarchy.indexOf(r)
+    if (idx !== -1 && idx < bestIndex) {
+      bestIndex = idx
+      bestRole = r
+    }
+  }
+  return bestRole
 }
 
 // GET - Get single file details
@@ -101,14 +106,16 @@ export async function PUT(request, { params }) {
     }
 
     // Check permission - uploader or super/national admin
-    const { data: adminRecords } = await adminClient
-      .from('admin_users')
-      .select('id, role, chapter_id')
+    const { data: teamMember } = await adminClient
+      .from('team_members')
+      .select('id, roles, chapter_id')
       .eq('user_id', user.id)
+      .eq('active', true)
+      .single()
 
-    const currentAdmin = getHighestPrivilegeAdmin(adminRecords)
+    const highestRole = getHighestRole(teamMember?.roles)
     const canUpdate = file.uploaded_by === user.id ||
-      (currentAdmin && ['super_admin', 'national_admin'].includes(currentAdmin.role))
+      (teamMember && teamMember.roles.some(r => ['super_admin', 'national_admin'].includes(r)))
 
     if (!canUpdate) {
       return NextResponse.json({ error: 'Permission denied' }, { status: 403 })
@@ -169,18 +176,20 @@ export async function DELETE(request, { params }) {
     }
 
     // Check delete permission
-    const { data: adminRecords } = await adminClient
-      .from('admin_users')
-      .select('id, role, chapter_id, is_media_team')
+    const { data: deleteTeamMember } = await adminClient
+      .from('team_members')
+      .select('id, roles, chapter_id, is_media_team')
       .eq('user_id', user.id)
+      .eq('active', true)
+      .single()
 
-    const currentAdmin = getHighestPrivilegeAdmin(adminRecords)
-    const isMediaTeam = adminRecords?.some(a => a.is_media_team) || false
+    const deleteHighestRole = getHighestRole(deleteTeamMember?.roles)
+    const isMediaTeam = deleteTeamMember?.is_media_team || false
 
     let canDelete = false
 
     // Super/national admin can delete anything
-    if (currentAdmin?.role === 'super_admin' || currentAdmin?.role === 'national_admin') {
+    if (deleteTeamMember?.roles?.some(r => ['super_admin', 'national_admin'].includes(r))) {
       canDelete = true
     }
     // User can delete their own uploads
@@ -188,12 +197,12 @@ export async function DELETE(request, { params }) {
       canDelete = true
     }
     // Chapter admin can delete files in their jurisdiction
-    else if (currentAdmin && file.chapter_id && file.access_tier === 'chapter') {
+    else if (deleteHighestRole && file.chapter_id && file.access_tier === 'chapter') {
       const { data: descendants } = await adminClient
-        .rpc('get_chapter_descendants', { chapter_uuid: currentAdmin.chapter_id })
+        .rpc('get_chapter_descendants', { chapter_uuid: deleteTeamMember.chapter_id })
       const allowedIds = (descendants?.map(d => d.id) || [])
-      if (currentAdmin.chapter_id) {
-        allowedIds.push(currentAdmin.chapter_id)
+      if (deleteTeamMember.chapter_id) {
+        allowedIds.push(deleteTeamMember.chapter_id)
       }
       canDelete = allowedIds.includes(file.chapter_id)
     }
@@ -210,7 +219,7 @@ export async function DELETE(request, { params }) {
     const { searchParams } = new URL(request.url)
     const hardDelete = searchParams.get('hard') === 'true'
 
-    if (hardDelete && currentAdmin?.role === 'super_admin') {
+    if (hardDelete && deleteTeamMember?.roles?.includes('super_admin')) {
       // Delete from R2
       try {
         await deleteFile(file.r2_key)

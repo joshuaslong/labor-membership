@@ -26,12 +26,13 @@ export default function CreateTaskPage() {
   const [loading, setLoading] = useState(false)
   const [error, setError] = useState(null)
   const [teamMembers, setTeamMembers] = useState([])
+  const [volunteers, setVolunteers] = useState([])
 
   const [formData, setFormData] = useState({
     project: '',
     phase: '',
     name: '',
-    owner: '',
+    assignTo: '',
     deliverable: '',
     time_estimate_min: '',
     deadline: '',
@@ -42,6 +43,7 @@ export default function CreateTaskPage() {
 
   useEffect(() => {
     loadTeamMembers()
+    loadVolunteers()
   }, [])
 
   const loadTeamMembers = async () => {
@@ -75,6 +77,18 @@ export default function CreateTaskPage() {
     setTeamMembers(data || [])
   }
 
+  const loadVolunteers = async () => {
+    const supabase = createClient()
+    const { data } = await supabase
+      .from('members')
+      .select('id, first_name, last_name')
+      .eq('wants_to_volunteer', true)
+      .eq('status', 'active')
+      .order('first_name')
+
+    setVolunteers(data || [])
+  }
+
   const handleChange = (e) => {
     const { name, value } = e.target
     setFormData(prev => ({ ...prev, [name]: value }))
@@ -86,12 +100,23 @@ export default function CreateTaskPage() {
     setError(null)
 
     try {
+      // Parse assignTo value: "tm:<id>" for team member, "vol:<id>" for volunteer
+      let owner = null
+      let assignee_member_id = null
+      if (formData.assignTo) {
+        const [type, id] = formData.assignTo.split(':')
+        if (type === 'tm') owner = id
+        else if (type === 'vol') assignee_member_id = id
+      }
+
+      const { assignTo, ...rest } = formData
       const res = await fetch('/api/tasks', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({
-          ...formData,
-          owner: formData.owner || null,
+          ...rest,
+          owner,
+          assignee_member_id,
           skill_type: formData.skill_type || null,
         }),
       })
@@ -212,19 +237,30 @@ export default function CreateTaskPage() {
               </div>
               <div className="p-4 space-y-4">
                 <div>
-                  <label className={labelClass}>Owner</label>
+                  <label className={labelClass}>Assign To</label>
                   <select
-                    name="owner"
-                    value={formData.owner}
+                    name="assignTo"
+                    value={formData.assignTo}
                     onChange={handleChange}
                     className={inputClass}
                   >
                     <option value="">Unassigned</option>
-                    {teamMembers.map(tm => (
-                      <option key={tm.id} value={tm.id}>
-                        {tm.member ? `${tm.member.first_name} ${tm.member.last_name}` : 'Unknown'}
-                      </option>
-                    ))}
+                    <optgroup label="Team Members">
+                      {teamMembers.map(tm => (
+                        <option key={`tm-${tm.id}`} value={`tm:${tm.id}`}>
+                          {tm.member ? `${tm.member.first_name} ${tm.member.last_name}` : 'Unknown'}
+                        </option>
+                      ))}
+                    </optgroup>
+                    {volunteers.length > 0 && (
+                      <optgroup label="Volunteers">
+                        {volunteers.map(v => (
+                          <option key={`vol-${v.id}`} value={`vol:${v.id}`}>
+                            {v.first_name} {v.last_name}
+                          </option>
+                        ))}
+                      </optgroup>
+                    )}
                   </select>
                 </div>
 

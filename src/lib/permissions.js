@@ -7,14 +7,14 @@
  */
 const SECTION_PERMISSIONS = {
   members: ['national_admin', 'state_admin', 'county_admin', 'city_admin', 'membership_coordinator', 'data_manager'],
-  events: ['national_admin', 'state_admin', 'county_admin', 'city_admin', 'event_coordinator'],
+  events: ['national_admin', 'state_admin', 'county_admin', 'city_admin', 'event_coordinator', 'team_member'],
   communicate: ['national_admin', 'state_admin', 'county_admin', 'city_admin', 'communications_lead'],
   chapters: ['national_admin', 'state_admin', 'county_admin', 'city_admin'],
-  resources: ['national_admin', 'state_admin', 'county_admin', 'city_admin', 'content_creator'],
+  resources: ['national_admin', 'state_admin', 'county_admin', 'city_admin', 'content_creator', 'team_member'],
   polls: ['national_admin', 'state_admin', 'county_admin', 'city_admin', 'communications_lead'],
-  volunteers: ['national_admin', 'state_admin', 'county_admin', 'city_admin', 'volunteer_manager', 'event_coordinator'],
-  tasks: ['national_admin', 'state_admin', 'county_admin', 'city_admin', 'volunteer_manager'],
-  messaging: ['national_admin', 'state_admin', 'county_admin', 'city_admin', 'communications_lead', 'event_coordinator', 'volunteer_manager', 'membership_coordinator', 'content_creator', 'data_manager'],
+  organize: ['national_admin', 'state_admin', 'county_admin', 'city_admin', 'volunteer_manager', 'event_coordinator', 'team_member'],
+  tasks: ['national_admin', 'state_admin', 'county_admin', 'city_admin', 'volunteer_manager', 'team_member'],
+  messaging: ['national_admin', 'state_admin', 'county_admin', 'city_admin', 'communications_lead', 'event_coordinator', 'volunteer_manager', 'membership_coordinator', 'content_creator', 'data_manager', 'team_member'],
   admin: ['super_admin', 'national_admin']
 }
 
@@ -97,3 +97,10 @@ export function getHighestRole(userRoles) {
   }
   return userRoles[0] || null
 }
+
+/**
+ * Role category constants
+ */
+export const ADMIN_ROLES = ['super_admin', 'national_admin', 'state_admin', 'county_admin', 'city_admin']
+export const SPECIALIST_ROLES = ['event_coordinator', 'volunteer_manager', 'communications_lead', 'content_creator', 'data_manager', 'membership_coordinator']
+export const BASE_ROLES = ['team_member']

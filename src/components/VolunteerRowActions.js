@@ -109,14 +109,14 @@ export default function VolunteerRowActions({ opportunityId, opportunityTitle, o
           style={{ top: menuPosition.top, left: menuPosition.left }}
         >
           <Link
-            href={`/volunteers/${opportunityId}`}
+            href={`/organize/${opportunityId}`}
             className="block px-4 py-2 text-sm text-gray-700 hover:bg-stone-50"
             onClick={() => setIsOpen(false)}
           >
             View
           </Link>
           <Link
-            href={`/workspace/volunteers/${opportunityId}`}
+            href={`/workspace/organize/${opportunityId}`}
             className="block px-4 py-2 text-sm text-gray-700 hover:bg-stone-50"
             onClick={() => setIsOpen(false)}
           >

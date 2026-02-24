@@ -1,6 +1,7 @@
 import { NextResponse } from 'next/server'
-import { createClient } from '@/lib/supabase/server'
+import { createAdminClient } from '@/lib/supabase/server'
 import { getCurrentTeamMember } from '@/lib/teamMember'
+import { sendMessagePushNotifications } from '@/lib/web-push'
 
 export async function GET(request, { params }) {
   const teamMember = await getCurrentTeamMember()
@@ -9,7 +10,7 @@ export async function GET(request, { params }) {
   }
 
   const { channelId } = await params
-  const supabase = await createClient()
+  const supabase = createAdminClient()
 
   // Verify user is a channel member
   const { data: membership } = await supabase
@@ -85,7 +86,7 @@ export async function POST(request, { params }) {
   }
 
   const { channelId } = await params
-  const supabase = await createClient()
+  const supabase = createAdminClient()
 
   // Verify user is a channel member
   const { data: membership } = await supabase
@@ -119,6 +120,13 @@ export async function POST(request, { params }) {
   if (error) {
     return NextResponse.json({ error: 'Failed to send message' }, { status: 500 })
   }
+
+  // Fire-and-forget push notifications to subscribed channel members
+  sendMessagePushNotifications({
+    channelId,
+    senderTeamMemberId: teamMember.id,
+    messageContent: content.trim(),
+  }).catch(err => console.error('Push notification error:', err))
 
   return NextResponse.json(message, { status: 201 })
 }

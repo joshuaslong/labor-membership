@@ -76,9 +76,78 @@ function FileTypeIcon({ mimeType, className = 'w-5 h-5' }) {
   )
 }
 
-export default function ResourceUploader({ allowedBuckets = ['chapters'], chapterId = null }) {
+function FolderSelector({ chapterId, selectedFolderId, onSelect, disabled }) {
+  const [folders, setFolders] = useState([])
+  const [loading, setLoading] = useState(false)
+
+  useEffect(() => {
+    if (!chapterId) return
+    setLoading(true)
+
+    async function loadFolders() {
+      try {
+        // Load all folders recursively (flatten for dropdown)
+        const allFolders = []
+
+        async function loadLevel(parentId, depth) {
+          const params = new URLSearchParams({ chapter_id: chapterId })
+          if (parentId) params.set('parent_id', parentId)
+
+          const res = await fetch(`/api/folders?${params}`)
+          const data = await res.json()
+          if (!res.ok) return
+
+          for (const folder of data.folders) {
+            allFolders.push({ ...folder, depth })
+            if (folder.subfolder_count > 0) {
+              await loadLevel(folder.id, depth + 1)
+            }
+          }
+        }
+
+        await loadLevel(null, 0)
+        setFolders(allFolders)
+      } catch {
+        setFolders([])
+      } finally {
+        setLoading(false)
+      }
+    }
+
+    loadFolders()
+  }, [chapterId])
+
+  if (!chapterId) return null
+
+  return (
+    <div className="bg-white border border-stone-200 rounded p-4 mb-4">
+      <label className="block text-xs font-medium text-gray-700 uppercase tracking-wide mb-2">
+        Folder
+      </label>
+      <select
+        value={selectedFolderId || ''}
+        onChange={(e) => onSelect(e.target.value || null)}
+        disabled={disabled || loading}
+        className="w-full px-3 py-1.5 text-sm border border-stone-200 rounded focus:outline-none focus:ring-1 focus:ring-labor-red focus:border-labor-red bg-white disabled:opacity-50"
+      >
+        <option value="">No folder (root)</option>
+        {folders.map(folder => (
+          <option key={folder.id} value={folder.id}>
+            {'  '.repeat(folder.depth)}{folder.name}
+          </option>
+        ))}
+      </select>
+      {loading && (
+        <p className="text-xs text-gray-400 mt-1">Loading folders...</p>
+      )}
+    </div>
+  )
+}
+
+export default function ResourceUploader({ allowedBuckets = ['chapters'], chapterId = null, defaultFolderId = null }) {
   const router = useRouter()
   const [selectedBucket, setSelectedBucket] = useState(allowedBuckets[0])
+  const [selectedFolderId, setSelectedFolderId] = useState(defaultFolderId)
   const [files, setFiles] = useState([])
   const [uploading, setUploading] = useState(false)
   const [progress, setProgress] = useState({})
@@ -150,6 +219,7 @@ export default function ResourceUploader({ allowedBuckets = ['chapters'], chapte
           bucketPrefix: selectedBucket,
           chapterId: chapterId,
           description: description || null,
+          folder_id: selectedFolderId || null,
         }),
       })
 
@@ -200,7 +270,10 @@ export default function ResourceUploader({ allowedBuckets = ['chapters'], chapte
     const failCount = results.filter(r => !r.success).length
 
     if (successCount > 0 && failCount === 0) {
-      router.push('/workspace/resources')
+      const redirectUrl = selectedFolderId
+        ? `/workspace/resources?folder=${selectedFolderId}`
+        : '/workspace/resources'
+      router.push(redirectUrl)
     } else if (successCount > 0) {
       // Remove successful uploads, keep failed ones
       const successIds = new Set(
@@ -257,6 +330,14 @@ export default function ResourceUploader({ allowedBuckets = ['chapters'], chapte
           </div>
         </div>
       )}
+
+      {/* Folder Selection */}
+      <FolderSelector
+        chapterId={chapterId}
+        selectedFolderId={selectedFolderId}
+        onSelect={setSelectedFolderId}
+        disabled={uploading}
+      />
 
       {/* Drop Zone */}
       <div

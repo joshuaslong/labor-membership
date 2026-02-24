@@ -6,8 +6,8 @@ import ChannelHeader from './ChannelHeader'
 import MessageBubble from './MessageBubble'
 import MessageComposer from './MessageComposer'
 
-export default function ChatArea({ channelId, channel, currentUser }) {
-  const { messages, loading, hasMore, sendMessage, loadMore } = useChannel(channelId)
+export default function ChatArea({ channelId, channel, currentUser, onBack }) {
+  const { messages, loading, hasMore, sendMessage, editMessage, deleteMessage, loadMore } = useChannel(channelId, currentUser)
   const messagesEndRef = useRef(null)
   const messagesContainerRef = useRef(null)
   const prevMessageCountRef = useRef(0)
@@ -63,20 +63,12 @@ export default function ChatArea({ channelId, channel, currentUser }) {
   const handleEdit = async (message) => {
     const newContent = prompt('Edit message:', message.content)
     if (newContent === null || newContent.trim() === '' || newContent === message.content) return
-
-    await fetch(`/api/workspace/messaging/messages/${message.id}`, {
-      method: 'PATCH',
-      headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify({ content: newContent.trim() })
-    })
+    await editMessage(message.id, newContent.trim())
   }
 
   const handleDelete = async (message) => {
     if (!confirm('Delete this message?')) return
-
-    await fetch(`/api/workspace/messaging/messages/${message.id}`, {
-      method: 'DELETE',
-    })
+    await deleteMessage(message.id)
   }
 
   if (!channelId) {
@@ -90,8 +82,8 @@ export default function ChatArea({ channelId, channel, currentUser }) {
   }
 
   return (
-    <div className="flex-1 flex flex-col min-w-0">
-      <ChannelHeader channel={channel} />
+    <div className="flex-1 flex flex-col min-w-0 min-h-0 overflow-hidden">
+      <ChannelHeader channel={channel} onBack={onBack} />
 
       {/* Messages area */}
       <div
@@ -121,7 +113,7 @@ export default function ChatArea({ channelId, channel, currentUser }) {
         )}
 
         {/* Messages list */}
-        <div className="py-2">
+        <div className="max-w-4xl mx-auto py-2">
           {messages.map(message => (
             <MessageBubble
               key={message.id}

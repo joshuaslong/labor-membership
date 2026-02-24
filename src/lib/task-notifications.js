@@ -121,3 +121,85 @@ export async function sendNewTaskNotification(task) {
     return { success: false, error: err.message }
   }
 }
+
+/**
+ * Send a notification email to a volunteer member assigned to a task
+ */
+export async function sendTaskNotificationToMember(task) {
+  if (!task.assignee_member_id) {
+    return { success: true, skipped: true, reason: 'No volunteer assignee' }
+  }
+
+  const supabase = createAdminClient()
+
+  // Get member directly
+  const { data: member } = await supabase
+    .from('members')
+    .select('id, email, first_name')
+    .eq('id', task.assignee_member_id)
+    .single()
+
+  if (!member || !member.email) {
+    console.error('Member not found for task notification:', task.assignee_member_id)
+    return { success: false, error: 'Member not found' }
+  }
+
+  // Build task URL
+  const appUrl = process.env.NEXT_PUBLIC_APP_URL || 'https://members.votelabor.org'
+  const taskUrl = `${appUrl}/workspace/tasks/${task.id}`
+
+  // Format deadline
+  const deadline = task.deadline ? formatEmailDate(task.deadline) : 'No deadline'
+
+  // Priority labels
+  const priorityLabels = { P1: 'Critical', P2: 'High', P3: 'Standard' }
+  const priority = priorityLabels[task.priority] || task.priority
+
+  // Format time estimate
+  const timeEstimate = formatTimeEstimate(task.time_estimate_min)
+
+  // Skill type labels
+  const skillLabels = {
+    WRITING: 'Writing', DESIGN: 'Design', VIDEO: 'Video',
+    TECHNICAL: 'Technical', RESEARCH: 'Research', COORDINATION: 'Coordination',
+  }
+  const skillType = task.skill_type ? skillLabels[task.skill_type] || task.skill_type : ''
+
+  // Build notes section HTML
+  const notesSection = task.notes
+    ? `<div style="background: #f9fafb; padding: 12px 16px; border-radius: 6px; border-left: 3px solid #E25555; margin: 16px 0; font-size: 14px;"><strong>Notes:</strong> ${task.notes}</div>`
+    : ''
+
+  try {
+    const result = await sendAutomatedEmail({
+      templateKey: 'new_task',
+      to: member.email,
+      variables: {
+        name: member.first_name || 'Volunteer',
+        task_name: task.name,
+        task_deliverable: task.deliverable || '',
+        task_project: task.project || '',
+        task_deadline: deadline,
+        task_priority: priority,
+        task_time_estimate: timeEstimate,
+        task_skill_row: skillType
+          ? `<tr><td style="padding: 6px 12px 6px 0; color: #6b7280; vertical-align: top; white-space: nowrap;"><strong>Type:</strong></td><td style="padding: 6px 0;">${skillType}</td></tr>`
+          : '',
+        task_notes_section: notesSection,
+        task_url: taskUrl,
+      },
+      recipientType: 'member',
+      recipientId: member.id,
+      relatedId: task.id,
+    })
+
+    if (result.success) {
+      console.log(`Task notification sent for "${task.name}" to volunteer ${member.email}`)
+    }
+
+    return result
+  } catch (err) {
+    console.error(`Failed to send task notification to volunteer ${member.email}:`, err)
+    return { success: false, error: err.message }
+  }
+}

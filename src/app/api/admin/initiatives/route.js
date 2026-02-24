@@ -14,14 +14,14 @@ export async function GET() {
     const adminClient = createAdminClient()
 
     // Verify admin access
-    const { data: adminRecord } = await adminClient
-      .from('admin_users')
-      .select('role')
+    const { data: teamMember } = await adminClient
+      .from('team_members')
+      .select('id, roles, chapter_id, is_media_team')
       .eq('user_id', user.id)
-      .in('role', ['super_admin', 'national_admin'])
+      .eq('active', true)
       .single()
 
-    if (!adminRecord) {
+    if (!teamMember || !teamMember.roles.some(r => ['super_admin', 'national_admin'].includes(r))) {
       return NextResponse.json({ error: 'Not authorized' }, { status: 403 })
     }
 
@@ -55,14 +55,14 @@ export async function POST(request) {
     const adminClient = createAdminClient()
 
     // Verify admin access
-    const { data: adminRecord } = await adminClient
-      .from('admin_users')
-      .select('role')
+    const { data: teamMember } = await adminClient
+      .from('team_members')
+      .select('id, roles, chapter_id, is_media_team')
       .eq('user_id', user.id)
-      .in('role', ['super_admin', 'national_admin'])
+      .eq('active', true)
       .single()
 
-    if (!adminRecord) {
+    if (!teamMember || !teamMember.roles.some(r => ['super_admin', 'national_admin'].includes(r))) {
       return NextResponse.json({ error: 'Not authorized' }, { status: 403 })
     }
 

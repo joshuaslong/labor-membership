@@ -4,13 +4,18 @@ import { BUCKET_PREFIXES } from '@/lib/r2'
 
 const roleHierarchy = ['super_admin', 'national_admin', 'state_admin', 'county_admin', 'city_admin']
 
-function getHighestPrivilegeAdmin(adminRecords) {
-  if (!adminRecords || adminRecords.length === 0) return null
-  return adminRecords.reduce((highest, current) => {
-    const currentIndex = roleHierarchy.indexOf(current.role)
-    const highestIndex = roleHierarchy.indexOf(highest.role)
-    return currentIndex < highestIndex ? current : highest
-  }, adminRecords[0])
+function getHighestRole(roles) {
+  if (!roles || roles.length === 0) return null
+  let bestIndex = Infinity
+  let bestRole = null
+  for (const r of roles) {
+    const idx = roleHierarchy.indexOf(r)
+    if (idx !== -1 && idx < bestIndex) {
+      bestIndex = idx
+      bestRole = r
+    }
+  }
+  return bestRole
 }
 
 // GET - List files based on user's access level
@@ -40,6 +45,7 @@ export async function GET(request) {
         mime_type,
         access_tier,
         chapter_id,
+        folder_id,
         description,
         tags,
         uploaded_by,
@@ -57,28 +63,30 @@ export async function GET(request) {
     if (!user) {
       query = query.eq('access_tier', 'public')
     } else {
-      // Get admin records for the user
-      const { data: adminRecords } = await adminClient
-        .from('admin_users')
-        .select('id, role, chapter_id, is_media_team')
+      // Get team member record for the user
+      const { data: teamMember } = await adminClient
+        .from('team_members')
+        .select('id, roles, chapter_id, is_media_team')
         .eq('user_id', user.id)
+        .eq('active', true)
+        .single()
 
-      const currentAdmin = getHighestPrivilegeAdmin(adminRecords)
-      const isMediaTeam = adminRecords?.some(a => a.is_media_team) || false
+      const highestRole = getHighestRole(teamMember?.roles)
+      const isMediaTeam = teamMember?.is_media_team || false
 
       // Filter based on access level
-      if (!currentAdmin) {
+      if (!highestRole) {
         // Regular member - only public and member-tier files
         query = query.in('access_tier', ['public', 'members'])
-      } else if (['super_admin', 'national_admin'].includes(currentAdmin.role)) {
+      } else if (teamMember.roles.some(r => ['super_admin', 'national_admin'].includes(r))) {
         // Full access - no additional filter needed
       } else {
         // Chapter admin - need to filter by jurisdiction
         const { data: descendants } = await adminClient
-          .rpc('get_chapter_descendants', { chapter_uuid: currentAdmin.chapter_id })
+          .rpc('get_chapter_descendants', { chapter_uuid: teamMember.chapter_id })
         const allowedChapterIds = descendants?.map(d => d.id) || []
-        if (currentAdmin.chapter_id) {
-          allowedChapterIds.push(currentAdmin.chapter_id)
+        if (teamMember.chapter_id) {
+          allowedChapterIds.push(teamMember.chapter_id)
         }
 
         // Build access filter
@@ -105,6 +113,13 @@ export async function GET(request) {
     }
     if (search) {
       query = query.ilike('original_filename', `%${search}%`)
+    }
+
+    const folderId = searchParams.get('folder_id')
+    if (folderId === 'root') {
+      query = query.is('folder_id', null)
+    } else if (folderId) {
+      query = query.eq('folder_id', folderId)
     }
 
     // Apply pagination

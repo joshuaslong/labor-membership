@@ -3,7 +3,7 @@ import { getCurrentTeamMember } from '@/lib/teamMember'
 import { hasRole } from '@/lib/permissions'
 import ResourceUploader from './ResourceUploader'
 
-export default async function WorkspaceUploadPage() {
+export default async function WorkspaceUploadPage({ searchParams }) {
   const teamMember = await getCurrentTeamMember()
   if (!teamMember) redirect('/login')
 
@@ -23,10 +23,14 @@ export default async function WorkspaceUploadPage() {
     allowedBuckets.push('internal-docs')
   }
 
+  const params = await searchParams
+  const defaultFolderId = params?.folder || null
+
   return (
     <ResourceUploader
       allowedBuckets={allowedBuckets}
       chapterId={teamMember.chapter_id}
+      defaultFolderId={defaultFolderId}
     />
   )
 }

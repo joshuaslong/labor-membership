@@ -1,4 +1,5 @@
 import ContextualSidebar from '@/components/ContextualSidebar'
+import ResponsiveSidebarWrapper from '@/components/ResponsiveSidebarWrapper'
 import { getCurrentTeamMember } from '@/lib/teamMember'
 import { redirect } from 'next/navigation'
 import { canAccessSection } from '@/lib/permissions'
@@ -16,7 +17,9 @@ export default async function AdminLayout({ children }) {
     { type: 'link', label: 'Dashboard', href: '/workspace/admin' },
     { type: 'divider' },
     { type: 'header', label: 'People' },
+    { type: 'link', label: 'Members', href: '/workspace/members' },
     { type: 'link', label: 'Team Members', href: '/workspace/admin/team' },
+    { type: 'link', label: 'Organize', href: '/workspace/admin/organize' },
     { type: 'header', label: 'Organization' },
     { type: 'link', label: 'Chapters', href: '/workspace/admin/chapters' },
     { type: 'link', label: 'Groups', href: '/workspace/admin/groups' },
@@ -31,7 +34,9 @@ export default async function AdminLayout({ children }) {
 
   return (
     <div className="flex">
-      <ContextualSidebar items={sidebarItems} />
+      <ResponsiveSidebarWrapper>
+        <ContextualSidebar items={sidebarItems} />
+      </ResponsiveSidebarWrapper>
       <main className="flex-1 min-h-[calc(100vh-61px)] overflow-y-auto">
         {children}
       </main>

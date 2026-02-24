@@ -1,6 +1,7 @@
 'use client'
 
-import { useState, useEffect, useCallback } from 'react'
+import { useState, useEffect, useCallback, useRef } from 'react'
+import { useSearchParams } from 'next/navigation'
 import ChannelSidebar from '@/components/messaging/ChannelSidebar'
 import ChatArea from '@/components/messaging/ChatArea'
 import CreateChannelModal from '@/components/messaging/CreateChannelModal'
@@ -8,6 +9,9 @@ import BrowseChannelsModal from '@/components/messaging/BrowseChannelsModal'
 import { useUnreadCounts } from '@/hooks/useUnreadCounts'
 
 export default function MessagingPage() {
+  const searchParams = useSearchParams()
+  const deepLinked = useRef(false)
+
   const [channels, setChannels] = useState([])
   const [allChannels, setAllChannels] = useState([])
   const [selectedChannelId, setSelectedChannelId] = useState(null)
@@ -21,6 +25,7 @@ export default function MessagingPage() {
 
   // Read current chapter scope from cookie
   const readChapterScope = useCallback(() => {
+    if (typeof document === 'undefined') return null
     const match = document.cookie.match(/chapter_scope=([^;]+)/)
     return match?.[1] || null
   }, [])
@@ -35,11 +40,12 @@ export default function MessagingPage() {
       .catch(() => {})
   }, [])
 
-  // Fetch channels (API returns flat array, filter joined client-side)
-  const fetchChannels = useCallback(async () => {
+  // Fetch channels — pass chapter scope as query param so API doesn't depend on cookie
+  const fetchChannels = useCallback(async (scope) => {
     setLoading(true)
     try {
-      const res = await fetch('/api/workspace/messaging/channels')
+      const params = scope ? `?chapter=${encodeURIComponent(scope)}` : ''
+      const res = await fetch(`/api/workspace/messaging/channels${params}`)
       if (!res.ok) throw new Error('Failed to load channels')
       const data = await res.json()
       const all = Array.isArray(data) ? data : []
@@ -54,9 +60,10 @@ export default function MessagingPage() {
   }, [])
 
   // Refresh all channels for browse modal
-  const fetchAllChannels = useCallback(async () => {
+  const fetchAllChannels = useCallback(async (scope) => {
     try {
-      const res = await fetch('/api/workspace/messaging/channels')
+      const params = scope ? `?chapter=${encodeURIComponent(scope)}` : ''
+      const res = await fetch(`/api/workspace/messaging/channels${params}`)
       if (!res.ok) throw new Error('Failed to load channels')
       const data = await res.json()
       setAllChannels(Array.isArray(data) ? data : [])
@@ -69,7 +76,7 @@ export default function MessagingPage() {
   useEffect(() => {
     const scope = readChapterScope()
     setChapterScope(scope)
-    fetchChannels()
+    fetchChannels(scope)
   }, [readChapterScope, fetchChannels])
 
   // Listen for chapter scope changes (cookie changes via custom event or polling)
@@ -79,7 +86,8 @@ export default function MessagingPage() {
       if (newScope !== chapterScope) {
         setChapterScope(newScope)
         setSelectedChannelId(null)
-        fetchChannels()
+        window.history.replaceState({}, '', '/workspace/messaging')
+        fetchChannels(newScope)
       }
     }
 
@@ -95,19 +103,34 @@ export default function MessagingPage() {
     }
   }, [chapterScope, readChapterScope, fetchChannels])
 
+  // Restore channel from URL param on load
+  useEffect(() => {
+    if (deepLinked.current || !channels.length) return
+    const channelParam = searchParams.get('channel')
+    if (channelParam && channels.some(c => c.id === channelParam)) {
+      setSelectedChannelId(channelParam)
+      deepLinked.current = true
+    }
+  }, [channels, searchParams])
+
   const selectedChannel = channels.find(c => c.id === selectedChannelId)
 
   const handleSelectChannel = (channelId) => {
     setSelectedChannelId(channelId)
+    const url = channelId
+      ? `/workspace/messaging?channel=${channelId}`
+      : '/workspace/messaging'
+    window.history.replaceState({}, '', url)
   }
 
   const handleChannelCreated = (newChannel) => {
-    setChannels(prev => [...prev, newChannel])
+    setChannels(prev => [...prev, { ...newChannel, is_member: true, member_count: 1 }])
+    setAllChannels(prev => [...prev, { ...newChannel, is_member: true, member_count: 1 }])
     setSelectedChannelId(newChannel.id)
   }
 
   const handleBrowseChannels = async () => {
-    await fetchAllChannels()
+    await fetchAllChannels(chapterScope)
     setShowBrowseModal(true)
   }
 
@@ -118,7 +141,7 @@ export default function MessagingPage() {
     if (!res.ok) return
 
     // Refresh channels
-    await fetchChannels()
+    await fetchChannels(chapterScope)
     setSelectedChannelId(channelId)
   }
 
@@ -130,7 +153,7 @@ export default function MessagingPage() {
   const scope = readChapterScope()
   if (scope === 'all' || (!scope && !loading)) {
     return (
-      <div className="flex items-center justify-center" style={{ height: 'calc(100vh - 64px)' }}>
+      <div className="flex items-center justify-center h-[calc(100dvh-117px)] md:h-[calc(100dvh-61px)]">
         <div className="text-center">
           <p className="text-sm text-gray-500">Select a chapter to view messaging</p>
         </div>
@@ -140,37 +163,43 @@ export default function MessagingPage() {
 
   return (
     <>
-      <div className="flex" style={{ height: 'calc(100vh - 64px)' }}>
-        <ChannelSidebar
-          channels={channels}
-          selectedChannelId={selectedChannelId}
-          onSelectChannel={handleSelectChannel}
-          onCreateChannel={() => setShowCreateModal(true)}
-          onBrowseChannels={handleBrowseChannels}
-          isAdmin={isAdmin}
-          unreadCounts={unreadCounts}
-        />
-        {loading && !channels.length ? (
-          <div className="flex-1 flex items-center justify-center bg-stone-50">
-            <div className="animate-pulse space-y-3 w-48">
-              <div className="h-3 bg-stone-200 rounded w-3/4"></div>
-              <div className="h-3 bg-stone-200 rounded w-1/2"></div>
-              <div className="h-3 bg-stone-200 rounded w-2/3"></div>
-            </div>
-          </div>
-        ) : (
-          <ChatArea
-            channelId={selectedChannelId}
-            channel={selectedChannel}
-            currentUser={currentUser}
+      <div className="flex h-[calc(100dvh-117px)] md:h-[calc(100dvh-61px)]">
+        <div className={`${selectedChannelId ? 'hidden md:block' : 'block w-full md:w-auto'}`}>
+          <ChannelSidebar
+            channels={channels}
+            selectedChannelId={selectedChannelId}
+            onSelectChannel={handleSelectChannel}
+            onCreateChannel={() => setShowCreateModal(true)}
+            onBrowseChannels={handleBrowseChannels}
+            isAdmin={isAdmin}
+            unreadCounts={unreadCounts}
           />
-        )}
+        </div>
+        <div className={`${selectedChannelId ? 'flex flex-col' : 'hidden md:flex md:flex-col'} flex-1 min-w-0 min-h-0`}>
+          {loading && !channels.length ? (
+            <div className="flex-1 flex items-center justify-center bg-stone-50">
+              <div className="animate-pulse space-y-3 w-48">
+                <div className="h-3 bg-stone-200 rounded w-3/4"></div>
+                <div className="h-3 bg-stone-200 rounded w-1/2"></div>
+                <div className="h-3 bg-stone-200 rounded w-2/3"></div>
+              </div>
+            </div>
+          ) : (
+            <ChatArea
+              channelId={selectedChannelId}
+              channel={selectedChannel}
+              currentUser={currentUser}
+              onBack={() => handleSelectChannel(null)}
+            />
+          )}
+        </div>
       </div>
 
       <CreateChannelModal
         isOpen={showCreateModal}
         onClose={() => setShowCreateModal(false)}
         onCreated={handleChannelCreated}
+        chapterId={chapterScope}
       />
       <BrowseChannelsModal
         isOpen={showBrowseModal}

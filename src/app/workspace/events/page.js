@@ -197,7 +197,37 @@ export default async function EventsPage({ searchParams: searchParamsPromise }) 
             <p>No events found.</p>
           </div>
         ) : (
-          <table className="min-w-full divide-y divide-stone-200" aria-label="Events list">
+          <>
+          {/* Mobile card view */}
+          <div className="md:hidden divide-y divide-stone-100">
+            {events.map(event => {
+              const counts = rsvpCounts[event.id] || { attending: 0, maybe: 0 }
+              return (
+                <Link key={event.id} href={`/workspace/events/${event.id}`} className="block px-4 py-3 hover:bg-stone-50">
+                  <div className="flex items-start justify-between gap-2">
+                    <div className="min-w-0">
+                      <p className="text-sm font-medium text-gray-900 truncate">{event.title}</p>
+                      <p className="text-xs text-gray-500 mt-0.5">
+                        {formatDate(event.start_date)}
+                        {!event.is_all_day && event.start_time && ` · ${formatTime(event.start_time)}`}
+                      </p>
+                    </div>
+                    <span className={`shrink-0 inline-flex items-center px-2 py-0.5 rounded text-xs font-medium ${statusBadge[event.status] || 'bg-gray-50 text-gray-700'}`}>
+                      {event.status}
+                    </span>
+                  </div>
+                  <div className="mt-1.5 flex items-center gap-3 text-xs text-gray-400">
+                    <span>{formatLocation(event)}</span>
+                    {event.chapters?.name && <span>{event.chapters.name}</span>}
+                    <span>{counts.attending} RSVP{counts.attending !== 1 ? 's' : ''}</span>
+                  </div>
+                </Link>
+              )
+            })}
+          </div>
+
+          {/* Desktop table */}
+          <table className="hidden md:table min-w-full divide-y divide-stone-200" aria-label="Events list">
             <caption className="sr-only">List of events with their details</caption>
             <thead className="bg-stone-50">
               <tr>
@@ -257,6 +287,7 @@ export default async function EventsPage({ searchParams: searchParamsPromise }) 
               })}
             </tbody>
           </table>
+          </>
         )}
       </div>
 

@@ -21,7 +21,7 @@ export async function POST(request) {
 
     const adminClient = createAdminClient()
     const body = await request.json()
-    const { filename, contentType, fileSize, bucketPrefix, chapterId, description, tags } = body
+    const { filename, contentType, fileSize, bucketPrefix, chapterId, description, tags, folder_id } = body
 
     if (!filename || !contentType || !bucketPrefix) {
       return NextResponse.json({ error: 'Missing required fields: filename, contentType, bucketPrefix' }, { status: 400 })
@@ -96,16 +96,17 @@ export async function POST(request) {
           .single()
         stateCode = chapter?.state_code || 'general'
       } else {
-        // Get admin's chapter if no chapter specified
-        const { data: adminRecords } = await adminClient
-          .from('admin_users')
+        // Get team member's chapter if no chapter specified
+        const { data: uploadTeamMember } = await adminClient
+          .from('team_members')
           .select('chapter_id, chapters(state_code)')
           .eq('user_id', user.id)
+          .eq('active', true)
           .not('chapter_id', 'is', null)
-          .limit(1)
+          .single()
 
-        if (adminRecords?.[0]?.chapters?.state_code) {
-          stateCode = adminRecords[0].chapters.state_code
+        if (uploadTeamMember?.chapters?.state_code) {
+          stateCode = uploadTeamMember.chapters.state_code
         } else {
           stateCode = 'general'
         }
@@ -134,6 +135,7 @@ export async function POST(request) {
         chapter_id: chapterId || null,
         description: description || null,
         tags: tags || null,
+        folder_id: folder_id || null,
         uploaded_by: user.id,
       })
       .select()

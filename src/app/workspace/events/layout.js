@@ -1,4 +1,5 @@
 import ContextualSidebar from '@/components/ContextualSidebar'
+import ResponsiveSidebarWrapper from '@/components/ResponsiveSidebarWrapper'
 import { getCurrentTeamMember } from '@/lib/teamMember'
 import { redirect } from 'next/navigation'
 import { canAccessSection } from '@/lib/permissions'
@@ -24,7 +25,9 @@ export default async function EventsLayout({ children }) {
 
   return (
     <div className="flex">
-      <ContextualSidebar items={sidebarItems} />
+      <ResponsiveSidebarWrapper>
+        <ContextualSidebar items={sidebarItems} />
+      </ResponsiveSidebarWrapper>
       <main className="flex-1 min-h-[calc(100vh-61px)] overflow-y-auto">
         {children}
       </main>

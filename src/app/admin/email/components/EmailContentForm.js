@@ -1,6 +1,7 @@
+'use client'
+
 import EmailEditor from '@/components/EmailEditor'
 import { EMAIL_TEMPLATES } from '../utils/emailTemplates'
-
 /**
  * Email content composition form - template, subject, and editor
  */
@@ -10,7 +11,7 @@ export default function EmailContentForm({
   subject,
   setSubject,
   content,
-  setContent
+  setContent,
 }) {
   return (
     <div className="space-y-3">
@@ -64,6 +65,7 @@ export default function EmailContentForm({
           Click <span className="font-semibold text-gray-500">Name</span> in the toolbar to insert the member&apos;s first name
         </p>
       </div>
+
     </div>
   )
 }

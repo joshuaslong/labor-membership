@@ -134,7 +134,33 @@ export default async function MembersPage({ searchParams: searchParamsPromise })
             <p>No members found.</p>
           </div>
         ) : (
-          <table className="min-w-full divide-y divide-stone-200" aria-label="Members list">
+          <>
+          {/* Mobile card view */}
+          <div className="md:hidden divide-y divide-stone-100">
+            {members.map(member => (
+              <Link key={member.id} href={`/workspace/members/${member.id}`} className="block px-4 py-3 hover:bg-stone-50">
+                <div className="flex items-start justify-between gap-2">
+                  <div className="min-w-0">
+                    <p className="text-sm font-medium text-gray-900">{member.first_name} {member.last_name}</p>
+                    <p className="text-xs text-gray-500 mt-0.5 truncate">{member.email}</p>
+                  </div>
+                  <span className={`shrink-0 inline-flex items-center px-2 py-0.5 rounded text-xs font-medium ${statusBadge[member.status] || 'bg-gray-50 text-gray-700'}`}>
+                    {member.status}
+                  </span>
+                </div>
+                {member.member_segments?.length > 0 && (
+                  <div className="mt-1.5 flex flex-wrap gap-1">
+                    {member.member_segments.map((seg) => (
+                      <SegmentBadge key={seg.segment} segment={seg.segment} />
+                    ))}
+                  </div>
+                )}
+              </Link>
+            ))}
+          </div>
+
+          {/* Desktop table */}
+          <table className="hidden md:table min-w-full divide-y divide-stone-200" aria-label="Members list">
             <caption className="sr-only">List of members with their details</caption>
             <thead className="bg-stone-50">
               <tr>
@@ -175,6 +201,7 @@ export default async function MembersPage({ searchParams: searchParamsPromise })
               ))}
             </tbody>
           </table>
+          </>
         )}
       </div>
 

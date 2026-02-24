@@ -5,21 +5,25 @@ import { useRouter } from 'next/navigation'
 import { createClient } from '@/lib/supabase/client'
 import Link from 'next/link'
 
-const ADMIN_ROLES = [
-  { value: 'super_admin', label: 'Super Admin', desc: 'Full access to everything' },
-  { value: 'national_admin', label: 'National Admin', desc: 'Full access to all member data' },
-  { value: 'state_admin', label: 'State Admin', desc: 'Manages state and sub-chapters' },
-  { value: 'county_admin', label: 'County Admin', desc: 'Manages county and city chapters' },
-  { value: 'city_admin', label: 'City Admin', desc: 'Manages city chapter only' },
+const BASE_ROLES = [
+  { value: 'team_member', label: 'Team Member', desc: 'Events, Resources, Organize, Tasks, Messaging' },
 ]
 
-const TEAM_ROLES = [
-  { value: 'membership_coordinator', label: 'Membership Coordinator', desc: 'Member management' },
-  { value: 'event_coordinator', label: 'Event Coordinator', desc: 'Event management' },
-  { value: 'communications_lead', label: 'Communications Lead', desc: 'Email and comms' },
-  { value: 'content_creator', label: 'Content Creator', desc: 'Resources and media' },
-  { value: 'volunteer_manager', label: 'Volunteer Manager', desc: 'Task management' },
-  { value: 'data_manager', label: 'Data Manager', desc: 'Data and analytics' },
+const SPECIALIST_ROLES = [
+  { value: 'event_coordinator', label: 'Event Coordinator', desc: 'Events, Organize, Messaging' },
+  { value: 'volunteer_manager', label: 'Volunteer Manager', desc: 'Organize, Tasks, Messaging' },
+  { value: 'membership_coordinator', label: 'Membership Coordinator', desc: 'Members, Messaging' },
+  { value: 'communications_lead', label: 'Communications Lead', desc: 'Email, Polls, Messaging' },
+  { value: 'content_creator', label: 'Content Creator', desc: 'Resources, Messaging' },
+  { value: 'data_manager', label: 'Data Manager', desc: 'Members, Messaging' },
+]
+
+const ADMIN_ROLES = [
+  { value: 'super_admin', label: 'Super Admin', desc: 'Full access to everything' },
+  { value: 'national_admin', label: 'National Admin', desc: 'Full access to all sections and data' },
+  { value: 'state_admin', label: 'State Admin', desc: 'State chapter and sub-chapters' },
+  { value: 'county_admin', label: 'County Admin', desc: 'County and city chapters' },
+  { value: 'city_admin', label: 'City Admin', desc: 'City chapter only' },
 ]
 
 export default function AddTeamMemberPage() {
@@ -223,55 +227,36 @@ export default function AddTeamMemberPage() {
             <p className="text-xs text-gray-400 mt-0.5">Select one or more roles for this team member</p>
           </div>
           <div className="p-4 space-y-4">
-            <div>
-              <h3 className="text-xs font-medium text-gray-400 uppercase tracking-wide mb-2">Admin Roles</h3>
-              <div className="space-y-1">
-                {ADMIN_ROLES.map(role => (
-                  <label
-                    key={role.value}
-                    className={`flex items-center gap-3 px-3 py-2 rounded cursor-pointer transition-colors ${
-                      formData.roles.includes(role.value) ? 'bg-gray-50 border border-stone-200' : 'hover:bg-gray-50'
-                    }`}
-                  >
-                    <input
-                      type="checkbox"
-                      checked={formData.roles.includes(role.value)}
-                      onChange={() => toggleRole(role.value)}
-                      className="rounded border-gray-300 text-labor-red focus:ring-labor-red"
-                    />
-                    <div>
-                      <div className="text-sm text-gray-900">{role.label}</div>
-                      <div className="text-xs text-gray-400">{role.desc}</div>
-                    </div>
-                  </label>
-                ))}
+            {[
+              { label: 'Base Role', roles: BASE_ROLES },
+              { label: 'Specialist Roles', roles: SPECIALIST_ROLES },
+              { label: 'Admin Roles', roles: ADMIN_ROLES },
+            ].map(group => (
+              <div key={group.label}>
+                <h3 className="text-xs font-medium text-gray-400 uppercase tracking-wide mb-2">{group.label}</h3>
+                <div className="space-y-1">
+                  {group.roles.map(role => (
+                    <label
+                      key={role.value}
+                      className={`flex items-center gap-3 px-3 py-2 rounded cursor-pointer transition-colors ${
+                        formData.roles.includes(role.value) ? 'bg-gray-50 border border-stone-200' : 'hover:bg-gray-50'
+                      }`}
+                    >
+                      <input
+                        type="checkbox"
+                        checked={formData.roles.includes(role.value)}
+                        onChange={() => toggleRole(role.value)}
+                        className="rounded border-gray-300 text-labor-red focus:ring-labor-red"
+                      />
+                      <div>
+                        <div className="text-sm text-gray-900">{role.label}</div>
+                        <div className="text-xs text-gray-400">{role.desc}</div>
+                      </div>
+                    </label>
+                  ))}
+                </div>
               </div>
-            </div>
-
-            <div>
-              <h3 className="text-xs font-medium text-gray-400 uppercase tracking-wide mb-2">Team Roles</h3>
-              <div className="space-y-1">
-                {TEAM_ROLES.map(role => (
-                  <label
-                    key={role.value}
-                    className={`flex items-center gap-3 px-3 py-2 rounded cursor-pointer transition-colors ${
-                      formData.roles.includes(role.value) ? 'bg-gray-50 border border-stone-200' : 'hover:bg-gray-50'
-                    }`}
-                  >
-                    <input
-                      type="checkbox"
-                      checked={formData.roles.includes(role.value)}
-                      onChange={() => toggleRole(role.value)}
-                      className="rounded border-gray-300 text-labor-red focus:ring-labor-red"
-                    />
-                    <div>
-                      <div className="text-sm text-gray-900">{role.label}</div>
-                      <div className="text-xs text-gray-400">{role.desc}</div>
-                    </div>
-                  </label>
-                ))}
-              </div>
-            </div>
+            ))}
           </div>
         </div>
 

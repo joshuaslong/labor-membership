@@ -140,13 +140,15 @@ export async function GET(request, { params }) {
         userRsvp = rsvp
       }
 
-      // Check if user is admin (may have multiple records)
-      const { data: adminRecords } = await adminClient
-        .from('admin_users')
-        .select('id, role, chapter_id')
+      // Check if user is admin
+      const { data: teamMember } = await adminClient
+        .from('team_members')
+        .select('id, roles, chapter_id')
         .eq('user_id', user.id)
+        .eq('active', true)
+        .single()
 
-      if (adminRecords && adminRecords.length > 0) {
+      if (teamMember && teamMember.roles?.length > 0) {
         isAdmin = true
       }
     }
@@ -203,22 +205,28 @@ export async function PUT(request, { params }) {
 
     const adminClient = createAdminClient()
 
-    // Verify admin access (user may have multiple admin records)
-    const { data: adminRecords } = await adminClient
-      .from('admin_users')
-      .select('id, role, chapter_id')
+    // Verify admin access
+    const { data: teamMember } = await adminClient
+      .from('team_members')
+      .select('id, roles, chapter_id')
       .eq('user_id', user.id)
+      .eq('active', true)
+      .single()
 
-    if (!adminRecords || adminRecords.length === 0) {
+    if (!teamMember || !teamMember.roles?.length) {
       return NextResponse.json({ error: 'Not an admin' }, { status: 403 })
     }
 
     const roleHierarchy = ['super_admin', 'national_admin', 'state_admin', 'county_admin', 'city_admin']
-    const currentAdmin = adminRecords.reduce((highest, current) => {
-      const currentIndex = roleHierarchy.indexOf(current.role)
-      const highestIndex = roleHierarchy.indexOf(highest.role)
-      return currentIndex < highestIndex ? current : highest
-    }, adminRecords[0])
+    const currentAdmin = { ...teamMember }
+    let bestIdx = Infinity
+    for (const r of teamMember.roles) {
+      const idx = roleHierarchy.indexOf(r)
+      if (idx !== -1 && idx < bestIdx) {
+        bestIdx = idx
+        currentAdmin.role = r
+      }
+    }
 
     // Get the existing event
     const { data: existingEvent } = await adminClient
@@ -234,14 +242,14 @@ export async function PUT(request, { params }) {
     const previousStatus = existingEvent.status
 
     // Check if admin can update this event
-    const isSuperAdmin = ['super_admin', 'national_admin'].includes(currentAdmin.role)
+    const isSuperAdmin = teamMember.roles.some(r => ['super_admin', 'national_admin'].includes(r))
 
     if (!isSuperAdmin) {
       const { data: descendants } = await adminClient
-        .rpc('get_chapter_descendants', { chapter_uuid: currentAdmin.chapter_id })
+        .rpc('get_chapter_descendants', { chapter_uuid: teamMember.chapter_id })
 
       const allowedChapterIds = new Set(descendants?.map(d => d.id) || [])
-      allowedChapterIds.add(currentAdmin.chapter_id)
+      allowedChapterIds.add(teamMember.chapter_id)
 
       if (!allowedChapterIds.has(existingEvent.chapter_id)) {
         return NextResponse.json({ error: 'Cannot update this event' }, { status: 403 })
@@ -498,21 +506,27 @@ export async function DELETE(request, { params }) {
     const adminClient = createAdminClient()
 
     // Verify admin access
-    const { data: deleteAdminRecords } = await adminClient
-      .from('admin_users')
-      .select('id, role, chapter_id')
+    const { data: deleteTeamMember } = await adminClient
+      .from('team_members')
+      .select('id, roles, chapter_id')
       .eq('user_id', user.id)
+      .eq('active', true)
+      .single()
 
-    if (!deleteAdminRecords || deleteAdminRecords.length === 0) {
+    if (!deleteTeamMember || !deleteTeamMember.roles?.length) {
       return NextResponse.json({ error: 'Not an admin' }, { status: 403 })
     }
 
     const deleteRoleHierarchy = ['super_admin', 'national_admin', 'state_admin', 'county_admin', 'city_admin']
-    const currentAdmin = deleteAdminRecords.reduce((highest, current) => {
-      const currentIndex = deleteRoleHierarchy.indexOf(current.role)
-      const highestIndex = deleteRoleHierarchy.indexOf(highest.role)
-      return currentIndex < highestIndex ? current : highest
-    }, deleteAdminRecords[0])
+    const currentAdmin = { ...deleteTeamMember }
+    let deleteBestIdx = Infinity
+    for (const r of deleteTeamMember.roles) {
+      const idx = deleteRoleHierarchy.indexOf(r)
+      if (idx !== -1 && idx < deleteBestIdx) {
+        deleteBestIdx = idx
+        currentAdmin.role = r
+      }
+    }
 
     // Get the event to check chapter access
     const { data: existingEvent } = await adminClient
@@ -526,14 +540,14 @@ export async function DELETE(request, { params }) {
     }
 
     // Check if admin can delete this event
-    const isSuperAdmin = ['super_admin', 'national_admin'].includes(currentAdmin.role)
+    const isSuperAdmin = deleteTeamMember.roles.some(r => ['super_admin', 'national_admin'].includes(r))
 
     if (!isSuperAdmin) {
       const { data: descendants } = await adminClient
-        .rpc('get_chapter_descendants', { chapter_uuid: currentAdmin.chapter_id })
+        .rpc('get_chapter_descendants', { chapter_uuid: deleteTeamMember.chapter_id })
 
       const allowedChapterIds = new Set(descendants?.map(d => d.id) || [])
-      allowedChapterIds.add(currentAdmin.chapter_id)
+      allowedChapterIds.add(deleteTeamMember.chapter_id)
 
       if (!allowedChapterIds.has(existingEvent.chapter_id)) {
         return NextResponse.json({ error: 'Cannot delete this event' }, { status: 403 })
