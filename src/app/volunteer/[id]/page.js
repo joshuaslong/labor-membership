@@ -453,7 +453,7 @@ function VolunteerDetailContent() {
                   <textarea
                     value={message}
                     onChange={(e) => setMessage(e.target.value)}
-                    className="input-field"
+                    className="input-field !h-auto"
                     rows={8}
                     placeholder="What relevant experience or skills do you have? Why are you interested in this opportunity?"
                   />
