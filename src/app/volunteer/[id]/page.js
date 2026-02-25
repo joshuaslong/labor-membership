@@ -37,9 +37,13 @@ function VolunteerDetailContent() {
   const [error, setError] = useState(null)
 
   // Apply form state
+  const [firstName, setFirstName] = useState('')
+  const [lastName, setLastName] = useState('')
+  const [email, setEmail] = useState('')
   const [message, setMessage] = useState('')
-  const [availabilityNotes, setAvailabilityNotes] = useState('')
   const [submitting, setSubmitting] = useState(false)
+  const [submitted, setSubmitted] = useState(false)
+  const [submittedEmail, setSubmittedEmail] = useState(null)
   const [withdrawing, setWithdrawing] = useState(false)
 
   useEffect(() => {
@@ -86,10 +90,17 @@ function VolunteerDetailContent() {
     setError(null)
 
     try {
+      const body = { message }
+      if (!user) {
+        body.first_name = firstName
+        body.last_name = lastName
+        body.email = email
+      }
+
       const res = await fetch(`/api/volunteers/${params.id}/apply`, {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ message, availability_notes: availabilityNotes })
+        body: JSON.stringify(body)
       })
 
       const data = await res.json()
@@ -98,7 +109,8 @@ function VolunteerDetailContent() {
         throw new Error(data.error || 'Failed to submit application')
       }
 
-      await loadData()
+      setSubmitted(true)
+      setSubmittedEmail(data.guest_email || user?.email || email)
     } catch (err) {
       setError(err.message)
     } finally {
@@ -276,145 +288,173 @@ function VolunteerDetailContent() {
 
         {/* Sidebar */}
         <div className="space-y-6 min-w-[320px]">
-          {/* Application Card */}
-          <div className="card">
-            <div className="flex items-center justify-between mb-4">
-              <h3 className="font-semibold">Apply</h3>
-              {opportunity.spots_remaining != null && (
-                <span className="text-sm text-gray-500">
-                  {opportunity.spots_remaining} spot{opportunity.spots_remaining !== 1 ? 's' : ''} left
-                </span>
-              )}
-            </div>
-
-            {opportunity.deadline && (
-              <p className={`text-xs mb-3 ${isPastDeadline ? 'text-red-600' : 'text-gray-500'}`}>
-                {isPastDeadline ? 'Deadline passed: ' : 'Deadline: '}
-                {formatDate(opportunity.deadline)}
-              </p>
-            )}
-
-            {isPastDeadline ? (
-              <div className="p-4 bg-gray-100 rounded-lg text-center text-gray-600">
-                The application deadline has passed
+          {/* Volunteer Card */}
+          <div className="card border-t-4 border-t-labor-red">
+            {submitted ? (
+              // Success state
+              <div className="text-center py-4">
+                <div className="w-14 h-14 bg-green-100 rounded-full flex items-center justify-center mx-auto mb-4">
+                  <svg className="w-7 h-7 text-green-600" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M5 13l4 4L19 7" />
+                  </svg>
+                </div>
+                <h3 className="text-lg font-semibold text-gray-900 mb-2">You&apos;re in!</h3>
+                <p className="text-sm text-gray-600 mb-4">
+                  We&apos;ll be in touch at <span className="font-medium text-gray-900">{submittedEmail}</span>
+                </p>
+                {!user && (
+                  <Link
+                    href="/join"
+                    className="text-sm text-labor-red hover:underline"
+                  >
+                    Want to track your application? Create an account
+                  </Link>
+                )}
+              </div>
+            ) : isPastDeadline ? (
+              <div className="py-4 text-center">
+                <div className="w-14 h-14 bg-gray-100 rounded-full flex items-center justify-center mx-auto mb-4">
+                  <svg className="w-7 h-7 text-gray-400" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 8v4l3 3m6-3a9 9 0 11-18 0 9 9 0 0118 0z" />
+                  </svg>
+                </div>
+                <p className="font-medium text-gray-900 mb-1">Deadline passed</p>
+                <p className="text-sm text-gray-500">{formatDate(opportunity.deadline)}</p>
               </div>
             ) : isFilled ? (
-              <div className="p-4 bg-gray-100 rounded-lg text-center text-gray-600">
-                This opportunity is fully staffed
+              <div className="py-4 text-center">
+                <div className="w-14 h-14 bg-gray-100 rounded-full flex items-center justify-center mx-auto mb-4">
+                  <svg className="w-7 h-7 text-gray-400" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M17 20h5v-2a3 3 0 00-5.356-1.857M17 20H7m10 0v-2c0-.656-.126-1.283-.356-1.857M7 20H2v-2a3 3 0 015.356-1.857M7 20v-2c0-.656.126-1.283.356-1.857m0 0a5.002 5.002 0 019.288 0M15 7a3 3 0 11-6 0 3 3 0 016 0zm6 3a2 2 0 11-4 0 2 2 0 014 0zM7 10a2 2 0 11-4 0 2 2 0 014 0z" />
+                  </svg>
+                </div>
+                <p className="font-medium text-gray-900">Fully staffed</p>
               </div>
-            ) : user && member ? (
-              // Logged in member
-              userApp ? (
-                // Already applied
-                <div>
-                  <div className={`p-4 rounded-lg text-center mb-3 ${
-                    userApp.status === 'approved' ? 'bg-green-50 text-green-700 border border-green-200'
-                      : userApp.status === 'pending' ? 'bg-amber-50 text-amber-700 border border-amber-200'
-                      : userApp.status === 'rejected' ? 'bg-red-50 text-red-700 border border-red-200'
-                      : 'bg-gray-50 text-gray-600 border border-gray-200'
-                  }`}>
-                    <p className="font-medium">
-                      {userApp.status === 'pending' ? 'Application Submitted'
-                        : userApp.status === 'approved' ? 'Application Approved!'
-                        : userApp.status === 'rejected' ? 'Application Not Selected'
-                        : 'Application Withdrawn'}
-                    </p>
-                    {userApp.status === 'pending' && (
-                      <p className="text-sm mt-1">We&apos;ll notify you when it&apos;s reviewed.</p>
-                    )}
-                  </div>
-                  {(userApp.status === 'pending' || userApp.status === 'approved') && (
-                    <button
-                      onClick={handleWithdraw}
-                      disabled={withdrawing}
-                      className="w-full py-2 text-sm text-gray-500 hover:text-red-600 transition-colors"
-                    >
-                      {withdrawing ? 'Withdrawing...' : 'Withdraw Application'}
-                    </button>
+            ) : userApp ? (
+              // Already applied (logged-in user)
+              <div className="py-2">
+                <div className={`p-4 rounded-lg text-center mb-3 ${
+                  userApp.status === 'approved' ? 'bg-green-50 text-green-700 border border-green-200'
+                    : userApp.status === 'pending' ? 'bg-amber-50 text-amber-700 border border-amber-200'
+                    : userApp.status === 'rejected' ? 'bg-red-50 text-red-700 border border-red-200'
+                    : 'bg-gray-50 text-gray-600 border border-gray-200'
+                }`}>
+                  <p className="font-medium">
+                    {userApp.status === 'pending' ? 'Application Submitted'
+                      : userApp.status === 'approved' ? 'Application Approved!'
+                      : userApp.status === 'rejected' ? 'Application Not Selected'
+                      : 'Application Withdrawn'}
+                  </p>
+                  {userApp.status === 'pending' && (
+                    <p className="text-sm mt-1">We&apos;ll notify you when it&apos;s reviewed.</p>
                   )}
                 </div>
-              ) : (
-                // Apply form
-                <form onSubmit={handleApply} className="space-y-4">
-                  <div>
-                    <label className="block text-sm font-medium text-gray-700 mb-1">
-                      Why are you interested? (optional)
-                    </label>
-                    <textarea
-                      value={message}
-                      onChange={(e) => setMessage(e.target.value)}
-                      className="input-field"
-                      rows={3}
-                      placeholder="Tell us why you'd like to volunteer..."
-                    />
-                  </div>
-                  <div>
-                    <label className="block text-sm font-medium text-gray-700 mb-1">
-                      Availability notes (optional)
-                    </label>
-                    <textarea
-                      value={availabilityNotes}
-                      onChange={(e) => setAvailabilityNotes(e.target.value)}
-                      className="input-field"
-                      rows={2}
-                      placeholder="Any scheduling constraints?"
-                    />
-                  </div>
+                {(userApp.status === 'pending' || userApp.status === 'approved') && (
                   <button
-                    type="submit"
-                    disabled={submitting}
-                    className="w-full btn-primary"
+                    onClick={handleWithdraw}
+                    disabled={withdrawing}
+                    className="w-full py-2 text-sm text-gray-500 hover:text-red-600 transition-colors"
                   >
-                    {submitting ? 'Submitting...' : 'Submit Application'}
+                    {withdrawing ? 'Withdrawing...' : 'Withdraw Application'}
                   </button>
-                </form>
-              )
-            ) : (
-              // Not logged in
-              <div className="space-y-3">
-                <Link
-                  href={`/login?redirect=/volunteer/${params.id}`}
-                  className="block w-full text-center py-2 px-4 bg-labor-red text-white rounded-lg hover:bg-labor-red/90 transition-colors font-medium"
-                >
-                  Log in to Apply
-                </Link>
-                <div className="relative">
-                  <div className="absolute inset-0 flex items-center">
-                    <div className="w-full border-t border-gray-200"></div>
-                  </div>
-                  <div className="relative flex justify-center">
-                    <span className="px-2 bg-white text-sm text-gray-500">or</span>
-                  </div>
-                </div>
-                <Link
-                  href="/join"
-                  className="block w-full text-center py-2 px-4 border border-gray-200 rounded-lg text-gray-700 hover:bg-gray-50 transition-colors"
-                >
-                  Join as a Member
-                </Link>
+                )}
               </div>
-            )}
+            ) : (
+              // Apply form — works for both logged-in and guests
+              <form onSubmit={handleApply} className="space-y-3">
+                <div className="flex items-center justify-between">
+                  <h3 className="font-semibold text-gray-900">Volunteer</h3>
+                  {opportunity.spots_remaining != null && (
+                    <span className="text-xs text-gray-500">
+                      {opportunity.spots_remaining} spot{opportunity.spots_remaining !== 1 ? 's' : ''} left
+                    </span>
+                  )}
+                </div>
 
-            {error && (
-              <p className="mt-3 text-sm text-red-600 text-center">{error}</p>
+                {opportunity.deadline && (
+                  <p className="text-xs text-gray-500">
+                    Deadline: {formatDate(opportunity.deadline)}
+                  </p>
+                )}
+
+                {user && member ? (
+                  // Logged-in: show identity summary
+                  <div className="flex items-center gap-2 py-2 px-3 bg-gray-50 rounded-lg">
+                    <div className="w-8 h-8 bg-labor-red rounded-full flex items-center justify-center text-white text-sm font-medium flex-shrink-0">
+                      {user.email?.charAt(0).toUpperCase()}
+                    </div>
+                    <div className="min-w-0">
+                      <p className="text-sm font-medium text-gray-900 truncate">{user.email}</p>
+                    </div>
+                  </div>
+                ) : !user ? (
+                  // Guest: name + email fields
+                  <>
+                    <div className="grid grid-cols-2 gap-2">
+                      <div>
+                        <label className="block text-xs font-medium text-gray-600 mb-1">First name</label>
+                        <input
+                          type="text"
+                          required
+                          value={firstName}
+                          onChange={(e) => setFirstName(e.target.value)}
+                          className="input-field text-sm"
+                          placeholder="Jane"
+                        />
+                      </div>
+                      <div>
+                        <label className="block text-xs font-medium text-gray-600 mb-1">Last name</label>
+                        <input
+                          type="text"
+                          required
+                          value={lastName}
+                          onChange={(e) => setLastName(e.target.value)}
+                          className="input-field text-sm"
+                          placeholder="Smith"
+                        />
+                      </div>
+                    </div>
+                    <div>
+                      <label className="block text-xs font-medium text-gray-600 mb-1">Email</label>
+                      <input
+                        type="email"
+                        required
+                        value={email}
+                        onChange={(e) => setEmail(e.target.value)}
+                        className="input-field text-sm"
+                        placeholder="jane@example.com"
+                      />
+                    </div>
+                  </>
+                ) : null}
+
+                <div>
+                  <label className="block text-xs font-medium text-gray-600 mb-1">
+                    Why are you interested? <span className="text-gray-400 font-normal">(optional)</span>
+                  </label>
+                  <textarea
+                    value={message}
+                    onChange={(e) => setMessage(e.target.value)}
+                    className="input-field text-sm"
+                    rows={2}
+                    placeholder="Tell us a bit about yourself..."
+                  />
+                </div>
+
+                <button
+                  type="submit"
+                  disabled={submitting}
+                  className="w-full py-2.5 px-4 bg-labor-red text-white rounded-lg hover:bg-labor-red/90 transition-colors font-medium text-sm"
+                >
+                  {submitting ? 'Submitting...' : 'Volunteer'}
+                </button>
+
+                {error && (
+                  <p className="text-sm text-red-600 text-center">{error}</p>
+                )}
+              </form>
             )}
           </div>
-
-          {/* Join CTA for non-members */}
-          {!member && user && (
-            <div className="card bg-labor-red-50 border-labor-red-200">
-              <h3 className="font-semibold text-labor-red-900 mb-2">Become a Member</h3>
-              <p className="text-sm text-labor-red-800 mb-4">
-                Join the Labor Party to apply for volunteer opportunities and connect with your community.
-              </p>
-              <Link
-                href="/join"
-                className="block w-full text-center py-2 px-4 bg-labor-red text-white rounded-lg hover:bg-labor-red-600 transition-colors font-medium"
-              >
-                Join Now
-              </Link>
-            </div>
-          )}
 
           {/* Chapter Info */}
           {opportunity.chapters && (
