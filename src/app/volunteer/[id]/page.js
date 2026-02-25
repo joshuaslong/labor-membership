@@ -68,7 +68,7 @@ function VolunteerDetailContent() {
       setMember(memberData)
     }
 
-    const res = await fetch(`/api/organize/${params.id}`)
+    const res = await fetch(`/api/volunteers/${params.id}`)
     if (!res.ok) {
       setLoading(false)
       setError('Opportunity not found')
@@ -86,7 +86,7 @@ function VolunteerDetailContent() {
     setError(null)
 
     try {
-      const res = await fetch(`/api/organize/${params.id}/apply`, {
+      const res = await fetch(`/api/volunteers/${params.id}/apply`, {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({ message, availability_notes: availabilityNotes })
@@ -111,7 +111,7 @@ function VolunteerDetailContent() {
     setError(null)
 
     try {
-      const res = await fetch(`/api/organize/${params.id}/apply`, {
+      const res = await fetch(`/api/volunteers/${params.id}/apply`, {
         method: 'DELETE'
       })
 
