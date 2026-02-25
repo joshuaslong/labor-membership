@@ -361,7 +361,7 @@ function VolunteerDetailContent() {
               </div>
             ) : (
               // Apply form — works for both logged-in and guests
-              <form onSubmit={handleApply} className="space-y-3">
+              <form onSubmit={handleApply} className="space-y-4">
                 <div className="flex items-center justify-between">
                   <h3 className="font-semibold text-gray-900">Volunteer</h3>
                   {opportunity.spots_remaining != null && (
@@ -390,38 +390,38 @@ function VolunteerDetailContent() {
                 ) : !user ? (
                   // Guest: name + email fields
                   <>
-                    <div className="grid grid-cols-2 gap-2">
+                    <div className="grid grid-cols-2 gap-3">
                       <div>
-                        <label className="block text-xs font-medium text-gray-600 mb-1">First name</label>
+                        <label className="block text-sm font-medium text-gray-700 mb-1.5">First name</label>
                         <input
                           type="text"
                           required
                           value={firstName}
                           onChange={(e) => setFirstName(e.target.value)}
-                          className="input-field text-sm"
+                          className="input-field"
                           placeholder="Jane"
                         />
                       </div>
                       <div>
-                        <label className="block text-xs font-medium text-gray-600 mb-1">Last name</label>
+                        <label className="block text-sm font-medium text-gray-700 mb-1.5">Last name</label>
                         <input
                           type="text"
                           required
                           value={lastName}
                           onChange={(e) => setLastName(e.target.value)}
-                          className="input-field text-sm"
+                          className="input-field"
                           placeholder="Smith"
                         />
                       </div>
                     </div>
                     <div>
-                      <label className="block text-xs font-medium text-gray-600 mb-1">Email</label>
+                      <label className="block text-sm font-medium text-gray-700 mb-1.5">Email</label>
                       <input
                         type="email"
                         required
                         value={email}
                         onChange={(e) => setEmail(e.target.value)}
-                        className="input-field text-sm"
+                        className="input-field"
                         placeholder="jane@example.com"
                       />
                     </div>
@@ -429,28 +429,48 @@ function VolunteerDetailContent() {
                 ) : null}
 
                 <div>
-                  <label className="block text-xs font-medium text-gray-600 mb-1">
-                    Why are you interested? <span className="text-gray-400 font-normal">(optional)</span>
+                  <label className="block text-sm font-medium text-gray-700 mb-1.5">
+                    Tell us about yourself and your experience
                   </label>
                   <textarea
                     value={message}
                     onChange={(e) => setMessage(e.target.value)}
-                    className="input-field text-sm"
-                    rows={2}
-                    placeholder="Tell us a bit about yourself..."
+                    className="input-field"
+                    rows={5}
+                    placeholder="What relevant experience or skills do you have? Why are you interested in this opportunity?"
                   />
                 </div>
 
                 <button
                   type="submit"
                   disabled={submitting}
-                  className="w-full py-2.5 px-4 bg-labor-red text-white rounded-lg hover:bg-labor-red/90 transition-colors font-medium text-sm"
+                  className="w-full py-2.5 px-4 bg-labor-red text-white rounded-lg hover:bg-labor-red/90 transition-colors font-medium"
                 >
                   {submitting ? 'Submitting...' : 'Volunteer'}
                 </button>
 
                 {error && (
                   <p className="text-sm text-red-600 text-center">{error}</p>
+                )}
+
+                {!user && (
+                  <div className="pt-2 border-t border-gray-100">
+                    <p className="text-xs text-gray-500 text-center mb-2">Already have an account?</p>
+                    <div className="flex gap-2">
+                      <Link
+                        href={`/login?redirect=/volunteer/${params.id}`}
+                        className="flex-1 text-center py-2 px-3 text-sm font-medium text-gray-700 border border-gray-200 rounded-lg hover:bg-gray-50 transition-colors"
+                      >
+                        Log in
+                      </Link>
+                      <Link
+                        href="/join"
+                        className="flex-1 text-center py-2 px-3 text-sm font-medium text-labor-red border border-labor-red/20 rounded-lg hover:bg-labor-red-50 transition-colors"
+                      >
+                        Sign up
+                      </Link>
+                    </div>
+                  </div>
                 )}
               </form>
             )}
