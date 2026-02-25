@@ -288,6 +288,24 @@ function VolunteerDetailContent() {
 
         {/* Sidebar */}
         <div className="space-y-6 min-w-[320px]">
+          {/* Chapter Info */}
+          {opportunity.chapters && (
+            <div className="card">
+              <h3 className="font-semibold mb-3">Posted by</h3>
+              <div className="flex items-center gap-3 p-3 bg-gray-50 rounded-lg">
+                <div className="w-10 h-10 bg-labor-red rounded-lg flex items-center justify-center text-white font-bold">
+                  {opportunity.chapters.name.charAt(0)}
+                </div>
+                <div>
+                  <div className="font-medium text-gray-900">{opportunity.chapters.name}</div>
+                  {opportunity.chapters.level && (
+                    <div className="text-sm text-gray-500 capitalize">{opportunity.chapters.level} Chapter</div>
+                  )}
+                </div>
+              </div>
+            </div>
+          )}
+
           {/* Volunteer Card */}
           <div className="card border-t-4 border-t-labor-red">
             {submitted ? (
@@ -436,7 +454,7 @@ function VolunteerDetailContent() {
                     value={message}
                     onChange={(e) => setMessage(e.target.value)}
                     className="input-field"
-                    rows={5}
+                    rows={8}
                     placeholder="What relevant experience or skills do you have? Why are you interested in this opportunity?"
                   />
                 </div>
@@ -476,23 +494,6 @@ function VolunteerDetailContent() {
             )}
           </div>
 
-          {/* Chapter Info */}
-          {opportunity.chapters && (
-            <div className="card">
-              <h3 className="font-semibold mb-3">Posted by</h3>
-              <div className="flex items-center gap-3 p-3 bg-gray-50 rounded-lg">
-                <div className="w-10 h-10 bg-labor-red rounded-lg flex items-center justify-center text-white font-bold">
-                  {opportunity.chapters.name.charAt(0)}
-                </div>
-                <div>
-                  <div className="font-medium text-gray-900">{opportunity.chapters.name}</div>
-                  {opportunity.chapters.level && (
-                    <div className="text-sm text-gray-500 capitalize">{opportunity.chapters.level} Chapter</div>
-                  )}
-                </div>
-              </div>
-            </div>
-          )}
         </div>
       </div>
     </div>
