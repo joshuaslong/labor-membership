@@ -28,10 +28,14 @@ export async function POST(request) {
     }
 
     const body = await request.json()
-    const { user_id, chapter_id, chapter_ids, roles } = body
+    const { user_id, member_id, chapter_id, chapter_ids, roles } = body
 
-    if (!user_id || !roles || !Array.isArray(roles) || roles.length === 0) {
-      return NextResponse.json({ error: 'user_id and at least one role are required' }, { status: 400 })
+    if (!roles || !Array.isArray(roles) || roles.length === 0) {
+      return NextResponse.json({ error: 'At least one role is required' }, { status: 400 })
+    }
+
+    if (!user_id && !member_id) {
+      return NextResponse.json({ error: 'Either user_id or member_id is required' }, { status: 400 })
     }
 
     // Only super_admin can assign super_admin role
@@ -41,23 +45,38 @@ export async function POST(request) {
 
     const adminClient = createAdminClient()
 
-    // Check if user already exists as team member
-    const { data: existing } = await adminClient
-      .from('team_members')
-      .select('id')
-      .eq('user_id', user_id)
-      .single()
-
-    if (existing) {
-      return NextResponse.json({ error: 'This user is already a team member' }, { status: 400 })
+    // Check if already a team member (by user_id or member_id)
+    if (user_id) {
+      const { data: existing } = await adminClient
+        .from('team_members')
+        .select('id')
+        .eq('user_id', user_id)
+        .single()
+      if (existing) {
+        return NextResponse.json({ error: 'This user is already a team member' }, { status: 400 })
+      }
+    }
+    if (member_id) {
+      const { data: existing } = await adminClient
+        .from('team_members')
+        .select('id')
+        .eq('member_id', member_id)
+        .single()
+      if (existing) {
+        return NextResponse.json({ error: 'This member is already a team member' }, { status: 400 })
+      }
     }
 
-    // Get member_id for this user
-    const { data: member } = await adminClient
-      .from('members')
-      .select('id')
-      .eq('user_id', user_id)
-      .single()
+    // Resolve member_id from user_id if not provided
+    let resolvedMemberId = member_id || null
+    if (!resolvedMemberId && user_id) {
+      const { data: member } = await adminClient
+        .from('members')
+        .select('id')
+        .eq('user_id', user_id)
+        .single()
+      resolvedMemberId = member?.id || null
+    }
 
     // Support both single chapter_id and multiple chapter_ids
     const allChapterIds = chapter_ids?.length > 0
@@ -69,8 +88,8 @@ export async function POST(request) {
     const { data: teamMember, error } = await adminClient
       .from('team_members')
       .insert({
-        user_id,
-        member_id: member?.id || null,
+        user_id: user_id || null,
+        member_id: resolvedMemberId,
         chapter_id: primaryChapterId,
         roles,
         active: true,
