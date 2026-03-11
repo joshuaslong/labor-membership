@@ -3,7 +3,7 @@
 import { useState, useEffect, useCallback } from 'react'
 import { usePushSubscription } from '@/hooks/usePushSubscription'
 
-export default function ChannelHeader({ channel, onBack, isAdmin, onDeleteChannel }) {
+export default function ChannelHeader({ channel, onBack, isAdmin, onDeleteChannel, onAddMembers }) {
   const [notificationsEnabled, setNotificationsEnabled] = useState(false)
   const [toggling, setToggling] = useState(false)
   const [pushError, setPushError] = useState(null)
@@ -121,8 +121,13 @@ export default function ChannelHeader({ channel, onBack, isAdmin, onDeleteChanne
               </svg>
             </button>
           )}
-          <h2 className="text-sm font-semibold text-gray-900 truncate">
-            # {channel.name}
+          <h2 className="text-sm font-semibold text-gray-900 truncate flex items-center gap-1">
+            {channel.is_private ? (
+              <svg className="w-3.5 h-3.5 text-gray-400 shrink-0" fill="none" stroke="currentColor" viewBox="0 0 24 24" strokeWidth={2}>
+                <path strokeLinecap="round" strokeLinejoin="round" d="M16.5 10.5V6.75a4.5 4.5 0 10-9 0v3.75m-.75 11.25h10.5a2.25 2.25 0 002.25-2.25v-6.75a2.25 2.25 0 00-2.25-2.25H6.75a2.25 2.25 0 00-2.25 2.25v6.75a2.25 2.25 0 002.25 2.25z" />
+              </svg>
+            ) : <span className="text-gray-400">#</span>}
+            {channel.name}
           </h2>
           {channel.description && (
             <p className="text-xs text-gray-500 truncate mt-0.5">{channel.description}</p>
@@ -186,6 +191,14 @@ export default function ChannelHeader({ channel, onBack, isAdmin, onDeleteChanne
                 <>
                   <div className="fixed inset-0 z-20" onClick={() => setShowMenu(false)} />
                   <div className="absolute right-0 top-full mt-1 w-40 bg-white border border-stone-200 rounded-lg shadow-lg z-30 py-1">
+                    {channel.is_private && (
+                      <button
+                        onClick={() => { setShowMenu(false); onAddMembers?.() }}
+                        className="w-full text-left px-3 py-2 text-xs text-gray-700 hover:bg-stone-50 transition-colors"
+                      >
+                        Add members
+                      </button>
+                    )}
                     <button
                       onClick={handleDelete}
                       disabled={deleting}

@@ -61,7 +61,11 @@ export default function ChannelSidebar({
                     : 'text-gray-700 hover:bg-stone-50'
                 }`}
               >
-                <span className="text-gray-400 text-sm md:text-xs">#</span>
+                <span className="text-gray-400 text-sm md:text-xs">{channel.is_private ? (
+                  <svg className="w-3 h-3 inline" fill="none" stroke="currentColor" viewBox="0 0 24 24" strokeWidth={2}>
+                    <path strokeLinecap="round" strokeLinejoin="round" d="M16.5 10.5V6.75a4.5 4.5 0 10-9 0v3.75m-.75 11.25h10.5a2.25 2.25 0 002.25-2.25v-6.75a2.25 2.25 0 00-2.25-2.25H6.75a2.25 2.25 0 00-2.25 2.25v6.75a2.25 2.25 0 002.25 2.25z" />
+                  </svg>
+                ) : '#'}</span>
                 <span className="truncate flex-1">{channel.name}</span>
                 {unread > 0 && (
                   <span className="shrink-0 bg-labor-red text-white text-xs font-medium rounded-full min-w-[18px] h-[18px] flex items-center justify-center px-1">

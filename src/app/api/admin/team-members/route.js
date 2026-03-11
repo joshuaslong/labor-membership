@@ -93,6 +93,28 @@ export async function POST(request) {
         .insert(chapterRows)
     }
 
+    // Auto-join all channels in the team member's chapters
+    if (allChapterIds.length > 0) {
+      const { data: chapterChannels } = await adminClient
+        .from('channels')
+        .select('id')
+        .in('chapter_id', allChapterIds)
+        .eq('is_archived', false)
+        .eq('is_private', false)
+
+      if (chapterChannels?.length > 0) {
+        const channelRows = chapterChannels.map(ch => ({
+          channel_id: ch.id,
+          team_member_id: teamMember.id,
+          role: 'member',
+        }))
+
+        await adminClient
+          .from('channel_members')
+          .insert(channelRows)
+      }
+    }
+
     return NextResponse.json({ teamMember }, { status: 201 })
   } catch (error) {
     console.error('Error creating team member:', error)

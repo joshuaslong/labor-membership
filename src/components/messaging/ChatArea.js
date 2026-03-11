@@ -1,12 +1,14 @@
 'use client'
 
-import { useEffect, useRef, useCallback } from 'react'
+import { useState, useEffect, useRef, useCallback } from 'react'
 import { useChannel } from '@/hooks/useChannel'
 import ChannelHeader from './ChannelHeader'
 import MessageBubble from './MessageBubble'
 import MessageComposer from './MessageComposer'
+import AddMembersModal from './AddMembersModal'
 
 export default function ChatArea({ channelId, channel, currentUser, onBack, isAdmin, onDeleteChannel }) {
+  const [showAddMembers, setShowAddMembers] = useState(false)
   const { messages, loading, hasMore, sendMessage, editMessage, deleteMessage, reactToMessage, loadMore } = useChannel(channelId, currentUser)
   const messagesEndRef = useRef(null)
   const messagesContainerRef = useRef(null)
@@ -84,7 +86,13 @@ export default function ChatArea({ channelId, channel, currentUser, onBack, isAd
 
   return (
     <div className="flex-1 flex flex-col min-w-0 min-h-0 overflow-hidden">
-      <ChannelHeader channel={channel} onBack={onBack} isAdmin={isAdmin} onDeleteChannel={onDeleteChannel} />
+      <ChannelHeader channel={channel} onBack={onBack} isAdmin={isAdmin} onDeleteChannel={onDeleteChannel} onAddMembers={() => setShowAddMembers(true)} />
+      <AddMembersModal
+        isOpen={showAddMembers}
+        onClose={() => setShowAddMembers(false)}
+        channelId={channelId}
+        chapterId={channel?.chapter_id}
+      />
 
       {/* Messages area */}
       <div

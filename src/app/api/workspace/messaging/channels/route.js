@@ -27,7 +27,7 @@ export async function GET(request) {
   let query = supabase
     .from('channels')
     .select(`
-      id, name, description, chapter_id, is_archived, created_at,
+      id, name, description, chapter_id, is_archived, is_private, created_at,
       channel_members(count)
     `)
     .eq('is_archived', false)
@@ -57,17 +57,21 @@ export async function GET(request) {
     }
   }
 
-  const result = channels.map(ch => ({
-    id: ch.id,
-    name: ch.name,
-    description: ch.description,
-    chapter_id: ch.chapter_id,
-    is_archived: ch.is_archived,
-    created_at: ch.created_at,
-    member_count: ch.channel_members?.[0]?.count ?? 0,
-    is_member: ch.id in membershipMap,
-    last_read_at: membershipMap[ch.id] ?? null,
-  }))
+  const result = channels
+    // Hide private channels the user hasn't joined
+    .filter(ch => !ch.is_private || ch.id in membershipMap)
+    .map(ch => ({
+      id: ch.id,
+      name: ch.name,
+      description: ch.description,
+      chapter_id: ch.chapter_id,
+      is_archived: ch.is_archived,
+      is_private: ch.is_private,
+      created_at: ch.created_at,
+      member_count: ch.channel_members?.[0]?.count ?? 0,
+      is_member: ch.id in membershipMap,
+      last_read_at: membershipMap[ch.id] ?? null,
+    }))
 
   return NextResponse.json(result)
 }
@@ -83,7 +87,7 @@ export async function POST(request) {
   }
 
   const body = await request.json()
-  const { name, description, chapter_id: chapterId } = body
+  const { name, description, chapter_id: chapterId, is_private, member_ids } = body
 
   if (!name || typeof name !== 'string' || !name.trim()) {
     return NextResponse.json({ error: 'Channel name is required' }, { status: 400 })
@@ -103,6 +107,7 @@ export async function POST(request) {
       description: description?.trim() || null,
       chapter_id: chapterId,
       created_by: teamMember.id,
+      is_private: !!is_private,
     })
     .select()
     .single()
@@ -114,14 +119,46 @@ export async function POST(request) {
     return NextResponse.json({ error: 'Failed to create channel' }, { status: 500 })
   }
 
-  // Add creator as admin member
-  await supabase
-    .from('channel_members')
-    .insert({
-      channel_id: channel.id,
-      team_member_id: teamMember.id,
-      role: 'admin',
-    })
+  if (is_private) {
+    // Private channel: add creator as admin + any specified members
+    const rows = [
+      { channel_id: channel.id, team_member_id: teamMember.id, role: 'admin' },
+    ]
+    if (Array.isArray(member_ids)) {
+      for (const tmId of member_ids) {
+        if (tmId !== teamMember.id) {
+          rows.push({ channel_id: channel.id, team_member_id: tmId, role: 'member' })
+        }
+      }
+    }
+    await supabase.from('channel_members').insert(rows)
+  } else {
+    // Public channel: auto-add all team members in this chapter
+    const { data: chapterTeamMembers } = await supabase
+      .from('team_member_chapters')
+      .select('team_member_id')
+      .eq('chapter_id', chapterId)
+
+    const { data: primaryChapterMembers } = await supabase
+      .from('team_members')
+      .select('id')
+      .eq('chapter_id', chapterId)
+      .eq('active', true)
+
+    const allMemberIds = new Set()
+    for (const m of (chapterTeamMembers || [])) allMemberIds.add(m.team_member_id)
+    for (const m of (primaryChapterMembers || [])) allMemberIds.add(m.id)
+
+    if (allMemberIds.size > 0) {
+      const rows = [...allMemberIds].map(tmId => ({
+        channel_id: channel.id,
+        team_member_id: tmId,
+        role: tmId === teamMember.id ? 'admin' : 'member',
+      }))
+
+      await supabase.from('channel_members').insert(rows)
+    }
+  }
 
   return NextResponse.json(channel, { status: 201 })
 }
