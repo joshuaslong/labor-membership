@@ -5,12 +5,14 @@ import { getPresignedUploadUrl, getPresignedDownloadUrl, generateR2Key, BUCKET_P
 
 const MAX_FILE_SIZE = 25 * 1024 * 1024 // 25MB per file
 const ALLOWED_TYPES = [
-  'image/jpeg', 'image/png', 'image/gif', 'image/webp',
+  'image/jpeg', 'image/png', 'image/gif', 'image/webp', 'image/svg+xml',
   'application/pdf',
   'application/msword', 'application/vnd.openxmlformats-officedocument.wordprocessingml.document',
   'application/vnd.ms-excel', 'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet',
+  'application/vnd.ms-powerpoint', 'application/vnd.openxmlformats-officedocument.presentationml.presentation',
   'text/csv', 'text/plain',
   'application/zip', 'application/x-zip-compressed',
+  'application/octet-stream', // Fallback when browser can't detect type
 ]
 
 // POST - Get presigned upload URL for a message attachment

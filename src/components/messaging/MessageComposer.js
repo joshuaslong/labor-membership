@@ -160,7 +160,10 @@ export default function MessageComposer({ onSend, disabled, channelId }) {
                   </svg>
                 )}
                 <span className="truncate max-w-[120px]">{f.file.name}</span>
-                <span className="text-[10px] opacity-70">{formatFileSize(f.file.size)}</span>
+                {f.error
+                  ? <span className="text-[10px]">{f.error}</span>
+                  : <span className="text-[10px] opacity-70">{formatFileSize(f.file.size)}</span>
+                }
                 <button
                   onClick={() => removeFile(f.id)}
                   className="ml-0.5 text-gray-400 hover:text-gray-600"

@@ -184,7 +184,7 @@ export function useChannel(channelId, currentUser) {
 
     const message = await res.json()
 
-    // Optimistically add to local state with sender info for display
+    // Add to local state with sender info and server-returned attachments
     setMessages(prev => {
       if (prev.some(m => m.id === message.id)) return prev
       return [...prev, {
@@ -195,12 +195,7 @@ export function useChannel(channelId, currentUser) {
           last_name: currentUser?.last_name || null,
         },
         reactions: [],
-        attachments: attachments?.map((a, i) => ({
-          id: `temp-${i}`,
-          filename: a.filename,
-          fileSize: a.fileSize,
-          mimeType: a.contentType,
-        })) || [],
+        attachments: message.attachments || [],
       }]
     })
   }, [channelId, currentUser])

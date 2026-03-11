@@ -176,6 +176,7 @@ export async function POST(request, { params }) {
   }
 
   // Save attachments if any
+  let savedAttachments = []
   if (hasAttachments) {
     const attachmentRows = attachments.map(a => ({
       message_id: message.id,
@@ -186,9 +187,21 @@ export async function POST(request, { params }) {
       mime_type: a.contentType || null,
     }))
 
-    await supabase
+    const { data: insertedAttachments, error: attachError } = await supabase
       .from('message_attachments')
       .insert(attachmentRows)
+      .select('id, original_filename, file_size_bytes, mime_type')
+
+    if (attachError) {
+      console.error('Failed to save message attachments:', attachError)
+    } else {
+      savedAttachments = (insertedAttachments || []).map(a => ({
+        id: a.id,
+        filename: a.original_filename,
+        fileSize: a.file_size_bytes,
+        mimeType: a.mime_type,
+      }))
+    }
   }
 
   // Fire-and-forget push notifications to subscribed channel members
@@ -198,5 +211,5 @@ export async function POST(request, { params }) {
     messageContent: messageContent || '(sent a file)',
   }).catch(err => console.error('Push notification error:', err))
 
-  return NextResponse.json(message, { status: 201 })
+  return NextResponse.json({ ...message, attachments: savedAttachments }, { status: 201 })
 }
