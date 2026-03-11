@@ -6,7 +6,7 @@ import ChannelHeader from './ChannelHeader'
 import MessageBubble from './MessageBubble'
 import MessageComposer from './MessageComposer'
 
-export default function ChatArea({ channelId, channel, currentUser, onBack }) {
+export default function ChatArea({ channelId, channel, currentUser, onBack, isAdmin, onDeleteChannel }) {
   const { messages, loading, hasMore, sendMessage, editMessage, deleteMessage, reactToMessage, loadMore } = useChannel(channelId, currentUser)
   const messagesEndRef = useRef(null)
   const messagesContainerRef = useRef(null)
@@ -84,7 +84,7 @@ export default function ChatArea({ channelId, channel, currentUser, onBack }) {
 
   return (
     <div className="flex-1 flex flex-col min-w-0 min-h-0 overflow-hidden">
-      <ChannelHeader channel={channel} onBack={onBack} />
+      <ChannelHeader channel={channel} onBack={onBack} isAdmin={isAdmin} onDeleteChannel={onDeleteChannel} />
 
       {/* Messages area */}
       <div

@@ -3,10 +3,12 @@
 import { useState, useEffect, useCallback } from 'react'
 import { usePushSubscription } from '@/hooks/usePushSubscription'
 
-export default function ChannelHeader({ channel, onBack }) {
+export default function ChannelHeader({ channel, onBack, isAdmin, onDeleteChannel }) {
   const [notificationsEnabled, setNotificationsEnabled] = useState(false)
   const [toggling, setToggling] = useState(false)
   const [pushError, setPushError] = useState(null)
+  const [showMenu, setShowMenu] = useState(false)
+  const [deleting, setDeleting] = useState(false)
   const { isSupported, permission, subscription, subscribe } = usePushSubscription()
 
   const channelId = channel?.id
@@ -83,10 +85,29 @@ export default function ChannelHeader({ channel, onBack }) {
     }
   }, [channelId, notificationsEnabled, subscription, subscribe, isSupported, permission, toggling])
 
+  const handleDelete = useCallback(async () => {
+    if (!confirm(`Delete #${channel?.name}? All messages will be permanently deleted.`)) return
+    setDeleting(true)
+    try {
+      const res = await fetch(`/api/workspace/messaging/channels/${channelId}`, { method: 'DELETE' })
+      if (!res.ok) {
+        const data = await res.json().catch(() => ({}))
+        alert(data.error || 'Failed to delete channel')
+        return
+      }
+      onDeleteChannel?.(channelId)
+    } catch {
+      alert('Failed to delete channel')
+    } finally {
+      setDeleting(false)
+      setShowMenu(false)
+    }
+  }, [channelId, channel?.name, onDeleteChannel])
+
   if (!channel) return null
 
   return (
-    <div className="border-b border-stone-200 bg-white px-4 py-3 sticky top-0 z-10 shrink-0">
+    <div className="border-b border-stone-200 bg-white px-4 py-3 shrink-0">
       <div className="max-w-4xl mx-auto flex items-center justify-between">
         <div className="min-w-0 flex items-center gap-2">
           {onBack && (
@@ -148,6 +169,33 @@ export default function ChannelHeader({ channel, onBack }) {
                 <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M17 20h5v-2a3 3 0 00-5.356-1.857M17 20H7m10 0v-2c0-.656-.126-1.283-.356-1.857M7 20H2v-2a3 3 0 015.356-1.857M7 20v-2c0-.656.126-1.283.356-1.857m0 0a5.002 5.002 0 019.288 0M15 7a3 3 0 11-6 0 3 3 0 016 0z" />
               </svg>
               <span>{channel.member_count}</span>
+            </div>
+          )}
+          {isAdmin && (
+            <div className="relative">
+              <button
+                onClick={() => setShowMenu(prev => !prev)}
+                className="p-1.5 rounded hover:bg-stone-100 text-gray-400 hover:text-gray-600 transition-colors"
+                aria-label="Channel options"
+              >
+                <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 5v.01M12 12v.01M12 19v.01" />
+                </svg>
+              </button>
+              {showMenu && (
+                <>
+                  <div className="fixed inset-0 z-20" onClick={() => setShowMenu(false)} />
+                  <div className="absolute right-0 top-full mt-1 w-40 bg-white border border-stone-200 rounded-lg shadow-lg z-30 py-1">
+                    <button
+                      onClick={handleDelete}
+                      disabled={deleting}
+                      className="w-full text-left px-3 py-2 text-xs text-red-600 hover:bg-red-50 transition-colors disabled:opacity-50"
+                    >
+                      {deleting ? 'Deleting...' : 'Delete channel'}
+                    </button>
+                  </div>
+                </>
+              )}
             </div>
           )}
         </div>

@@ -23,6 +23,12 @@ export default function MessagingPage() {
 
   const unreadCounts = useUnreadCounts(channels)
 
+  // Prevent body scroll on mobile — messaging page manages its own scroll
+  useEffect(() => {
+    document.body.style.overflow = 'hidden'
+    return () => { document.body.style.overflow = '' }
+  }, [])
+
   // Read current chapter scope from cookie
   const readChapterScope = useCallback(() => {
     if (typeof document === 'undefined') return null
@@ -145,9 +151,16 @@ export default function MessagingPage() {
     setSelectedChannelId(channelId)
   }
 
-  const isAdmin = currentUser?.roles?.some(r =>
+  const isUserAdmin = currentUser?.roles?.some(r =>
     ['super_admin', 'national_admin', 'state_admin', 'county_admin', 'city_admin'].includes(r)
   ) ?? false
+
+  const handleDeleteChannel = (channelId) => {
+    setChannels(prev => prev.filter(c => c.id !== channelId))
+    setAllChannels(prev => prev.filter(c => c.id !== channelId))
+    setSelectedChannelId(null)
+    window.history.replaceState({}, '', '/workspace/messaging')
+  }
 
   // No chapter selected
   const scope = readChapterScope()
@@ -163,7 +176,7 @@ export default function MessagingPage() {
 
   return (
     <>
-      <div className="flex h-[calc(100dvh-117px)] md:h-[calc(100dvh-61px)]">
+      <div className="flex h-[calc(100dvh-117px)] md:h-[calc(100dvh-61px)] overflow-hidden">
         <div className={`${selectedChannelId ? 'hidden md:block' : 'block w-full md:w-auto'}`}>
           <ChannelSidebar
             channels={channels}
@@ -171,11 +184,11 @@ export default function MessagingPage() {
             onSelectChannel={handleSelectChannel}
             onCreateChannel={() => setShowCreateModal(true)}
             onBrowseChannels={handleBrowseChannels}
-            isAdmin={isAdmin}
+            isAdmin={isUserAdmin}
             unreadCounts={unreadCounts}
           />
         </div>
-        <div className={`${selectedChannelId ? 'flex flex-col' : 'hidden md:flex md:flex-col'} flex-1 min-w-0 min-h-0`}>
+        <div className={`${selectedChannelId ? 'flex flex-col h-full' : 'hidden md:flex md:flex-col'} flex-1 min-w-0 min-h-0`}>
           {loading && !channels.length ? (
             <div className="flex-1 flex items-center justify-center bg-stone-50">
               <div className="animate-pulse space-y-3 w-48">
@@ -190,6 +203,8 @@ export default function MessagingPage() {
               channel={selectedChannel}
               currentUser={currentUser}
               onBack={() => handleSelectChannel(null)}
+              isAdmin={isUserAdmin}
+              onDeleteChannel={handleDeleteChannel}
             />
           )}
         </div>
