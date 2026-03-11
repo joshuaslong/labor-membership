@@ -34,12 +34,17 @@ export function useChannel(channelId, currentUser) {
         const existingMap = new Map(prev.map(m => [m.id, m]))
         let changed = false
 
-        // Update any existing messages that were edited
+        // Update any existing messages that were edited or have new reactions/attachments
         const updated = prev.map(m => {
           const fresh = latest.find(f => f.id === m.id)
-          if (fresh && (fresh.content !== m.content || fresh.is_edited !== m.is_edited)) {
-            changed = true
-            return { ...m, content: fresh.content, is_edited: fresh.is_edited }
+          if (fresh) {
+            const contentChanged = fresh.content !== m.content || fresh.is_edited !== m.is_edited
+            const reactionsChanged = JSON.stringify(fresh.reactions) !== JSON.stringify(m.reactions)
+            const attachmentsChanged = fresh.attachments?.length !== m.attachments?.length
+            if (contentChanged || reactionsChanged || attachmentsChanged) {
+              changed = true
+              return { ...m, content: fresh.content, is_edited: fresh.is_edited, reactions: fresh.reactions || [], attachments: fresh.attachments || m.attachments || [] }
+            }
           }
           return m
         })
@@ -158,15 +163,18 @@ export function useChannel(channelId, currentUser) {
     return () => clearInterval(interval)
   }, [channelId, fetchNewMessages])
 
-  const sendMessage = useCallback(async (content) => {
-    if (!channelId || !content.trim()) return
+  const sendMessage = useCallback(async (content, attachments) => {
+    if (!channelId || (!content?.trim() && (!attachments || attachments.length === 0))) return
+
+    const body = { content: content?.trim() || '' }
+    if (attachments?.length > 0) body.attachments = attachments
 
     const res = await fetch(
       `/api/workspace/messaging/channels/${channelId}/messages`,
       {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ content: content.trim() })
+        body: JSON.stringify(body)
       }
     )
     if (!res.ok) {
@@ -185,7 +193,14 @@ export function useChannel(channelId, currentUser) {
           team_member_id: message.sender_id,
           first_name: currentUser?.first_name || null,
           last_name: currentUser?.last_name || null,
-        }
+        },
+        reactions: [],
+        attachments: attachments?.map((a, i) => ({
+          id: `temp-${i}`,
+          filename: a.filename,
+          fileSize: a.fileSize,
+          mimeType: a.contentType,
+        })) || [],
       }]
     })
   }, [channelId, currentUser])
@@ -239,5 +254,48 @@ export function useChannel(channelId, currentUser) {
     setMessages(prev => prev.filter(m => m.id !== messageId))
   }, [])
 
-  return { messages, loading, hasMore, error, sendMessage, editMessage, deleteMessage, loadMore }
+  const reactToMessage = useCallback(async (messageId, emoji) => {
+    const res = await fetch(`/api/workspace/messaging/messages/${messageId}/reactions`, {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ emoji })
+    })
+    if (!res.ok) return
+
+    const { action } = await res.json()
+
+    // Optimistically update local state
+    setMessages(prev => prev.map(m => {
+      if (m.id !== messageId) return m
+      const reactions = [...(m.reactions || [])]
+      const existing = reactions.find(r => r.emoji === emoji)
+
+      if (action === 'added') {
+        if (existing) {
+          existing.count++
+          existing.reacted = true
+          existing.users.push({ id: currentUser?.id, name: [currentUser?.first_name, currentUser?.last_name].filter(Boolean).join(' ') })
+        } else {
+          reactions.push({
+            emoji,
+            count: 1,
+            reacted: true,
+            users: [{ id: currentUser?.id, name: [currentUser?.first_name, currentUser?.last_name].filter(Boolean).join(' ') }]
+          })
+        }
+      } else if (action === 'removed' && existing) {
+        existing.count--
+        existing.reacted = false
+        existing.users = existing.users.filter(u => u.id !== currentUser?.id)
+        if (existing.count <= 0) {
+          const idx = reactions.indexOf(existing)
+          reactions.splice(idx, 1)
+        }
+      }
+
+      return { ...m, reactions }
+    }))
+  }, [currentUser])
+
+  return { messages, loading, hasMore, error, sendMessage, editMessage, deleteMessage, reactToMessage, loadMore }
 }

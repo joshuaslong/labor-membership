@@ -38,7 +38,7 @@ export default function AddTeamMemberPage() {
   const [formData, setFormData] = useState({
     user_id: '',
     member_name: '',
-    chapter_id: '',
+    chapter_ids: [],
     roles: [],
   })
 
@@ -66,8 +66,7 @@ export default function AddTeamMemberPage() {
       .from('members')
       .select('id, user_id, first_name, last_name, email')
       .or(`first_name.ilike.${term},last_name.ilike.${term},email.ilike.${term}`)
-      .not('user_id', 'is', null)
-      .limit(10)
+      .limit(50)
 
     setSearchResults(data || [])
     setSearching(false)
@@ -81,6 +80,15 @@ export default function AddTeamMemberPage() {
     }))
     setSearchResults([])
     setSearchQuery('')
+  }
+
+  const toggleChapter = (chapterId) => {
+    setFormData(prev => ({
+      ...prev,
+      chapter_ids: prev.chapter_ids.includes(chapterId)
+        ? prev.chapter_ids.filter(id => id !== chapterId)
+        : [...prev.chapter_ids, chapterId],
+    }))
   }
 
   const toggleRole = (role) => {
@@ -112,7 +120,7 @@ export default function AddTeamMemberPage() {
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({
           user_id: formData.user_id,
-          chapter_id: formData.chapter_id || null,
+          chapter_ids: formData.chapter_ids,
           roles: formData.roles,
         }),
       })
@@ -178,21 +186,27 @@ export default function AddTeamMemberPage() {
                   <div className="absolute right-3 top-8 text-xs text-gray-400">Searching...</div>
                 )}
                 {searchResults.length > 0 && (
-                  <div className="absolute z-10 w-full mt-1 bg-white border border-stone-200 rounded shadow-lg max-h-48 overflow-y-auto">
+                  <div className="absolute z-10 w-full mt-1 bg-white border border-stone-200 rounded shadow-lg max-h-64 overflow-y-auto">
                     {searchResults.map(m => (
                       <button
                         key={m.id}
                         type="button"
-                        onClick={() => selectMember(m)}
-                        className="w-full text-left px-3 py-2 hover:bg-gray-50 transition-colors border-b border-stone-100 last:border-0"
+                        onClick={() => m.user_id ? selectMember(m) : null}
+                        disabled={!m.user_id}
+                        className={`w-full text-left px-3 py-2 border-b border-stone-100 last:border-0 transition-colors ${
+                          m.user_id ? 'hover:bg-gray-50 cursor-pointer' : 'opacity-50 cursor-not-allowed'
+                        }`}
                       >
                         <div className="text-sm text-gray-900">{m.first_name} {m.last_name}</div>
-                        <div className="text-xs text-gray-500">{m.email}</div>
+                        <div className="text-xs text-gray-500">
+                          {m.email}
+                          {!m.user_id && <span className="ml-1 text-amber-600">(no account)</span>}
+                        </div>
                       </button>
                     ))}
                   </div>
                 )}
-                <p className="text-xs text-gray-400 mt-1">Member must already have an account.</p>
+                <p className="text-xs text-gray-400 mt-1">Members without an account are shown but cannot be added until they create one.</p>
               </div>
             )}
           </div>
@@ -201,22 +215,38 @@ export default function AddTeamMemberPage() {
         {/* Chapter Assignment */}
         <div className="bg-white border border-stone-200 rounded">
           <div className="px-4 py-3 border-b border-stone-200">
-            <h2 className="text-sm font-semibold text-gray-900">Chapter</h2>
+            <h2 className="text-sm font-semibold text-gray-900">Chapters</h2>
+            <p className="text-xs text-gray-400 mt-0.5">Select one or more chapters for this team member</p>
           </div>
           <div className="p-4">
-            <label className={labelClass}>Chapter Assignment</label>
-            <select
-              value={formData.chapter_id}
-              onChange={(e) => setFormData(prev => ({ ...prev, chapter_id: e.target.value }))}
-              className={inputClass}
-            >
-              <option value="">No chapter (national scope)</option>
-              {chapters.map(c => (
-                <option key={c.id} value={c.id}>
-                  {c.level === 'national' ? c.name : `${'  '.repeat(['state', 'county', 'city'].indexOf(c.level) + 1)}${c.name}`}
-                </option>
-              ))}
-            </select>
+            <div className="space-y-1 max-h-64 overflow-y-auto">
+              {chapters.map(c => {
+                const indent = c.level === 'national' ? 0 : ['state', 'county', 'city'].indexOf(c.level) + 1
+                return (
+                  <label
+                    key={c.id}
+                    className={`flex items-center gap-3 px-3 py-2 rounded cursor-pointer transition-colors ${
+                      formData.chapter_ids.includes(c.id) ? 'bg-gray-50 border border-stone-200' : 'hover:bg-gray-50'
+                    }`}
+                    style={{ paddingLeft: `${12 + indent * 16}px` }}
+                  >
+                    <input
+                      type="checkbox"
+                      checked={formData.chapter_ids.includes(c.id)}
+                      onChange={() => toggleChapter(c.id)}
+                      className="rounded border-gray-300 text-labor-red focus:ring-labor-red"
+                    />
+                    <div>
+                      <div className="text-sm text-gray-900">{c.name}</div>
+                      <div className="text-xs text-gray-400 capitalize">{c.level}</div>
+                    </div>
+                  </label>
+                )
+              })}
+            </div>
+            {formData.chapter_ids.length === 0 && (
+              <p className="text-xs text-gray-400 mt-2">No chapters selected (national scope)</p>
+            )}
           </div>
         </div>
 

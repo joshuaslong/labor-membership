@@ -129,10 +129,10 @@ export default function MobileNav({ isLoggedIn, isAdmin, memberName }) {
                 <>
                   <div className="my-4 border-t border-white/20" />
                   <Link
-                    href="/admin"
+                    href="/workspace"
                     className="block px-4 py-3 text-white/90 hover:text-white hover:bg-white/10 rounded-lg transition-colors"
                   >
-                    Admin
+                    Workspace
                   </Link>
                   <Link
                     href="/members"

@@ -28,7 +28,7 @@ export async function POST(request) {
     }
 
     const body = await request.json()
-    const { user_id, chapter_id, roles } = body
+    const { user_id, chapter_id, chapter_ids, roles } = body
 
     if (!user_id || !roles || !Array.isArray(roles) || roles.length === 0) {
       return NextResponse.json({ error: 'user_id and at least one role are required' }, { status: 400 })
@@ -59,12 +59,19 @@ export async function POST(request) {
       .eq('user_id', user_id)
       .single()
 
+    // Support both single chapter_id and multiple chapter_ids
+    const allChapterIds = chapter_ids?.length > 0
+      ? chapter_ids
+      : chapter_id ? [chapter_id] : []
+
+    const primaryChapterId = allChapterIds[0] || null
+
     const { data: teamMember, error } = await adminClient
       .from('team_members')
       .insert({
         user_id,
         member_id: member?.id || null,
-        chapter_id: chapter_id || null,
+        chapter_id: primaryChapterId,
         roles,
         active: true,
       })
@@ -72,6 +79,19 @@ export async function POST(request) {
       .single()
 
     if (error) throw error
+
+    // Insert chapter assignments into junction table
+    if (allChapterIds.length > 0) {
+      const chapterRows = allChapterIds.map((cId, i) => ({
+        team_member_id: teamMember.id,
+        chapter_id: cId,
+        is_primary: i === 0,
+      }))
+
+      await adminClient
+        .from('team_member_chapters')
+        .insert(chapterRows)
+    }
 
     return NextResponse.json({ teamMember }, { status: 201 })
   } catch (error) {

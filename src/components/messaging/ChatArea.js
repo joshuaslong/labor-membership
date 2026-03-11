@@ -7,7 +7,7 @@ import MessageBubble from './MessageBubble'
 import MessageComposer from './MessageComposer'
 
 export default function ChatArea({ channelId, channel, currentUser, onBack }) {
-  const { messages, loading, hasMore, sendMessage, editMessage, deleteMessage, loadMore } = useChannel(channelId, currentUser)
+  const { messages, loading, hasMore, sendMessage, editMessage, deleteMessage, reactToMessage, loadMore } = useChannel(channelId, currentUser)
   const messagesEndRef = useRef(null)
   const messagesContainerRef = useRef(null)
   const prevMessageCountRef = useRef(0)
@@ -26,9 +26,7 @@ export default function ChatArea({ channelId, channel, currentUser, onBack }) {
     const newCount = messages.length
 
     if (newCount > prevCount) {
-      // New messages added at the end or initial load
       if (isInitialLoadRef.current || newCount - prevCount <= 2) {
-        // Initial load or a few new messages: scroll to bottom
         messagesEndRef.current?.scrollIntoView({ behavior: isInitialLoadRef.current ? 'instant' : 'smooth' })
         isInitialLoadRef.current = false
       }
@@ -50,7 +48,6 @@ export default function ChatArea({ channelId, channel, currentUser, onBack }) {
     if (container.scrollTop < 50) {
       const prevHeight = container.scrollHeight
       loadMore().then(() => {
-        // Maintain scroll position after prepending
         requestAnimationFrame(() => {
           if (container) {
             container.scrollTop = container.scrollHeight - prevHeight
@@ -69,6 +66,10 @@ export default function ChatArea({ channelId, channel, currentUser, onBack }) {
   const handleDelete = async (message) => {
     if (!confirm('Delete this message?')) return
     await deleteMessage(message.id)
+  }
+
+  const handleReact = async (messageId, emoji) => {
+    await reactToMessage(messageId, emoji)
   }
 
   if (!channelId) {
@@ -91,14 +92,12 @@ export default function ChatArea({ channelId, channel, currentUser, onBack }) {
         className="flex-1 overflow-y-auto bg-white"
         onScroll={handleScroll}
       >
-        {/* Loading indicator for older messages */}
         {loading && hasMore && (
           <div className="text-center py-3">
             <span className="text-xs text-gray-400">Loading older messages...</span>
           </div>
         )}
 
-        {/* Empty channel state */}
         {!loading && messages.length === 0 && (
           <div className="flex items-center justify-center h-full">
             <div className="text-center py-12">
@@ -112,7 +111,6 @@ export default function ChatArea({ channelId, channel, currentUser, onBack }) {
           </div>
         )}
 
-        {/* Messages list */}
         <div className="max-w-4xl mx-auto py-2">
           {messages.map(message => (
             <MessageBubble
@@ -121,13 +119,15 @@ export default function ChatArea({ channelId, channel, currentUser, onBack }) {
               isOwn={(message.sender?.team_member_id || message.sender_id) === currentUser?.id}
               onEdit={handleEdit}
               onDelete={handleDelete}
+              onReact={handleReact}
+              channelId={channelId}
             />
           ))}
         </div>
         <div ref={messagesEndRef} />
       </div>
 
-      <MessageComposer onSend={sendMessage} disabled={!channelId} />
+      <MessageComposer onSend={sendMessage} disabled={!channelId} channelId={channelId} />
     </div>
   )
 }

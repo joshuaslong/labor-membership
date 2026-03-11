@@ -62,6 +62,17 @@ export async function GET(request, { params }) {
       }
     }
 
+    // Fetch all chapter assignments from junction table
+    const { data: chapterAssignments } = await adminClient
+      .from('team_member_chapters')
+      .select('chapter_id, is_primary, chapters:chapter_id(id, name, level)')
+      .eq('team_member_id', id)
+
+    teamMember.chapters = (chapterAssignments || []).map(ca => ({
+      ...ca.chapters,
+      is_primary: ca.is_primary,
+    }))
+
     return NextResponse.json({ teamMember })
   } catch (error) {
     console.error('Error fetching team member:', error)
@@ -96,7 +107,7 @@ export async function PUT(request, { params }) {
     }
 
     const body = await request.json()
-    const { roles, chapter_id, active } = body
+    const { roles, chapter_id, chapter_ids, active } = body
 
     const adminClient = createAdminClient()
 
@@ -121,9 +132,16 @@ export async function PUT(request, { params }) {
       return NextResponse.json({ error: 'Only super admins can assign the super admin role' }, { status: 403 })
     }
 
+    // Determine chapter IDs
+    const allChapterIds = chapter_ids !== undefined
+      ? (chapter_ids || [])
+      : chapter_id !== undefined
+        ? (chapter_id ? [chapter_id] : [])
+        : null // null means don't update chapters
+
     const updates = {}
     if (roles !== undefined) updates.roles = roles
-    if (chapter_id !== undefined) updates.chapter_id = chapter_id || null
+    if (allChapterIds !== null) updates.chapter_id = allChapterIds[0] || null
     if (active !== undefined) updates.active = active
 
     const { data: teamMember, error } = await adminClient
@@ -146,7 +164,43 @@ export async function PUT(request, { params }) {
 
     if (error) throw error
 
-    return NextResponse.json({ teamMember })
+    // Update junction table if chapters were provided
+    if (allChapterIds !== null) {
+      // Remove old assignments
+      await adminClient
+        .from('team_member_chapters')
+        .delete()
+        .eq('team_member_id', id)
+
+      // Insert new assignments
+      if (allChapterIds.length > 0) {
+        const chapterRows = allChapterIds.map((cId, i) => ({
+          team_member_id: id,
+          chapter_id: cId,
+          is_primary: i === 0,
+        }))
+
+        await adminClient
+          .from('team_member_chapters')
+          .insert(chapterRows)
+      }
+    }
+
+    // Fetch the updated chapter assignments
+    const { data: chapterAssignments } = await adminClient
+      .from('team_member_chapters')
+      .select('chapter_id, is_primary, chapters:chapter_id(id, name, level)')
+      .eq('team_member_id', id)
+
+    return NextResponse.json({
+      teamMember: {
+        ...teamMember,
+        chapters: (chapterAssignments || []).map(ca => ({
+          ...ca.chapters,
+          is_primary: ca.is_primary,
+        })),
+      }
+    })
   } catch (error) {
     console.error('Error updating team member:', error)
     return NextResponse.json({ error: error.message }, { status: 500 })

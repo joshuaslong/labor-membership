@@ -42,7 +42,7 @@ export default function TeamMemberDetailPage() {
   const [saving, setSaving] = useState(false)
   const [error, setError] = useState(null)
   const [editing, setEditing] = useState(false)
-  const [editData, setEditData] = useState({ roles: [], chapter_id: '', active: true })
+  const [editData, setEditData] = useState({ roles: [], chapter_ids: [], active: true })
 
   useEffect(() => {
     loadMember()
@@ -57,7 +57,7 @@ export default function TeamMemberDetailPage() {
       setMember(data.teamMember)
       setEditData({
         roles: data.teamMember.roles || [],
-        chapter_id: data.teamMember.chapter_id || '',
+        chapter_ids: (data.teamMember.chapters || []).map(c => c.id),
         active: data.teamMember.active,
       })
     } catch (err) {
@@ -79,6 +79,15 @@ export default function TeamMemberDetailPage() {
       roles: prev.roles.includes(role)
         ? prev.roles.filter(r => r !== role)
         : [...prev.roles, role],
+    }))
+  }
+
+  const toggleChapter = (chapterId) => {
+    setEditData(prev => ({
+      ...prev,
+      chapter_ids: prev.chapter_ids.includes(chapterId)
+        ? prev.chapter_ids.filter(id => id !== chapterId)
+        : [...prev.chapter_ids, chapterId],
     }))
   }
 
@@ -214,15 +223,19 @@ export default function TeamMemberDetailPage() {
         <div>
           <h1 className="text-lg font-semibold text-gray-900">{memberName}</h1>
           <p className="text-sm text-gray-500">{member.member?.email}</p>
-          <div className="flex items-center gap-2 mt-2">
+          <div className="flex items-center gap-2 mt-2 flex-wrap">
             <span className={`inline-flex items-center px-2 py-0.5 rounded text-xs font-medium border ${
               member.active ? 'text-green-700 bg-green-50 border-green-200' : 'text-gray-700 bg-stone-50 border-stone-200'
             }`}>
               {member.active ? 'Active' : 'Inactive'}
             </span>
-            {member.chapter && (
+            {member.chapters?.length > 0 ? (
+              member.chapters.map(c => (
+                <span key={c.id} className="text-xs text-gray-400">{c.name}{c.is_primary ? ' (primary)' : ''}</span>
+              ))
+            ) : member.chapter ? (
               <span className="text-xs text-gray-400">{member.chapter.name}</span>
-            )}
+            ) : null}
           </div>
         </div>
         {!editing && (
@@ -266,7 +279,23 @@ export default function TeamMemberDetailPage() {
               <h2 className="text-sm font-semibold text-gray-900">Details</h2>
             </div>
             <div className="p-4 space-y-3">
-              <DetailRow label="Chapter" value={member.chapter?.name || 'None (national scope)'} />
+              <div className="flex items-start justify-between py-1">
+                <span className="text-xs text-gray-400 uppercase tracking-wide">Chapters</span>
+                <div className="text-right">
+                  {member.chapters?.length > 0 ? (
+                    member.chapters.map(c => (
+                      <div key={c.id} className="text-sm text-gray-900">
+                        {c.name}
+                        {c.is_primary && <span className="ml-1 text-xs text-gray-400">(primary)</span>}
+                      </div>
+                    ))
+                  ) : member.chapter ? (
+                    <span className="text-sm text-gray-900">{member.chapter.name}</span>
+                  ) : (
+                    <span className="text-sm text-gray-900">None (national scope)</span>
+                  )}
+                </div>
+              </div>
               <DetailRow label="Member Since" value={new Date(member.created_at).toLocaleDateString('en-US', { year: 'numeric', month: 'long', day: 'numeric' })} />
               {member.member?.id && (
                 <div className="flex items-center justify-between py-1">
@@ -314,22 +343,34 @@ export default function TeamMemberDetailPage() {
       {/* Edit Mode */}
       {editing && (
         <>
-          {/* Chapter */}
+          {/* Chapters */}
           <div className="bg-white border border-stone-200 rounded mb-6">
             <div className="px-4 py-3 border-b border-stone-200">
-              <h2 className="text-sm font-semibold text-gray-900">Chapter</h2>
+              <h2 className="text-sm font-semibold text-gray-900">Chapters</h2>
+              <p className="text-xs text-gray-400 mt-0.5">Select one or more chapters</p>
             </div>
             <div className="p-4">
-              <select
-                value={editData.chapter_id}
-                onChange={(e) => setEditData(prev => ({ ...prev, chapter_id: e.target.value }))}
-                className="w-full px-3 py-2 text-sm border border-stone-200 rounded bg-white text-gray-900 focus:outline-none focus:ring-1 focus:ring-labor-red focus:border-labor-red"
-              >
-                <option value="">No chapter (national scope)</option>
+              <div className="space-y-1 max-h-64 overflow-y-auto">
                 {chapters.map(c => (
-                  <option key={c.id} value={c.id}>{c.name}</option>
+                  <label
+                    key={c.id}
+                    className={`flex items-center gap-3 px-3 py-2 rounded cursor-pointer transition-colors ${
+                      editData.chapter_ids.includes(c.id) ? 'bg-gray-50 border border-stone-200' : 'hover:bg-gray-50'
+                    }`}
+                  >
+                    <input
+                      type="checkbox"
+                      checked={editData.chapter_ids.includes(c.id)}
+                      onChange={() => toggleChapter(c.id)}
+                      className="rounded border-gray-300 text-labor-red focus:ring-labor-red"
+                    />
+                    <span className="text-sm text-gray-900">{c.name}</span>
+                  </label>
                 ))}
-              </select>
+              </div>
+              {editData.chapter_ids.length === 0 && (
+                <p className="text-xs text-gray-400 mt-2">No chapters selected (national scope)</p>
+              )}
             </div>
           </div>
 
@@ -398,7 +439,7 @@ export default function TeamMemberDetailPage() {
                 setEditing(false)
                 setEditData({
                   roles: member.roles || [],
-                  chapter_id: member.chapter_id || '',
+                  chapter_ids: (member.chapters || []).map(c => c.id),
                   active: member.active,
                 })
               }}
