@@ -37,7 +37,6 @@ export default function AddTeamMemberPage() {
 
   const [formData, setFormData] = useState({
     user_id: '',
-    member_id: '',
     member_name: '',
     chapter_ids: [],
     roles: [],
@@ -76,8 +75,7 @@ export default function AddTeamMemberPage() {
   const selectMember = (member) => {
     setFormData(prev => ({
       ...prev,
-      user_id: member.user_id || '',
-      member_id: member.id,
+      user_id: member.user_id,
       member_name: `${member.first_name} ${member.last_name} (${member.email})`,
     }))
     setSearchResults([])
@@ -104,7 +102,7 @@ export default function AddTeamMemberPage() {
 
   const handleSubmit = async (e) => {
     e.preventDefault()
-    if (!formData.member_id) {
+    if (!formData.user_id) {
       setError('Please select a member')
       return
     }
@@ -117,17 +115,14 @@ export default function AddTeamMemberPage() {
     setError(null)
 
     try {
-      const payload = {
-        member_id: formData.member_id,
-        chapter_ids: formData.chapter_ids,
-        roles: formData.roles,
-      }
-      if (formData.user_id) payload.user_id = formData.user_id
-
       const res = await fetch('/api/admin/team-members', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify(payload),
+        body: JSON.stringify({
+          user_id: formData.user_id,
+          chapter_ids: formData.chapter_ids,
+          roles: formData.roles,
+        }),
       })
 
       const data = await res.json()
@@ -171,7 +166,7 @@ export default function AddTeamMemberPage() {
                 <span className="text-sm text-gray-900">{formData.member_name}</span>
                 <button
                   type="button"
-                  onClick={() => setFormData(prev => ({ ...prev, user_id: '', member_id: '', member_name: '' }))}
+                  onClick={() => setFormData(prev => ({ ...prev, user_id: '', member_name: '' }))}
                   className="text-xs text-gray-400 hover:text-gray-600"
                 >
                   Change
@@ -196,19 +191,22 @@ export default function AddTeamMemberPage() {
                       <button
                         key={m.id}
                         type="button"
-                        onClick={() => selectMember(m)}
-                        className="w-full text-left px-3 py-2 border-b border-stone-100 last:border-0 transition-colors hover:bg-gray-50 cursor-pointer"
+                        onClick={() => m.user_id ? selectMember(m) : null}
+                        disabled={!m.user_id}
+                        className={`w-full text-left px-3 py-2 border-b border-stone-100 last:border-0 transition-colors ${
+                          m.user_id ? 'hover:bg-gray-50 cursor-pointer' : 'opacity-50 cursor-not-allowed'
+                        }`}
                       >
                         <div className="text-sm text-gray-900">{m.first_name} {m.last_name}</div>
                         <div className="text-xs text-gray-500">
                           {m.email}
-                          {!m.user_id && <span className="ml-1 text-amber-500">(no account yet)</span>}
+                          {!m.user_id && <span className="ml-1 text-amber-600">(needs to sign up first)</span>}
                         </div>
                       </button>
                     ))}
                   </div>
                 )}
-                <p className="text-xs text-gray-400 mt-1">Members without an account will get access when they sign up.</p>
+                <p className="text-xs text-gray-400 mt-1">Members must create an account before they can be added as team members.</p>
               </div>
             )}
           </div>
