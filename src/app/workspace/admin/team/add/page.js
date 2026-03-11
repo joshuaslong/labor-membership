@@ -187,26 +187,23 @@ export default function AddTeamMemberPage() {
                 )}
                 {searchResults.length > 0 && (
                   <div className="absolute z-10 w-full mt-1 bg-white border border-stone-200 rounded shadow-lg max-h-64 overflow-y-auto">
-                    {searchResults.map(m => (
+                    {searchResults.filter(m => m.user_id).map(m => (
                       <button
                         key={m.id}
                         type="button"
-                        onClick={() => m.user_id ? selectMember(m) : null}
-                        disabled={!m.user_id}
-                        className={`w-full text-left px-3 py-2 border-b border-stone-100 last:border-0 transition-colors ${
-                          m.user_id ? 'hover:bg-gray-50 cursor-pointer' : 'opacity-50 cursor-not-allowed'
-                        }`}
+                        onClick={() => selectMember(m)}
+                        className="w-full text-left px-3 py-2 border-b border-stone-100 last:border-0 transition-colors hover:bg-gray-50 cursor-pointer"
                       >
                         <div className="text-sm text-gray-900">{m.first_name} {m.last_name}</div>
-                        <div className="text-xs text-gray-500">
-                          {m.email}
-                          {!m.user_id && <span className="ml-1 text-amber-600">(no account)</span>}
-                        </div>
+                        <div className="text-xs text-gray-500">{m.email}</div>
                       </button>
                     ))}
+                    {searchResults.length > 0 && searchResults.filter(m => m.user_id).length === 0 && (
+                      <div className="px-3 py-2 text-xs text-gray-400">No members with accounts match this search.</div>
+                    )}
                   </div>
                 )}
-                <p className="text-xs text-gray-400 mt-1">Members without an account are shown but cannot be added until they create one.</p>
+                <p className="text-xs text-gray-400 mt-1">Only members who have created an account can be added as team members.</p>
               </div>
             )}
           </div>

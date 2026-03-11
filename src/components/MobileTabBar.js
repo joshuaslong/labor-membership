@@ -50,11 +50,23 @@ function Icon({ name, className = 'w-5 h-5' }) {
 export default function MobileTabBar({ sections = [] }) {
   const pathname = usePathname()
   const [showMore, setShowMore] = useState(false)
+  const [keyboardOpen, setKeyboardOpen] = useState(false)
 
   // Close More popup on route change
   useEffect(() => {
     setShowMore(false)
   }, [pathname])
+
+  // Hide tab bar when virtual keyboard is open
+  useEffect(() => {
+    const vv = window.visualViewport
+    if (!vv) return
+    const handleResize = () => {
+      setKeyboardOpen(vv.height < window.innerHeight * 0.75)
+    }
+    vv.addEventListener('resize', handleResize)
+    return () => vv.removeEventListener('resize', handleResize)
+  }, [])
 
   // Split sections into priority visible tabs and overflow
   const nonHome = sections.filter(s => s !== 'workspace')
@@ -77,7 +89,7 @@ export default function MobileTabBar({ sections = [] }) {
     `flex flex-col items-center justify-center gap-0.5 flex-1 h-full ${active ? 'text-labor-red' : 'text-gray-500'}`
 
   return (
-    <div className="md:hidden fixed bottom-0 left-0 right-0 z-40 bg-white border-t border-stone-200 pb-safe">
+    <div className={`md:hidden fixed bottom-0 left-0 right-0 z-40 bg-white border-t border-stone-200 pb-safe ${keyboardOpen ? 'hidden' : ''}`}>
       <nav className="flex items-center h-14" aria-label="Mobile navigation">
         {/* Home */}
         <Link href="/workspace" className={tabClass(isActive('workspace'))}>
