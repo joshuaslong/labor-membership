@@ -8,6 +8,7 @@ export default async function Navigation() {
   const { data: { user } } = await supabase.auth.getUser()
 
   let isAdmin = false
+  let isTeamMember = false
   let memberName = null
 
   if (user) {
@@ -18,6 +19,7 @@ export default async function Navigation() {
       .eq('user_id', user.id)
       .eq('active', true)
       .single()
+    isTeamMember = !!teamMember
     isAdmin = teamMember?.roles?.some(r => ['super_admin', 'national_admin', 'state_admin', 'county_admin', 'city_admin'].includes(r))
 
     const { data: member } = await supabase
@@ -31,6 +33,7 @@ export default async function Navigation() {
   const navData = {
     isLoggedIn: !!user,
     isAdmin,
+    isTeamMember,
     memberName: memberName || user?.email?.split('@')[0] || null,
   }
 
@@ -90,7 +93,7 @@ export default async function Navigation() {
               >
                 Dashboard
               </Link>
-              {isAdmin && (
+              {isTeamMember && (
                 <Link
                   href="/workspace"
                   className="px-3 py-2 text-sm font-medium text-white/80 hover:text-white hover:bg-white/10 rounded-md transition-colors"
