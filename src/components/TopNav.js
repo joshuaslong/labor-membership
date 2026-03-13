@@ -74,6 +74,19 @@ function TopNav({ sections = [], availableChapters = [], selectedChapterId = 'al
                   {sectionLabels[section]}
                 </Link>
               ))}
+              <span className="text-stone-300">|</span>
+              <Link
+                href="/initiatives"
+                className="text-sm font-medium text-gray-700 hover:text-gray-900 pb-1"
+              >
+                Initiatives
+              </Link>
+              <Link
+                href="/dashboard/profile"
+                className="text-sm font-medium text-gray-700 hover:text-gray-900 pb-1"
+              >
+                My Profile
+              </Link>
             </nav>
           </div>
           <div className="flex items-center gap-4">
@@ -84,19 +97,7 @@ function TopNav({ sections = [], availableChapters = [], selectedChapterId = 'al
                 showAll={showAllOption}
               />
             )}
-            <Link
-              href="/initiatives"
-              className="hidden md:inline text-sm text-gray-700 hover:text-gray-900"
-            >
-              Initiatives
-            </Link>
-            <Link
-              href="/dashboard/profile"
-              className="hidden md:inline text-sm text-gray-700 hover:text-gray-900"
-            >
-              My Profile
-            </Link>
-            <form action="/api/auth/logout" method="POST" className="hidden md:inline">
+            <form action="/api/auth/logout" method="POST" className="hidden md:flex items-center">
               <button
                 type="submit"
                 className="text-sm text-gray-700 hover:text-gray-900"
