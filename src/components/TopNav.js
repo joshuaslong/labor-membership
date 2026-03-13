@@ -30,6 +30,7 @@ function TopNav({ sections = [], availableChapters = [], selectedChapterId = 'al
     polls: 'Polls',
     organize: 'Organize',
     tasks: 'Tasks',
+    initiatives: 'Initiatives',
     admin: 'Admin'
   }
 
@@ -74,27 +75,6 @@ function TopNav({ sections = [], availableChapters = [], selectedChapterId = 'al
                   {sectionLabels[section]}
                 </Link>
               ))}
-              <span className="text-stone-300">|</span>
-              <Link
-                href="/workspace/initiatives"
-                className={`text-sm font-medium pb-1 ${
-                  pathname.startsWith('/workspace/initiatives')
-                    ? 'text-labor-red border-b-2 border-labor-red'
-                    : 'text-gray-700 hover:text-gray-900'
-                }`}
-              >
-                Initiatives
-              </Link>
-              <Link
-                href="/workspace/profile"
-                className={`text-sm font-medium pb-1 ${
-                  pathname.startsWith('/workspace/profile')
-                    ? 'text-labor-red border-b-2 border-labor-red'
-                    : 'text-gray-700 hover:text-gray-900'
-                }`}
-              >
-                My Profile
-              </Link>
             </nav>
           </div>
           <div className="flex items-center gap-4">
@@ -105,6 +85,12 @@ function TopNav({ sections = [], availableChapters = [], selectedChapterId = 'al
                 showAll={showAllOption}
               />
             )}
+            <Link
+              href="/workspace/profile"
+              className="hidden md:inline text-sm text-gray-700 hover:text-gray-900"
+            >
+              My Profile
+            </Link>
             <form action="/api/auth/logout" method="POST" className="hidden md:flex items-center">
               <button
                 type="submit"
