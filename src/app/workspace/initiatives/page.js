@@ -127,7 +127,7 @@ export default async function InitiativesPage({ searchParams: searchParamsPromis
                     <td className="px-4 py-3 text-sm text-gray-500 tabular-nums">{initiative.display_order}</td>
                     <td className="px-4 py-3 text-sm text-gray-500 tabular-nums">{formatDate(initiative.created_at)}</td>
                     <td className="px-4 py-3 text-sm">
-                      <InitiativeRowActions initiativeId={initiative.id} initiativeTitle={initiative.title} />
+                      <InitiativeRowActions initiativeId={initiative.id} initiativeTitle={initiative.title} initiativeStatus={initiative.status} />
                     </td>
                   </tr>
                 ))}

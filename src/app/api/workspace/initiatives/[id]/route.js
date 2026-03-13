@@ -49,6 +49,44 @@ export async function PUT(request, { params }) {
   return NextResponse.json({ initiative: data })
 }
 
+export async function PATCH(request, { params }) {
+  const teamMember = await getCurrentTeamMember()
+  if (!teamMember) {
+    return NextResponse.json({ error: 'Unauthorized' }, { status: 401 })
+  }
+
+  if (!isAdmin(teamMember.roles)) {
+    return NextResponse.json({ error: 'Forbidden' }, { status: 403 })
+  }
+
+  const { id } = await params
+  const body = await request.json()
+
+  const allowedFields = ['status']
+  const updates = {}
+  for (const key of allowedFields) {
+    if (body[key] !== undefined) updates[key] = body[key]
+  }
+
+  if (Object.keys(updates).length === 0) {
+    return NextResponse.json({ error: 'No valid fields to update' }, { status: 400 })
+  }
+
+  const supabase = createAdminClient()
+  const { data, error } = await supabase
+    .from('initiatives')
+    .update(updates)
+    .eq('id', id)
+    .select()
+    .single()
+
+  if (error) {
+    return NextResponse.json({ error: error.message }, { status: 500 })
+  }
+
+  return NextResponse.json({ initiative: data })
+}
+
 export async function DELETE(request, { params }) {
   const teamMember = await getCurrentTeamMember()
   if (!teamMember) {

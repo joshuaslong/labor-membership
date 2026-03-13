@@ -5,11 +5,12 @@ import { createPortal } from 'react-dom'
 import { useRouter } from 'next/navigation'
 import Link from 'next/link'
 
-export default function InitiativeRowActions({ initiativeId, initiativeTitle }) {
+export default function InitiativeRowActions({ initiativeId, initiativeTitle, initiativeStatus }) {
   const router = useRouter()
   const [isOpen, setIsOpen] = useState(false)
   const [showDeleteModal, setShowDeleteModal] = useState(false)
   const [deleting, setDeleting] = useState(false)
+  const [archiving, setArchiving] = useState(false)
   const [error, setError] = useState(null)
   const [menuPosition, setMenuPosition] = useState({ top: 0, left: 0 })
   const buttonRef = useRef(null)
@@ -63,6 +64,30 @@ export default function InitiativeRowActions({ initiativeId, initiativeTitle }) 
     }
   }
 
+  const handleArchive = async () => {
+    setArchiving(true)
+    try {
+      const newStatus = initiativeStatus === 'archived' ? 'draft' : 'archived'
+      const res = await fetch(`/api/workspace/initiatives/${initiativeId}`, {
+        method: 'PATCH',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ status: newStatus }),
+      })
+
+      if (!res.ok) {
+        const data = await res.json()
+        throw new Error(data.error || 'Failed to update initiative')
+      }
+
+      setIsOpen(false)
+      router.refresh()
+    } catch (err) {
+      setError(err.message)
+    } finally {
+      setArchiving(false)
+    }
+  }
+
   return (
     <>
       <div className="flex justify-end">
@@ -91,6 +116,13 @@ export default function InitiativeRowActions({ initiativeId, initiativeTitle }) 
           >
             Edit
           </Link>
+          <button
+            onClick={handleArchive}
+            disabled={archiving}
+            className="block w-full text-left px-4 py-2 text-sm text-gray-700 hover:bg-stone-50 disabled:opacity-50"
+          >
+            {archiving ? 'Updating...' : initiativeStatus === 'archived' ? 'Unarchive' : 'Archive'}
+          </button>
           <button
             onClick={() => {
               setIsOpen(false)
