@@ -84,6 +84,18 @@ function TopNav({ sections = [], availableChapters = [], selectedChapterId = 'al
                 showAll={showAllOption}
               />
             )}
+            <Link
+              href="/initiatives"
+              className="hidden md:inline text-sm text-gray-700 hover:text-gray-900"
+            >
+              Initiatives
+            </Link>
+            <Link
+              href="/dashboard/profile"
+              className="hidden md:inline text-sm text-gray-700 hover:text-gray-900"
+            >
+              My Profile
+            </Link>
             <form action="/api/auth/logout" method="POST" className="hidden md:inline">
               <button
                 type="submit"
