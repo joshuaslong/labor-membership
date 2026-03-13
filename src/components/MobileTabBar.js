@@ -146,7 +146,7 @@ export default function MobileTabBar({ sections = [] }) {
                 </Link>
               ))}
               <Link
-                href="/initiatives"
+                href="/workspace/initiatives"
                 className="flex flex-col items-center gap-1 py-2 rounded-lg text-gray-600"
               >
                 <svg className="w-5 h-5" fill="none" viewBox="0 0 24 24" strokeWidth={1.5} stroke="currentColor">
@@ -155,7 +155,7 @@ export default function MobileTabBar({ sections = [] }) {
                 <span className="text-[10px] font-medium">Initiatives</span>
               </Link>
               <Link
-                href="/dashboard/profile"
+                href="/workspace/profile"
                 className="flex flex-col items-center gap-1 py-2 rounded-lg text-gray-600"
               >
                 <svg className="w-5 h-5" fill="none" viewBox="0 0 24 24" strokeWidth={1.5} stroke="currentColor">

@@ -76,14 +76,22 @@ function TopNav({ sections = [], availableChapters = [], selectedChapterId = 'al
               ))}
               <span className="text-stone-300">|</span>
               <Link
-                href="/initiatives"
-                className="text-sm font-medium text-gray-700 hover:text-gray-900 pb-1"
+                href="/workspace/initiatives"
+                className={`text-sm font-medium pb-1 ${
+                  pathname.startsWith('/workspace/initiatives')
+                    ? 'text-labor-red border-b-2 border-labor-red'
+                    : 'text-gray-700 hover:text-gray-900'
+                }`}
               >
                 Initiatives
               </Link>
               <Link
-                href="/dashboard/profile"
-                className="text-sm font-medium text-gray-700 hover:text-gray-900 pb-1"
+                href="/workspace/profile"
+                className={`text-sm font-medium pb-1 ${
+                  pathname.startsWith('/workspace/profile')
+                    ? 'text-labor-red border-b-2 border-labor-red'
+                    : 'text-gray-700 hover:text-gray-900'
+                }`}
               >
                 My Profile
               </Link>
