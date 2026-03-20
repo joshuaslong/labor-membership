@@ -64,6 +64,7 @@ export default async function EventsPage({ searchParams: searchParamsPromise }) 
       start_time,
       end_date,
       end_time,
+      timezone,
       status,
       is_all_day,
       max_attendees,
@@ -168,6 +169,20 @@ export default async function EventsPage({ searchParams: searchParamsPromise }) 
     })
   }
 
+  function getTimezoneAbbr(timezone) {
+    if (!timezone) return ''
+    try {
+      const parts = new Intl.DateTimeFormat('en-US', {
+        timeZone: timezone,
+        timeZoneName: 'short',
+      }).formatToParts(new Date())
+      const tzPart = parts.find(p => p.type === 'timeZoneName')
+      return tzPart ? tzPart.value : ''
+    } catch {
+      return ''
+    }
+  }
+
   function formatLocation(event) {
     if (event.is_virtual) return 'Virtual'
     if (event.location_city && event.location_state) {
@@ -209,7 +224,7 @@ export default async function EventsPage({ searchParams: searchParamsPromise }) 
                       <p className="text-sm font-medium text-gray-900 truncate">{event.title}</p>
                       <p className="text-xs text-gray-500 mt-0.5">
                         {formatDate(event.start_date)}
-                        {!event.is_all_day && event.start_time && ` · ${formatTime(event.start_time)}`}
+                        {!event.is_all_day && event.start_time && ` · ${formatTime(event.start_time)}${event.timezone ? ` ${getTimezoneAbbr(event.timezone)}` : ''}`}
                       </p>
                     </div>
                     <span className={`shrink-0 inline-flex items-center px-2 py-0.5 rounded text-xs font-medium ${statusBadge[event.status] || 'bg-gray-50 text-gray-700'}`}>
@@ -261,7 +276,7 @@ export default async function EventsPage({ searchParams: searchParamsPromise }) 
                     <td className="px-4 py-3 text-sm text-gray-600 tabular-nums">
                       <div>{formatDate(event.start_date)}</div>
                       {!event.is_all_day && event.start_time && (
-                        <div className="text-xs text-gray-400">{formatTime(event.start_time)}</div>
+                        <div className="text-xs text-gray-400">{formatTime(event.start_time)}{event.timezone ? ` ${getTimezoneAbbr(event.timezone)}` : ''}</div>
                       )}
                     </td>
                     <td className="px-4 py-3 text-sm text-gray-600">
