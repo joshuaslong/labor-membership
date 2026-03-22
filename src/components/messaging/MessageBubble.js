@@ -145,7 +145,7 @@ function AttachmentList({ attachments, channelId }) {
   )
 }
 
-export default function MessageBubble({ message, isOwn, onEdit, onDelete, onReact, channelId }) {
+export default function MessageBubble({ message, isOwn, onEdit, onDelete, onReact, onReply, channelId, isThreadView }) {
   const sender = message.sender || {}
   const senderName = [sender.first_name, sender.last_name].filter(Boolean).join(' ') || 'Unknown'
   const initial = (sender.first_name?.[0] || senderName[0] || '?').toUpperCase()
@@ -185,6 +185,17 @@ export default function MessageBubble({ message, isOwn, onEdit, onDelete, onReac
         {(hasReactions || onReact) && (
           <ReactionBar reactions={message.reactions || []} onReact={(emoji) => onReact?.(message.id, emoji)} />
         )}
+        {!isThreadView && message.reply_count > 0 && (
+          <button
+            onClick={() => onReply?.(message)}
+            className="flex items-center gap-1.5 mt-1 text-xs text-blue-600 hover:text-blue-800 hover:underline"
+          >
+            <svg className="w-3.5 h-3.5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+              <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M3 10h10a8 8 0 018 8v2M3 10l6 6m-6-6l6-6" />
+            </svg>
+            {message.reply_count} {message.reply_count === 1 ? 'reply' : 'replies'}
+          </button>
+        )}
       </div>
       <div className="absolute right-3 -top-2 hidden group-hover:flex items-center gap-0.5 bg-white border border-stone-200 rounded shadow-sm px-0.5 py-0.5">
         <button
@@ -199,6 +210,17 @@ export default function MessageBubble({ message, isOwn, onEdit, onDelete, onReac
             <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M14.828 14.828a4 4 0 01-5.656 0M9 10h.01M15 10h.01M21 12a9 9 0 11-18 0 9 9 0 0118 0z" />
           </svg>
         </button>
+        {!isThreadView && onReply && (
+          <button
+            onClick={() => onReply(message)}
+            className="p-1 text-gray-400 hover:text-gray-600 rounded"
+            title="Reply in thread"
+          >
+            <svg className="w-3.5 h-3.5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+              <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M3 10h10a8 8 0 018 8v2M3 10l6 6m-6-6l6-6" />
+            </svg>
+          </button>
+        )}
         {isOwn && (
           <>
             <button

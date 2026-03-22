@@ -31,12 +31,13 @@ export async function GET(request, { params }) {
   let query = supabase
     .from('messages')
     .select(`
-      id, content, is_edited, is_deleted, created_at, updated_at,
+      id, content, is_edited, is_deleted, created_at, updated_at, parent_message_id,
       team_members:sender_id(id,
         members(first_name, last_name)
       )
     `)
     .eq('channel_id', channelId)
+    .is('parent_message_id', null) // Exclude thread replies from main feed
     .order('created_at', { ascending: false })
     .limit(limit)
 
@@ -61,6 +62,22 @@ export async function GET(request, { params }) {
 
   // Fetch reactions and attachments for these messages
   const messageIds = messages.map(m => m.id)
+
+  // Fetch thread reply counts and latest reply timestamps
+  let threadInfoByMessage = {}
+  if (messageIds.length > 0) {
+    const { data: threadData } = await supabase
+      .rpc('get_thread_info', { message_ids: messageIds })
+
+    if (threadData) {
+      for (const t of threadData) {
+        threadInfoByMessage[t.parent_message_id] = {
+          reply_count: t.reply_count,
+          latest_reply_at: t.latest_reply_at,
+        }
+      }
+    }
+  }
 
   const [reactionsResult, attachmentsResult] = await Promise.all([
     messageIds.length > 0
@@ -119,6 +136,8 @@ export async function GET(request, { params }) {
     },
     reactions: reactionsByMessage[msg.id] ? Object.values(reactionsByMessage[msg.id]) : [],
     attachments: attachmentsByMessage[msg.id] || [],
+    reply_count: threadInfoByMessage[msg.id]?.reply_count || 0,
+    latest_reply_at: threadInfoByMessage[msg.id]?.latest_reply_at || null,
   }))
 
   return NextResponse.json({
@@ -149,7 +168,7 @@ export async function POST(request, { params }) {
   }
 
   const body = await request.json()
-  const { content, attachments } = body
+  const { content, attachments, parentMessageId } = body
 
   // Allow empty content if there are attachments
   const hasContent = content && typeof content === 'string' && content.trim()
@@ -161,12 +180,28 @@ export async function POST(request, { params }) {
 
   const messageContent = hasContent ? content.trim() : ''
 
+  // If replying to a thread, validate parent message exists in this channel
+  if (parentMessageId) {
+    const { data: parentMsg } = await supabase
+      .from('messages')
+      .select('id')
+      .eq('id', parentMessageId)
+      .eq('channel_id', channelId)
+      .is('parent_message_id', null) // Can only reply to top-level messages
+      .single()
+
+    if (!parentMsg) {
+      return NextResponse.json({ error: 'Parent message not found in this channel' }, { status: 400 })
+    }
+  }
+
   const { data: message, error } = await supabase
     .from('messages')
     .insert({
       channel_id: channelId,
       sender_id: teamMember.id,
       content: messageContent,
+      parent_message_id: parentMessageId || null,
     })
     .select()
     .single()
@@ -204,11 +239,12 @@ export async function POST(request, { params }) {
     }
   }
 
-  // Fire-and-forget push notifications to subscribed channel members
+  // Fire-and-forget push notifications
   sendMessagePushNotifications({
     channelId,
     senderTeamMemberId: teamMember.id,
     messageContent: messageContent || '(sent a file)',
+    parentMessageId: parentMessageId || null,
   }).catch(err => console.error('Push notification error:', err))
 
   return NextResponse.json({ ...message, attachments: savedAttachments }, { status: 201 })

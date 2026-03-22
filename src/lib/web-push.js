@@ -28,6 +28,7 @@ export async function sendMessagePushNotifications({
   channelId,
   senderTeamMemberId,
   messageContent,
+  parentMessageId,
 }) {
   ensureVapid()
   if (!vapidConfigured) return
@@ -60,21 +61,40 @@ export async function sendMessagePushNotifications({
     }
   }
 
-  // Get channel members with notifications enabled (excluding sender)
-  const { data: members } = await supabase
-    .from('channel_members')
-    .select('team_member_id')
-    .eq('channel_id', channelId)
-    .eq('notifications_enabled', true)
-    .neq('team_member_id', senderTeamMemberId)
+  let targetMemberIds
 
-  if (!members || members.length === 0) return
+  if (parentMessageId) {
+    // Thread reply: notify thread participants (parent author + other repliers)
+    const { data: threadMessages } = await supabase
+      .from('messages')
+      .select('sender_id')
+      .or(`id.eq.${parentMessageId},parent_message_id.eq.${parentMessageId}`)
 
-  // Get push subscriptions for those members
+    if (!threadMessages || threadMessages.length === 0) return
+
+    // Unique participant IDs, excluding the sender
+    targetMemberIds = [...new Set(threadMessages.map(m => m.sender_id))]
+      .filter(id => id !== senderTeamMemberId)
+  } else {
+    // Regular channel message: notify channel members with notifications enabled
+    const { data: members } = await supabase
+      .from('channel_members')
+      .select('team_member_id')
+      .eq('channel_id', channelId)
+      .eq('notifications_enabled', true)
+      .neq('team_member_id', senderTeamMemberId)
+
+    if (!members || members.length === 0) return
+    targetMemberIds = members.map(m => m.team_member_id)
+  }
+
+  if (targetMemberIds.length === 0) return
+
+  // Get push subscriptions for target members
   const { data: subscriptions } = await supabase
     .from('push_subscriptions')
     .select('id, endpoint, p256dh, auth')
-    .in('team_member_id', members.map(m => m.team_member_id))
+    .in('team_member_id', targetMemberIds)
 
   if (!subscriptions || subscriptions.length === 0) return
 
@@ -82,14 +102,18 @@ export async function sendMessagePushNotifications({
     ? messageContent.slice(0, 100) + '...'
     : messageContent
 
+  const title = parentMessageId
+    ? `Thread in #${channel?.name || 'channel'}`
+    : `#${channel?.name || 'channel'}`
+
   const payload = JSON.stringify({
-    title: `#${channel?.name || 'channel'}`,
+    title,
     body: `${senderName}: ${preview}`,
     data: {
       url: `/workspace/messaging?channel=${channelId}`,
       channelId,
     },
-    tag: `channel-${channelId}`,
+    tag: parentMessageId ? `thread-${parentMessageId}` : `channel-${channelId}`,
   })
 
   const staleIds = []
