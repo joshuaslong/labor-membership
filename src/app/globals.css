@@ -482,4 +482,18 @@
       height: calc(100dvh - 61px);
     }
   }
+
+  /* Bottom sheet slide-up animation for mobile */
+  @keyframes slide-up {
+    from { transform: translateY(100%); }
+    to { transform: translateY(0); }
+  }
+  .animate-slide-up {
+    animation: slide-up 200ms ease-out;
+  }
+  @media (min-width: 768px) {
+    .animate-slide-up {
+      animation: none;
+    }
+  }
 }

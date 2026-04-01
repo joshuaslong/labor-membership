@@ -182,7 +182,7 @@ export default function MessageComposer({ onSend, disabled, channelId }) {
           <button
             onClick={() => fileInputRef.current?.click()}
             disabled={disabled}
-            className="shrink-0 rounded p-2 text-gray-400 hover:text-gray-600 hover:bg-stone-100 disabled:opacity-40 disabled:cursor-not-allowed transition-colors"
+            className="shrink-0 rounded p-3 text-gray-400 hover:text-gray-600 hover:bg-stone-100 disabled:opacity-40 disabled:cursor-not-allowed transition-colors"
             title="Attach a file"
           >
             <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
@@ -215,7 +215,7 @@ export default function MessageComposer({ onSend, disabled, channelId }) {
           <button
             onClick={handleSubmit}
             disabled={disabled || sending || hasUploading || (!text.trim() && !hasUploadedFiles)}
-            className="shrink-0 rounded bg-labor-red px-3 py-2 text-sm font-medium text-white hover:bg-labor-red-600 disabled:opacity-40 disabled:cursor-not-allowed transition-colors"
+            className="shrink-0 rounded bg-labor-red p-3 min-w-[44px] min-h-[44px] flex items-center justify-center text-sm font-medium text-white hover:bg-labor-red-600 disabled:opacity-40 disabled:cursor-not-allowed transition-colors"
           >
             <svg className="w-4 h-4 rotate-90" fill="none" stroke="currentColor" viewBox="0 0 24 24">
               <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 19l9 2-9-18-9 18 9-2zm0 0v-8" />

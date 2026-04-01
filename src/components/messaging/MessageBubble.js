@@ -1,6 +1,7 @@
 'use client'
 
-import { useState } from 'react'
+import { useState, useRef, useCallback } from 'react'
+import BottomSheet from './BottomSheet'
 
 function formatTimestamp(dateStr) {
   const date = new Date(dateStr)
@@ -152,6 +153,50 @@ export default function MessageBubble({ message, isOwn, onEdit, onDelete, onReac
   const hasReactions = message.reactions?.length > 0
   const hasAttachments = message.attachments?.length > 0
 
+  // Action sheet state (mobile long-press)
+  const [showActions, setShowActions] = useState(false)
+  const longPressTimer = useRef(null)
+  const longPressTriggered = useRef(false)
+
+  // Inline edit state
+  const [isEditing, setIsEditing] = useState(false)
+  const [editText, setEditText] = useState('')
+
+  const startEdit = useCallback(() => {
+    setEditText(message.content || '')
+    setIsEditing(true)
+    setShowActions(false)
+  }, [message.content])
+
+  const saveEdit = useCallback(async () => {
+    const trimmed = editText.trim()
+    if (trimmed && trimmed !== message.content) {
+      await onEdit?.(message.id, trimmed)
+    }
+    setIsEditing(false)
+  }, [editText, message.content, message.id, onEdit])
+
+  // Long-press touch handlers
+  const handleTouchStart = useCallback(() => {
+    longPressTriggered.current = false
+    longPressTimer.current = setTimeout(() => {
+      longPressTriggered.current = true
+      navigator.vibrate?.(10)
+      setShowActions(true)
+    }, 500)
+  }, [])
+
+  const handleTouchEnd = useCallback((e) => {
+    clearTimeout(longPressTimer.current)
+    if (longPressTriggered.current) {
+      e.preventDefault()
+    }
+  }, [])
+
+  const handleTouchMove = useCallback(() => {
+    clearTimeout(longPressTimer.current)
+  }, [])
+
   if (message.is_deleted) {
     return (
       <div className="flex items-start gap-3 px-4 py-1.5">
@@ -163,7 +208,10 @@ export default function MessageBubble({ message, isOwn, onEdit, onDelete, onReac
 
   return (
     <div
-      className="relative flex items-start gap-3 px-4 py-1.5 hover:bg-stone-50 group"
+      className="relative flex items-start gap-3 px-4 py-1.5 hover:bg-stone-50 active:bg-stone-100 group transition-colors duration-75"
+      onTouchStart={handleTouchStart}
+      onTouchEnd={handleTouchEnd}
+      onTouchMove={handleTouchMove}
     >
       <div
         className={`w-8 h-8 rounded-full flex items-center justify-center text-white text-xs font-semibold shrink-0 ${getAvatarColor(senderName)}`}
@@ -178,14 +226,46 @@ export default function MessageBubble({ message, isOwn, onEdit, onDelete, onReac
             {message.is_edited && <span className="ml-1 text-gray-400">(edited)</span>}
           </span>
         </div>
-        {message.content && (
-          <p className="text-base md:text-sm text-gray-800 whitespace-pre-wrap break-words">{message.content}</p>
+        {isEditing ? (
+          <div className="mt-1">
+            <textarea
+              value={editText}
+              onChange={(e) => setEditText(e.target.value)}
+              className="w-full border border-stone-300 rounded px-2 py-1.5 text-base md:text-sm text-gray-900 focus:outline-none focus:border-stone-400 resize-none"
+              rows={2}
+              autoFocus
+              onKeyDown={(e) => {
+                if (e.key === 'Enter' && !e.shiftKey) { e.preventDefault(); saveEdit() }
+                if (e.key === 'Escape') setIsEditing(false)
+              }}
+            />
+            <div className="flex items-center gap-2 mt-1.5">
+              <button
+                onClick={saveEdit}
+                className="px-3 py-1 text-xs font-medium bg-labor-red text-white rounded hover:bg-labor-red-600 transition-colors"
+              >
+                Save
+              </button>
+              <button
+                onClick={() => setIsEditing(false)}
+                className="px-3 py-1 text-xs text-gray-600 hover:text-gray-800"
+              >
+                Cancel
+              </button>
+            </div>
+          </div>
+        ) : (
+          message.content && (
+            <p className="text-base md:text-sm text-gray-800 whitespace-pre-wrap break-words">{message.content}</p>
+          )
         )}
         {hasAttachments && <AttachmentList attachments={message.attachments} channelId={channelId} />}
         {(hasReactions || onReact) && (
           <ReactionBar reactions={message.reactions || []} onReact={(emoji) => onReact?.(message.id, emoji)} />
         )}
       </div>
+
+      {/* Desktop hover toolbar */}
       <div className="absolute right-3 -top-2 hidden group-hover:flex items-center gap-0.5 bg-white border border-stone-200 rounded shadow-sm px-0.5 py-0.5">
         <button
           onClick={() => {
@@ -202,7 +282,7 @@ export default function MessageBubble({ message, isOwn, onEdit, onDelete, onReac
         {isOwn && (
           <>
             <button
-              onClick={() => onEdit?.(message)}
+              onClick={startEdit}
               className="p-1 text-gray-400 hover:text-gray-600 rounded"
               title="Edit"
             >
@@ -222,6 +302,56 @@ export default function MessageBubble({ message, isOwn, onEdit, onDelete, onReac
           </>
         )}
       </div>
+
+      {/* Mobile action sheet */}
+      <BottomSheet isOpen={showActions} onClose={() => setShowActions(false)}>
+        <div className="px-4 pt-4 pb-2">
+          {/* Quick reactions */}
+          <div className="flex justify-around mb-3">
+            {QUICK_EMOJIS.map(emoji => (
+              <button
+                key={emoji}
+                onClick={() => { onReact?.(message.id, emoji); setShowActions(false) }}
+                className="w-11 h-11 flex items-center justify-center rounded-full hover:bg-stone-100 active:bg-stone-200 text-xl transition-colors"
+              >
+                {emoji}
+              </button>
+            ))}
+          </div>
+          <div className="border-t border-stone-200" />
+          {/* Action buttons */}
+          <div className="py-1">
+            {isOwn && (
+              <>
+                <button
+                  onClick={startEdit}
+                  className="w-full text-left px-3 py-3 flex items-center gap-3 text-sm text-gray-700 hover:bg-stone-50 active:bg-stone-100 rounded transition-colors"
+                >
+                  <svg className="w-4 h-4 text-gray-400" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M11 5H6a2 2 0 00-2 2v11a2 2 0 002 2h11a2 2 0 002-2v-5m-1.414-9.414a2 2 0 112.828 2.828L11.828 15H9v-2.828l8.586-8.586z" />
+                  </svg>
+                  Edit message
+                </button>
+                <button
+                  onClick={() => { onDelete?.(message); setShowActions(false) }}
+                  className="w-full text-left px-3 py-3 flex items-center gap-3 text-sm text-red-600 hover:bg-red-50 active:bg-red-100 rounded transition-colors"
+                >
+                  <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M19 7l-.867 12.142A2 2 0 0116.138 21H7.862a2 2 0 01-1.995-1.858L5 7m5 4v6m4-6v6m1-10V4a1 1 0 00-1-1h-4a1 1 0 00-1 1v3M4 7h16" />
+                  </svg>
+                  Delete message
+                </button>
+              </>
+            )}
+            <button
+              onClick={() => setShowActions(false)}
+              className="w-full text-left px-3 py-3 flex items-center gap-3 text-sm text-gray-500 hover:bg-stone-50 active:bg-stone-100 rounded transition-colors"
+            >
+              Cancel
+            </button>
+          </div>
+        </div>
+      </BottomSheet>
     </div>
   )
 }
