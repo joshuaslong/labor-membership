@@ -135,8 +135,7 @@ export default function MessagingPage() {
     setSelectedChannelId(newChannel.id)
   }
 
-  const handleBrowseChannels = async () => {
-    await fetchAllChannels(chapterScope)
+  const handleBrowseChannels = () => {
     setShowBrowseModal(true)
   }
 
@@ -186,6 +185,7 @@ export default function MessagingPage() {
             onBrowseChannels={handleBrowseChannels}
             isAdmin={isUserAdmin}
             unreadCounts={unreadCounts}
+            loading={loading}
           />
         </div>
         <div className={`${selectedChannelId ? 'flex flex-col' : 'hidden md:flex md:flex-col'} flex-1 min-w-0 min-h-0`}>
