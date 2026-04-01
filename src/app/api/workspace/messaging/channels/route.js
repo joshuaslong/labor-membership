@@ -27,7 +27,7 @@ export async function GET(request) {
   let query = supabase
     .from('channels')
     .select(`
-      id, name, description, chapter_id, is_archived, created_at,
+      id, name, description, chapter_id, is_archived, is_private, created_at,
       channel_members(count)
     `)
     .eq('is_archived', false)
@@ -44,30 +44,83 @@ export async function GET(request) {
   // Check which channels the current user has joined + get read cursors
   const channelIds = channels.map(c => c.id)
   let membershipMap = {}
+  let latestMessageMap = {}
 
   if (channelIds.length > 0) {
-    const { data: memberships } = await supabase
-      .from('channel_members')
-      .select('channel_id, last_read_at')
-      .eq('team_member_id', teamMember.id)
-      .in('channel_id', channelIds)
+    // Fetch memberships and latest messages in parallel
+    const [membershipsResult, latestMessagesResult] = await Promise.all([
+      supabase
+        .from('channel_members')
+        .select('channel_id, last_read_at')
+        .eq('team_member_id', teamMember.id)
+        .in('channel_id', channelIds),
+      // Fetch recent messages to find latest per channel
+      // Limit to a reasonable window — channels × a few messages each
+      supabase
+        .from('messages')
+        .select('channel_id, content, created_at, sender_id')
+        .in('channel_id', channelIds)
+        .eq('is_deleted', false)
+        .order('created_at', { ascending: false })
+        .limit(channelIds.length * 3)
+    ])
 
-    for (const m of (memberships || [])) {
+    for (const m of (membershipsResult.data || [])) {
       membershipMap[m.channel_id] = m.last_read_at
+    }
+
+    // Group latest message per channel (query returns all messages sorted by date desc)
+    for (const msg of (latestMessagesResult.data || [])) {
+      if (!latestMessageMap[msg.channel_id]) {
+        latestMessageMap[msg.channel_id] = msg
+      }
     }
   }
 
-  const result = channels.map(ch => ({
-    id: ch.id,
-    name: ch.name,
-    description: ch.description,
-    chapter_id: ch.chapter_id,
-    is_archived: ch.is_archived,
-    created_at: ch.created_at,
-    member_count: ch.channel_members?.[0]?.count ?? 0,
-    is_member: ch.id in membershipMap,
-    last_read_at: membershipMap[ch.id] ?? null,
-  }))
+  // Compute unread counts: count messages after last_read_at per channel
+  let unreadCountMap = {}
+  if (channelIds.length > 0) {
+    // For channels the user is a member of, count unread messages
+    const memberChannelIds = Object.keys(membershipMap)
+    if (memberChannelIds.length > 0) {
+      for (const chId of memberChannelIds) {
+        const lastRead = membershipMap[chId]
+        const latestMsg = latestMessageMap[chId]
+        if (!latestMsg) {
+          unreadCountMap[chId] = 0
+        } else if (!lastRead) {
+          // Never read — mark as unread
+          unreadCountMap[chId] = 1
+        } else if (new Date(latestMsg.created_at) > new Date(lastRead)) {
+          unreadCountMap[chId] = 1
+        } else {
+          unreadCountMap[chId] = 0
+        }
+      }
+    }
+  }
+
+  const result = channels
+    // Hide private channels the user hasn't joined
+    .filter(ch => !ch.is_private || ch.id in membershipMap)
+    .map(ch => {
+      const latestMsg = latestMessageMap[ch.id]
+      return {
+        id: ch.id,
+        name: ch.name,
+        description: ch.description,
+        chapter_id: ch.chapter_id,
+        is_archived: ch.is_archived,
+        is_private: ch.is_private,
+        created_at: ch.created_at,
+        member_count: ch.channel_members?.[0]?.count ?? 0,
+        is_member: ch.id in membershipMap,
+        last_read_at: membershipMap[ch.id] ?? null,
+        latest_message_at: latestMsg?.created_at ?? null,
+        last_message_preview: latestMsg?.content?.slice(0, 100) ?? null,
+        unread_count: unreadCountMap[ch.id] ?? 0,
+      }
+    })
 
   return NextResponse.json(result)
 }
@@ -83,7 +136,7 @@ export async function POST(request) {
   }
 
   const body = await request.json()
-  const { name, description, chapter_id: chapterId } = body
+  const { name, description, chapter_id: chapterId, is_private, member_ids } = body
 
   if (!name || typeof name !== 'string' || !name.trim()) {
     return NextResponse.json({ error: 'Channel name is required' }, { status: 400 })
@@ -103,6 +156,7 @@ export async function POST(request) {
       description: description?.trim() || null,
       chapter_id: chapterId,
       created_by: teamMember.id,
+      is_private: !!is_private,
     })
     .select()
     .single()
@@ -114,14 +168,46 @@ export async function POST(request) {
     return NextResponse.json({ error: 'Failed to create channel' }, { status: 500 })
   }
 
-  // Add creator as admin member
-  await supabase
-    .from('channel_members')
-    .insert({
-      channel_id: channel.id,
-      team_member_id: teamMember.id,
-      role: 'admin',
-    })
+  if (is_private) {
+    // Private channel: add creator as admin + any specified members
+    const rows = [
+      { channel_id: channel.id, team_member_id: teamMember.id, role: 'admin' },
+    ]
+    if (Array.isArray(member_ids)) {
+      for (const tmId of member_ids) {
+        if (tmId !== teamMember.id) {
+          rows.push({ channel_id: channel.id, team_member_id: tmId, role: 'member' })
+        }
+      }
+    }
+    await supabase.from('channel_members').insert(rows)
+  } else {
+    // Public channel: auto-add all team members in this chapter
+    const { data: chapterTeamMembers } = await supabase
+      .from('team_member_chapters')
+      .select('team_member_id')
+      .eq('chapter_id', chapterId)
+
+    const { data: primaryChapterMembers } = await supabase
+      .from('team_members')
+      .select('id')
+      .eq('chapter_id', chapterId)
+      .eq('active', true)
+
+    const allMemberIds = new Set()
+    for (const m of (chapterTeamMembers || [])) allMemberIds.add(m.team_member_id)
+    for (const m of (primaryChapterMembers || [])) allMemberIds.add(m.id)
+
+    if (allMemberIds.size > 0) {
+      const rows = [...allMemberIds].map(tmId => ({
+        channel_id: channel.id,
+        team_member_id: tmId,
+        role: tmId === teamMember.id ? 'admin' : 'member',
+      }))
+
+      await supabase.from('channel_members').insert(rows)
+    }
+  }
 
   return NextResponse.json(channel, { status: 201 })
 }

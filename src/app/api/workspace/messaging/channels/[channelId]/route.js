@@ -1,5 +1,5 @@
 import { NextResponse } from 'next/server'
-import { createClient } from '@/lib/supabase/server'
+import { createClient, createAdminClient } from '@/lib/supabase/server'
 import { getCurrentTeamMember } from '@/lib/teamMember'
 import { isAdmin } from '@/lib/permissions'
 
@@ -88,4 +88,40 @@ export async function PATCH(request, { params }) {
   }
 
   return NextResponse.json(channel)
+}
+
+export async function DELETE(request, { params }) {
+  const teamMember = await getCurrentTeamMember()
+  if (!teamMember) {
+    return NextResponse.json({ error: 'Unauthorized' }, { status: 401 })
+  }
+
+  const { channelId } = await params
+  const supabase = await createClient()
+
+  // Check if user is a channel admin or chapter admin
+  const { data: membership } = await supabase
+    .from('channel_members')
+    .select('role')
+    .eq('channel_id', channelId)
+    .eq('team_member_id', teamMember.id)
+    .single()
+
+  const isChannelAdmin = membership?.role === 'admin'
+  const isChapterAdmin = isAdmin(teamMember.roles)
+
+  if (!isChannelAdmin && !isChapterAdmin) {
+    return NextResponse.json({ error: 'Only channel or chapter admins can delete channels' }, { status: 403 })
+  }
+
+  // Use admin client — all related records cascade-delete via FK constraints
+  const admin = createAdminClient()
+  const { error } = await admin.from('channels').delete().eq('id', channelId)
+
+  if (error) {
+    console.error('Failed to delete channel:', error)
+    return NextResponse.json({ error: 'Failed to delete channel' }, { status: 500 })
+  }
+
+  return NextResponse.json({ success: true })
 }

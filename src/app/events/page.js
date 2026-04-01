@@ -17,6 +17,20 @@ function formatEventTime(timeStr) {
   })
 }
 
+function getTimezoneAbbr(timezone) {
+  if (!timezone) return ''
+  try {
+    const parts = new Intl.DateTimeFormat('en-US', {
+      timeZone: timezone,
+      timeZoneName: 'short',
+    }).formatToParts(new Date())
+    const tzPart = parts.find(p => p.type === 'timeZoneName')
+    return tzPart ? tzPart.value : ''
+  } catch {
+    return ''
+  }
+}
+
 function EventsContent() {
   const searchParams = useSearchParams()
   const chapterFilter = searchParams.get('chapter')
@@ -281,6 +295,7 @@ function EventsContent() {
                               </svg>
                               {formatEventTime(event.start_time)}
                               {event.end_time && ` - ${formatEventTime(event.end_time)}`}
+                              {event.timezone && ` ${getTimezoneAbbr(event.timezone)}`}
                             </span>
                           )}
                           {event.location_name && (

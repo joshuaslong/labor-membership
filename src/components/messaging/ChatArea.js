@@ -1,13 +1,17 @@
 'use client'
 
-import { useEffect, useRef, useCallback } from 'react'
+import { useState, useEffect, useRef, useCallback } from 'react'
 import { useChannel } from '@/hooks/useChannel'
 import ChannelHeader from './ChannelHeader'
 import MessageBubble from './MessageBubble'
 import MessageComposer from './MessageComposer'
+import AddMembersModal from './AddMembersModal'
+import BottomSheet from './BottomSheet'
 
-export default function ChatArea({ channelId, channel, currentUser, onBack }) {
-  const { messages, loading, hasMore, sendMessage, editMessage, deleteMessage, loadMore } = useChannel(channelId, currentUser)
+export default function ChatArea({ channelId, channel, currentUser, onBack, isAdmin, onDeleteChannel }) {
+  const [showAddMembers, setShowAddMembers] = useState(false)
+  const [deleteTarget, setDeleteTarget] = useState(null)
+  const { messages, loading, hasMore, sendMessage, editMessage, deleteMessage, reactToMessage, loadMore } = useChannel(channelId, currentUser)
   const messagesEndRef = useRef(null)
   const messagesContainerRef = useRef(null)
   const prevMessageCountRef = useRef(0)
@@ -26,9 +30,7 @@ export default function ChatArea({ channelId, channel, currentUser, onBack }) {
     const newCount = messages.length
 
     if (newCount > prevCount) {
-      // New messages added at the end or initial load
       if (isInitialLoadRef.current || newCount - prevCount <= 2) {
-        // Initial load or a few new messages: scroll to bottom
         messagesEndRef.current?.scrollIntoView({ behavior: isInitialLoadRef.current ? 'instant' : 'smooth' })
         isInitialLoadRef.current = false
       }
@@ -50,7 +52,6 @@ export default function ChatArea({ channelId, channel, currentUser, onBack }) {
     if (container.scrollTop < 50) {
       const prevHeight = container.scrollHeight
       loadMore().then(() => {
-        // Maintain scroll position after prepending
         requestAnimationFrame(() => {
           if (container) {
             container.scrollTop = container.scrollHeight - prevHeight
@@ -60,15 +61,23 @@ export default function ChatArea({ channelId, channel, currentUser, onBack }) {
     }
   }, [loading, hasMore, loadMore])
 
-  const handleEdit = async (message) => {
-    const newContent = prompt('Edit message:', message.content)
-    if (newContent === null || newContent.trim() === '' || newContent === message.content) return
-    await editMessage(message.id, newContent.trim())
+  const handleEdit = async (messageId, newContent) => {
+    await editMessage(messageId, newContent)
   }
 
-  const handleDelete = async (message) => {
-    if (!confirm('Delete this message?')) return
-    await deleteMessage(message.id)
+  const handleDelete = (message) => {
+    setDeleteTarget(message)
+  }
+
+  const confirmDelete = async () => {
+    if (deleteTarget) {
+      await deleteMessage(deleteTarget.id)
+      setDeleteTarget(null)
+    }
+  }
+
+  const handleReact = async (messageId, emoji) => {
+    await reactToMessage(messageId, emoji)
   }
 
   if (!channelId) {
@@ -83,7 +92,13 @@ export default function ChatArea({ channelId, channel, currentUser, onBack }) {
 
   return (
     <div className="flex-1 flex flex-col min-w-0 min-h-0 overflow-hidden">
-      <ChannelHeader channel={channel} onBack={onBack} />
+      <ChannelHeader channel={channel} onBack={onBack} isAdmin={isAdmin} onDeleteChannel={onDeleteChannel} onAddMembers={() => setShowAddMembers(true)} />
+      <AddMembersModal
+        isOpen={showAddMembers}
+        onClose={() => setShowAddMembers(false)}
+        channelId={channelId}
+        chapterId={channel?.chapter_id}
+      />
 
       {/* Messages area */}
       <div
@@ -91,14 +106,12 @@ export default function ChatArea({ channelId, channel, currentUser, onBack }) {
         className="flex-1 overflow-y-auto bg-white"
         onScroll={handleScroll}
       >
-        {/* Loading indicator for older messages */}
         {loading && hasMore && (
           <div className="text-center py-3">
             <span className="text-xs text-gray-400">Loading older messages...</span>
           </div>
         )}
 
-        {/* Empty channel state */}
         {!loading && messages.length === 0 && (
           <div className="flex items-center justify-center h-full">
             <div className="text-center py-12">
@@ -112,7 +125,6 @@ export default function ChatArea({ channelId, channel, currentUser, onBack }) {
           </div>
         )}
 
-        {/* Messages list */}
         <div className="max-w-4xl mx-auto py-2">
           {messages.map(message => (
             <MessageBubble
@@ -121,13 +133,37 @@ export default function ChatArea({ channelId, channel, currentUser, onBack }) {
               isOwn={(message.sender?.team_member_id || message.sender_id) === currentUser?.id}
               onEdit={handleEdit}
               onDelete={handleDelete}
+              onReact={handleReact}
+              channelId={channelId}
             />
           ))}
         </div>
         <div ref={messagesEndRef} />
       </div>
 
-      <MessageComposer onSend={sendMessage} disabled={!channelId} />
+      <MessageComposer onSend={sendMessage} disabled={!channelId} channelId={channelId} />
+
+      {/* Delete confirmation */}
+      <BottomSheet isOpen={!!deleteTarget} onClose={() => setDeleteTarget(null)}>
+        <div className="p-5 text-center">
+          <h3 className="text-sm font-semibold text-gray-900">Delete message?</h3>
+          <p className="text-xs text-gray-500 mt-1">This can&apos;t be undone.</p>
+          <div className="flex items-center justify-center gap-3 mt-4">
+            <button
+              onClick={() => setDeleteTarget(null)}
+              className="btn-secondary text-sm px-4 py-2"
+            >
+              Cancel
+            </button>
+            <button
+              onClick={confirmDelete}
+              className="bg-red-600 text-white text-sm font-medium px-4 py-2 rounded hover:bg-red-700 transition-colors"
+            >
+              Delete
+            </button>
+          </div>
+        </div>
+      </BottomSheet>
     </div>
   )
 }

@@ -4,7 +4,7 @@ import { useState, useEffect } from 'react'
 import Link from 'next/link'
 import { usePathname } from 'next/navigation'
 
-export default function MobileNav({ isLoggedIn, isAdmin, memberName }) {
+export default function MobileNav({ isLoggedIn, isAdmin, isTeamMember, memberName }) {
   const [isOpen, setIsOpen] = useState(false)
   const pathname = usePathname()
 
@@ -125,21 +125,23 @@ export default function MobileNav({ isLoggedIn, isAdmin, memberName }) {
               >
                 My Profile
               </Link>
-              {isAdmin && (
+              {isTeamMember && (
                 <>
                   <div className="my-4 border-t border-white/20" />
                   <Link
-                    href="/admin"
+                    href="/workspace"
                     className="block px-4 py-3 text-white/90 hover:text-white hover:bg-white/10 rounded-lg transition-colors"
                   >
-                    Admin
+                    Workspace
                   </Link>
-                  <Link
-                    href="/members"
-                    className="block px-4 py-3 text-white/90 hover:text-white hover:bg-white/10 rounded-lg transition-colors"
-                  >
-                    Members
-                  </Link>
+                  {isAdmin && (
+                    <Link
+                      href="/members"
+                      className="block px-4 py-3 text-white/90 hover:text-white hover:bg-white/10 rounded-lg transition-colors"
+                    >
+                      Members
+                    </Link>
+                  )}
                 </>
               )}
 

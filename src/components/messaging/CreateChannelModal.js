@@ -1,14 +1,53 @@
 'use client'
 
-import { useState } from 'react'
+import { useState, useEffect } from 'react'
 
 export default function CreateChannelModal({ isOpen, onClose, onCreated, chapterId }) {
   const [name, setName] = useState('')
   const [description, setDescription] = useState('')
+  const [isPrivate, setIsPrivate] = useState(false)
   const [error, setError] = useState(null)
   const [submitting, setSubmitting] = useState(false)
 
+  // Member selection for private channels
+  const [memberSearch, setMemberSearch] = useState('')
+  const [searchResults, setSearchResults] = useState([])
+  const [selectedMembers, setSelectedMembers] = useState([])
+  const [searching, setSearching] = useState(false)
+
+  // Search team members when typing in private mode
+  useEffect(() => {
+    if (!isPrivate || memberSearch.length < 2) {
+      setSearchResults([])
+      return
+    }
+    const timeout = setTimeout(async () => {
+      setSearching(true)
+      try {
+        const res = await fetch(`/api/workspace/messaging/team-members?search=${encodeURIComponent(memberSearch)}&chapter_id=${chapterId}`)
+        if (res.ok) {
+          const data = await res.json()
+          // Filter out already selected
+          const selectedIds = new Set(selectedMembers.map(m => m.id))
+          setSearchResults(data.filter(m => !selectedIds.has(m.id)))
+        }
+      } catch { /* ignore */ }
+      setSearching(false)
+    }, 300)
+    return () => clearTimeout(timeout)
+  }, [memberSearch, isPrivate, chapterId, selectedMembers])
+
   if (!isOpen) return null
+
+  const addMember = (member) => {
+    setSelectedMembers(prev => [...prev, member])
+    setMemberSearch('')
+    setSearchResults([])
+  }
+
+  const removeMember = (id) => {
+    setSelectedMembers(prev => prev.filter(m => m.id !== id))
+  }
 
   const handleSubmit = async (e) => {
     e.preventDefault()
@@ -28,7 +67,9 @@ export default function CreateChannelModal({ isOpen, onClose, onCreated, chapter
         body: JSON.stringify({
           name: trimmedName,
           description: description.trim() || null,
-          chapter_id: chapterId
+          chapter_id: chapterId,
+          is_private: isPrivate,
+          member_ids: isPrivate ? selectedMembers.map(m => m.id) : undefined,
         })
       })
 
@@ -40,6 +81,9 @@ export default function CreateChannelModal({ isOpen, onClose, onCreated, chapter
       const channel = await res.json()
       setName('')
       setDescription('')
+      setIsPrivate(false)
+      setSelectedMembers([])
+      setMemberSearch('')
       onCreated?.(channel)
       onClose()
     } catch (err) {
@@ -109,6 +153,65 @@ export default function CreateChannelModal({ isOpen, onClose, onCreated, chapter
               maxLength={200}
             />
           </div>
+
+          {/* Private toggle */}
+          <label className="flex items-center gap-2 cursor-pointer">
+            <input
+              type="checkbox"
+              checked={isPrivate}
+              onChange={e => { setIsPrivate(e.target.checked); setSelectedMembers([]); setMemberSearch('') }}
+              className="rounded border-stone-300 text-labor-red focus:ring-labor-red"
+            />
+            <span className="text-sm text-gray-700">Private channel</span>
+          </label>
+          {isPrivate && (
+            <p className="text-xs text-gray-500 -mt-2">Only invited members can see and access this channel.</p>
+          )}
+
+          {/* Member selection for private channels */}
+          {isPrivate && (
+            <div>
+              <label className="block text-xs font-medium text-gray-700 uppercase tracking-wide mb-1">
+                Add Members
+              </label>
+              <input
+                type="text"
+                value={memberSearch}
+                onChange={e => setMemberSearch(e.target.value)}
+                placeholder="Search team members..."
+                className="w-full border border-stone-200 rounded px-3 py-1.5 text-sm text-gray-900 placeholder-gray-400 focus:outline-none focus:border-stone-400"
+              />
+              {/* Search results */}
+              {searchResults.length > 0 && (
+                <div className="mt-1 border border-stone-200 rounded bg-white max-h-32 overflow-y-auto">
+                  {searchResults.map(m => (
+                    <button
+                      key={m.id}
+                      type="button"
+                      onClick={() => addMember(m)}
+                      className="w-full text-left px-3 py-1.5 text-sm hover:bg-stone-50 text-gray-900"
+                    >
+                      {m.first_name} {m.last_name}
+                    </button>
+                  ))}
+                </div>
+              )}
+              {searching && <p className="text-xs text-gray-400 mt-1">Searching...</p>}
+              {/* Selected members */}
+              {selectedMembers.length > 0 && (
+                <div className="flex flex-wrap gap-1.5 mt-2">
+                  {selectedMembers.map(m => (
+                    <span key={m.id} className="inline-flex items-center gap-1 bg-stone-100 text-gray-700 text-xs px-2 py-1 rounded-full">
+                      {m.first_name} {m.last_name}
+                      <button type="button" onClick={() => removeMember(m.id)} className="text-gray-400 hover:text-gray-600">
+                        <svg className="w-3 h-3" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M6 18L18 6M6 6l12 12" /></svg>
+                      </button>
+                    </span>
+                  ))}
+                </div>
+              )}
+            </div>
+          )}
 
           <div className="flex items-center justify-end gap-2 pt-2">
             <button

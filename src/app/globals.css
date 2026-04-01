@@ -461,4 +461,39 @@
   .pb-safe {
     padding-bottom: env(safe-area-inset-bottom, 0px);
   }
+
+  /* Messaging page layout — fixed on mobile, relative on desktop */
+  .messaging-layout {
+    position: fixed;
+    top: 61px;
+    left: 0;
+    right: 0;
+    bottom: calc(3.5rem + env(safe-area-inset-bottom, 0px));
+    z-index: 10;
+  }
+  @media (min-width: 768px) {
+    .messaging-layout {
+      position: relative;
+      top: auto;
+      left: auto;
+      right: auto;
+      bottom: auto;
+      z-index: auto;
+      height: calc(100dvh - 61px);
+    }
+  }
+
+  /* Bottom sheet slide-up animation for mobile */
+  @keyframes slide-up {
+    from { transform: translateY(100%); }
+    to { transform: translateY(0); }
+  }
+  .animate-slide-up {
+    animation: slide-up 200ms ease-out;
+  }
+  @media (min-width: 768px) {
+    .animate-slide-up {
+      animation: none;
+    }
+  }
 }

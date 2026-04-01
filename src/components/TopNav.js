@@ -30,6 +30,7 @@ function TopNav({ sections = [], availableChapters = [], selectedChapterId = 'al
     polls: 'Polls',
     organize: 'Organize',
     tasks: 'Tasks',
+    initiatives: 'Initiatives',
     admin: 'Admin'
   }
 
@@ -84,7 +85,13 @@ function TopNav({ sections = [], availableChapters = [], selectedChapterId = 'al
                 showAll={showAllOption}
               />
             )}
-            <form action="/api/auth/logout" method="POST" className="hidden md:inline">
+            <Link
+              href="/workspace/profile"
+              className="hidden md:inline text-sm text-gray-700 hover:text-gray-900"
+            >
+              My Profile
+            </Link>
+            <form action="/api/auth/logout" method="POST" className="hidden md:flex items-center">
               <button
                 type="submit"
                 className="text-sm text-gray-700 hover:text-gray-900"

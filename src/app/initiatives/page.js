@@ -1,6 +1,8 @@
 import Link from 'next/link'
 import { createAdminClient } from '@/lib/supabase/server'
 
+export const revalidate = 0
+
 export const metadata = {
   title: 'Initiatives | Labor Party',
   description: 'Support Labor Party direct action campaigns. 100% of donations go directly to the cause.',

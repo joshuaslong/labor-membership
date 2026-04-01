@@ -1,28 +1,67 @@
 import { createClient, createAdminClient } from '@/lib/supabase/server'
 import { NextResponse } from 'next/server'
 
-// POST - Apply to a volunteer opportunity
+// POST - Apply to a volunteer opportunity (supports both logged-in and guest users)
 export async function POST(request, { params }) {
   try {
     const { id } = await params
+    const adminClient = createAdminClient()
+    const body = await request.json()
+
+    // Determine member: logged-in user or guest
+    let memberId
+    let guestEmail = null
+
     const supabase = await createClient()
     const { data: { user } } = await supabase.auth.getUser()
 
-    if (!user) {
-      return NextResponse.json({ error: 'You must be logged in to apply' }, { status: 401 })
-    }
+    if (user) {
+      // Logged-in user — look up their member record
+      const { data: member } = await adminClient
+        .from('members')
+        .select('id')
+        .eq('user_id', user.id)
+        .single()
 
-    const adminClient = createAdminClient()
+      if (!member) {
+        return NextResponse.json({ error: 'Member record not found' }, { status: 403 })
+      }
+      memberId = member.id
+    } else {
+      // Guest application — require name + email
+      const { first_name, last_name, email } = body
+      if (!first_name?.trim() || !last_name?.trim() || !email?.trim()) {
+        return NextResponse.json({ error: 'Name and email are required' }, { status: 400 })
+      }
 
-    // Get member record
-    const { data: member } = await adminClient
-      .from('members')
-      .select('id')
-      .eq('user_id', user.id)
-      .single()
+      const trimmedEmail = email.trim().toLowerCase()
+      guestEmail = trimmedEmail
 
-    if (!member) {
-      return NextResponse.json({ error: 'You must be a member to apply' }, { status: 403 })
+      // Check if a member with this email already exists
+      const { data: existing } = await adminClient
+        .from('members')
+        .select('id')
+        .eq('email', trimmedEmail)
+        .single()
+
+      if (existing) {
+        memberId = existing.id
+      } else {
+        // Create a new guest member record
+        const { data: newMember, error: memberError } = await adminClient
+          .from('members')
+          .insert({
+            first_name: first_name.trim(),
+            last_name: last_name.trim(),
+            email: trimmedEmail,
+            status: 'pending'
+          })
+          .select('id')
+          .single()
+
+        if (memberError) throw memberError
+        memberId = newMember.id
+      }
     }
 
     // Get opportunity and validate
@@ -40,7 +79,6 @@ export async function POST(request, { params }) {
       return NextResponse.json({ error: 'This opportunity is not accepting applications' }, { status: 400 })
     }
 
-    // Check deadline
     if (opportunity.deadline) {
       const now = new Date()
       const deadline = new Date(opportunity.deadline + 'T23:59:59')
@@ -49,7 +87,6 @@ export async function POST(request, { params }) {
       }
     }
 
-    // Check capacity
     if (opportunity.spots_available != null) {
       const { count } = await adminClient
         .from('volunteer_applications')
@@ -62,17 +99,15 @@ export async function POST(request, { params }) {
       }
     }
 
-    const body = await request.json()
-    const { message, availability_notes } = body
+    const { message } = body
 
     const { data: application, error } = await adminClient
       .from('volunteer_applications')
       .insert({
         opportunity_id: id,
-        member_id: member.id,
+        member_id: memberId,
         status: 'pending',
-        message: message || null,
-        availability_notes: availability_notes || null
+        message: message || null
       })
       .select()
       .single()
@@ -84,7 +119,7 @@ export async function POST(request, { params }) {
       throw error
     }
 
-    return NextResponse.json({ application }, { status: 201 })
+    return NextResponse.json({ application, guest_email: guestEmail }, { status: 201 })
 
   } catch (error) {
     console.error('Error applying to volunteer opportunity:', error)

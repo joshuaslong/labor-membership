@@ -27,6 +27,20 @@ function formatEventTime(timeStr) {
   })
 }
 
+function getTimezoneAbbr(timezone) {
+  if (!timezone) return ''
+  try {
+    const parts = new Intl.DateTimeFormat('en-US', {
+      timeZone: timezone,
+      timeZoneName: 'short',
+    }).formatToParts(new Date())
+    const tzPart = parts.find(p => p.type === 'timeZoneName')
+    return tzPart ? tzPart.value : ''
+  } catch {
+    return ''
+  }
+}
+
 function EventDetailContent() {
   const params = useParams()
   const router = useRouter()
@@ -354,6 +368,7 @@ function EventDetailContent() {
                     <div className="text-gray-600">
                       {formatEventTime(event.start_time)}
                       {event.end_time && ` - ${formatEventTime(event.end_time)}`}
+                      {event.timezone && ` ${getTimezoneAbbr(event.timezone)}`}
                     </div>
                   )}
                 </div>
