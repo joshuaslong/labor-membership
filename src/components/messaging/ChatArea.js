@@ -6,9 +6,11 @@ import ChannelHeader from './ChannelHeader'
 import MessageBubble from './MessageBubble'
 import MessageComposer from './MessageComposer'
 import AddMembersModal from './AddMembersModal'
+import BottomSheet from './BottomSheet'
 
 export default function ChatArea({ channelId, channel, currentUser, onBack, isAdmin, onDeleteChannel }) {
   const [showAddMembers, setShowAddMembers] = useState(false)
+  const [deleteTarget, setDeleteTarget] = useState(null)
   const { messages, loading, hasMore, sendMessage, editMessage, deleteMessage, reactToMessage, loadMore } = useChannel(channelId, currentUser)
   const messagesEndRef = useRef(null)
   const messagesContainerRef = useRef(null)
@@ -59,15 +61,19 @@ export default function ChatArea({ channelId, channel, currentUser, onBack, isAd
     }
   }, [loading, hasMore, loadMore])
 
-  const handleEdit = async (message) => {
-    const newContent = prompt('Edit message:', message.content)
-    if (newContent === null || newContent.trim() === '' || newContent === message.content) return
-    await editMessage(message.id, newContent.trim())
+  const handleEdit = async (messageId, newContent) => {
+    await editMessage(messageId, newContent)
   }
 
-  const handleDelete = async (message) => {
-    if (!confirm('Delete this message?')) return
-    await deleteMessage(message.id)
+  const handleDelete = (message) => {
+    setDeleteTarget(message)
+  }
+
+  const confirmDelete = async () => {
+    if (deleteTarget) {
+      await deleteMessage(deleteTarget.id)
+      setDeleteTarget(null)
+    }
   }
 
   const handleReact = async (messageId, emoji) => {
@@ -136,6 +142,28 @@ export default function ChatArea({ channelId, channel, currentUser, onBack, isAd
       </div>
 
       <MessageComposer onSend={sendMessage} disabled={!channelId} channelId={channelId} />
+
+      {/* Delete confirmation */}
+      <BottomSheet isOpen={!!deleteTarget} onClose={() => setDeleteTarget(null)}>
+        <div className="p-5 text-center">
+          <h3 className="text-sm font-semibold text-gray-900">Delete message?</h3>
+          <p className="text-xs text-gray-500 mt-1">This can&apos;t be undone.</p>
+          <div className="flex items-center justify-center gap-3 mt-4">
+            <button
+              onClick={() => setDeleteTarget(null)}
+              className="btn-secondary text-sm px-4 py-2"
+            >
+              Cancel
+            </button>
+            <button
+              onClick={confirmDelete}
+              className="bg-red-600 text-white text-sm font-medium px-4 py-2 rounded hover:bg-red-700 transition-colors"
+            >
+              Delete
+            </button>
+          </div>
+        </div>
+      </BottomSheet>
     </div>
   )
 }
