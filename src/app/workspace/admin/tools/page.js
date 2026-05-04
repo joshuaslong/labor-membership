@@ -59,17 +59,17 @@ function ImportTool() {
     setResult(null)
 
     try {
-      const text = await file.text()
+      const formData = new FormData()
+      formData.append('file', file)
       const res = await fetch('/api/admin/import-members', {
         method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ csv: text }),
+        body: formData,
       })
 
       const data = await res.json()
       if (!res.ok) throw new Error(data.error || 'Import failed')
 
-      setResult(data)
+      setResult(data.results || data)
     } catch (err) {
       setError(err.message)
     } finally {
@@ -133,7 +133,9 @@ function ImportTool() {
                 <h3 className="text-xs font-medium text-red-600 uppercase tracking-wide mb-1">Errors</h3>
                 <div className="max-h-40 overflow-y-auto text-xs text-red-600 space-y-0.5">
                   {result.errors.map((err, i) => (
-                    <p key={i}>{err}</p>
+                    <p key={i}>
+                      {err.email ? `${err.email} — ` : ''}{err.error || String(err)}
+                    </p>
                   ))}
                 </div>
               </div>
