@@ -104,18 +104,62 @@ function normalizePhone(phone) {
   return phone.trim()
 }
 
-// Parse CSV string to array of objects
+// RFC 4180 parser: handles quoted fields containing commas, newlines, and escaped quotes ("").
+// Memberstack bios contain newlines, which the previous naive split('\n') misinterpreted as row breaks.
 function parseCSV(csvText) {
-  const lines = csvText.trim().split('\n')
-  if (lines.length < 2) return []
+  if (csvText.charCodeAt(0) === 0xFEFF) csvText = csvText.slice(1) // strip BOM
 
-  // Parse header - handle tab or comma delimited
-  const delimiter = lines[0].includes('\t') ? '\t' : ','
-  const headers = lines[0].split(delimiter).map(h => h.trim().toLowerCase().replace(/[^a-z0-9]/g, '_'))
+  // Detect delimiter from first physical line
+  const firstNewline = csvText.indexOf('\n')
+  const firstLine = firstNewline === -1 ? csvText : csvText.slice(0, firstNewline)
+  const delimiter = firstLine.includes('\t') ? '\t' : ','
 
+  const records = []
+  let field = ''
+  let record = []
+  let inQuotes = false
+  const len = csvText.length
+
+  for (let i = 0; i < len; i++) {
+    const c = csvText[i]
+
+    if (inQuotes) {
+      if (c === '"') {
+        if (csvText[i + 1] === '"') { field += '"'; i++; continue }
+        inQuotes = false
+        continue
+      }
+      field += c
+      continue
+    }
+
+    if (c === '"') { inQuotes = true; continue }
+    if (c === delimiter) { record.push(field); field = ''; continue }
+    if (c === '\r' || c === '\n') {
+      if (c === '\r' && csvText[i + 1] === '\n') i++
+      record.push(field)
+      records.push(record)
+      record = []
+      field = ''
+      continue
+    }
+    field += c
+  }
+  if (field.length > 0 || record.length > 0) {
+    record.push(field)
+    records.push(record)
+  }
+
+  // Drop trailing blank records
+  while (records.length > 0 && records[records.length - 1].length === 1 && records[records.length - 1][0] === '') {
+    records.pop()
+  }
+  if (records.length < 2) return []
+
+  const headers = records[0].map(h => h.trim().toLowerCase().replace(/[^a-z0-9]/g, '_'))
   const rows = []
-  for (let i = 1; i < lines.length; i++) {
-    const values = lines[i].split(delimiter)
+  for (let r = 1; r < records.length; r++) {
+    const values = records[r]
     const row = {}
     headers.forEach((header, index) => {
       row[header] = values[index]?.trim() || null
@@ -123,6 +167,13 @@ function parseCSV(csvText) {
     rows.push(row)
   }
   return rows
+}
+
+function safeIsoDate(value) {
+  if (!value) return null
+  const d = new Date(value)
+  if (isNaN(d.getTime())) return null
+  return d.toISOString()
 }
 
 // Check if a CSV value is truthy
@@ -159,8 +210,8 @@ function mapMemberstackToMember(row) {
     volunteer_interests: row.volunteer_interests || null,
     // Default mailing list to TRUE (as requested)
     mailing_list_opted_in: true,
-    joined_date: row.createdat ? new Date(row.createdat).toISOString() : new Date().toISOString(),
-    last_login_at: row.last_login ? new Date(row.last_login).toISOString() : null,
+    joined_date: safeIsoDate(row.createdat) || new Date().toISOString(),
+    last_login_at: safeIsoDate(row.last_login),
     status: 'active',
     memberstack_id: row.id || row.member_id || null,
     // Internal fields (removed before insert)
@@ -236,28 +287,33 @@ export async function POST(request) {
     // Pass 1: normalize, dedupe by email (last occurrence wins to mirror per-row loop semantics)
     const validRowsByEmail = new Map()
     for (const row of rawRows) {
-      if (!row.email) {
+      try {
+        if (!row.email) {
+          results.skipped++
+          const label = `${row.first_name || ''} ${row.last_name || ''}`.trim() || '(no email)'
+          results.errors.push({ email: label, error: 'Missing email' })
+          continue
+        }
+
+        const memberData = mapMemberstackToMember(row)
+        const stateCode = memberData._state_code
+        const segments = memberData._segments
+        delete memberData._state_code
+        delete memberData._segments
+
+        if (memberData.phone && row.phone_number !== memberData.phone) results.phoneNormalized++
+        if (stateCode && row.state !== stateCode) results.stateNormalized++
+
+        if (stateCode && stateToChapterId[stateCode]) {
+          memberData.chapter_id = stateToChapterId[stateCode]
+          results.stateAssignments++
+        }
+
+        validRowsByEmail.set(memberData.email, { memberData, segments })
+      } catch (err) {
         results.skipped++
-        const label = `${row.first_name || ''} ${row.last_name || ''}`.trim() || '(no email)'
-        results.errors.push({ email: label, error: 'Missing email' })
-        continue
+        results.errors.push({ email: row.email || '(no email)', error: `Row mapping failed: ${err.message}` })
       }
-
-      const memberData = mapMemberstackToMember(row)
-      const stateCode = memberData._state_code
-      const segments = memberData._segments
-      delete memberData._state_code
-      delete memberData._segments
-
-      if (memberData.phone && row.phone_number !== memberData.phone) results.phoneNormalized++
-      if (stateCode && row.state !== stateCode) results.stateNormalized++
-
-      if (stateCode && stateToChapterId[stateCode]) {
-        memberData.chapter_id = stateToChapterId[stateCode]
-        results.stateAssignments++
-      }
-
-      validRowsByEmail.set(memberData.email, { memberData, segments })
     }
 
     const emails = [...validRowsByEmail.keys()]
