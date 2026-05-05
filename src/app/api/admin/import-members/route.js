@@ -3,10 +3,14 @@ import { NextResponse } from 'next/server'
 
 export const maxDuration = 60
 
-// Fields the original per-row update touched. Anything outside this list (email,
-// mailing_list_opted_in, joined_date, status) is intentionally preserved on existing rows.
+// Fields included in the bulk upsert merged row. Email is included because
+// `members.email` is NOT NULL — the upsert's INSERT phase fails NOT NULL before
+// reaching the ON CONFLICT branch otherwise. Email value is identical between
+// existing and new (Pass 2 looked up by email), so the SET clause is a no-op.
+// Excluded fields (mailing_list_opted_in, joined_date, status) are intentionally
+// preserved on existing rows.
 const UPDATEABLE_FIELDS = [
-  'first_name', 'last_name', 'phone', 'state', 'zip_code', 'bio',
+  'email', 'first_name', 'last_name', 'phone', 'state', 'zip_code', 'bio',
   'wants_to_volunteer', 'volunteer_experience', 'volunteer_skills',
   'volunteer_interests', 'memberstack_id', 'last_login_at', 'chapter_id',
 ]
