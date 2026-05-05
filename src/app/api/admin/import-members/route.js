@@ -1,6 +1,22 @@
 import { createClient, createAdminClient } from '@/lib/supabase/server'
 import { NextResponse } from 'next/server'
 
+export const maxDuration = 60
+
+// Fields the original per-row update touched. Anything outside this list (email,
+// mailing_list_opted_in, joined_date, status) is intentionally preserved on existing rows.
+const UPDATEABLE_FIELDS = [
+  'first_name', 'last_name', 'phone', 'state', 'zip_code', 'bio',
+  'wants_to_volunteer', 'volunteer_experience', 'volunteer_skills',
+  'volunteer_interests', 'memberstack_id', 'last_login_at', 'chapter_id',
+]
+
+function chunk(arr, size) {
+  const out = []
+  for (let i = 0; i < arr.length; i += size) out.push(arr.slice(i, i + size))
+  return out
+}
+
 // US State name to code mapping
 const STATE_MAP = {
   'alabama': 'AL', 'alaska': 'AK', 'arizona': 'AZ', 'arkansas': 'AR',
@@ -190,9 +206,9 @@ export async function POST(request) {
     }
 
     const csvText = await file.text()
-    const rows = parseCSV(csvText)
+    const rawRows = parseCSV(csvText)
 
-    if (rows.length === 0) {
+    if (rawRows.length === 0) {
       return NextResponse.json({ error: 'No data found in CSV' }, { status: 400 })
     }
 
@@ -202,17 +218,11 @@ export async function POST(request) {
       .select('id, state_code')
       .eq('level', 'state')
 
-    // Create state code to chapter ID map
     const stateToChapterId = {}
-    stateChapters?.forEach(chapter => {
-      if (chapter.state_code) {
-        stateToChapterId[chapter.state_code] = chapter.id
-      }
-    })
+    stateChapters?.forEach(c => { if (c.state_code) stateToChapterId[c.state_code] = c.id })
 
-    // Process and import members
     const results = {
-      total: rows.length,
+      total: rawRows.length,
       imported: 0,
       updated: 0,
       skipped: 0,
@@ -223,104 +233,139 @@ export async function POST(request) {
       segmentsApplied: 0,
     }
 
-    for (const row of rows) {
-      try {
-        if (!row.email) {
-          results.skipped++
-          results.errors.push({ row: row, error: 'Missing email' })
-          continue
+    // Pass 1: normalize, dedupe by email (last occurrence wins to mirror per-row loop semantics)
+    const validRowsByEmail = new Map()
+    for (const row of rawRows) {
+      if (!row.email) {
+        results.skipped++
+        const label = `${row.first_name || ''} ${row.last_name || ''}`.trim() || '(no email)'
+        results.errors.push({ email: label, error: 'Missing email' })
+        continue
+      }
+
+      const memberData = mapMemberstackToMember(row)
+      const stateCode = memberData._state_code
+      const segments = memberData._segments
+      delete memberData._state_code
+      delete memberData._segments
+
+      if (memberData.phone && row.phone_number !== memberData.phone) results.phoneNormalized++
+      if (stateCode && row.state !== stateCode) results.stateNormalized++
+
+      if (stateCode && stateToChapterId[stateCode]) {
+        memberData.chapter_id = stateToChapterId[stateCode]
+        results.stateAssignments++
+      }
+
+      validRowsByEmail.set(memberData.email, { memberData, segments })
+    }
+
+    const emails = [...validRowsByEmail.keys()]
+    if (emails.length === 0) {
+      return NextResponse.json({ success: true, results })
+    }
+
+    // Pass 2: bulk-fetch existing members so we can split into insert/update buckets
+    const existingByEmail = new Map()
+    for (const emailChunk of chunk(emails, 1000)) {
+      const { data: existing, error: fetchErr } = await adminClient
+        .from('members')
+        .select(['id', 'email', ...UPDATEABLE_FIELDS].join(', '))
+        .in('email', emailChunk)
+      if (fetchErr) throw fetchErr
+      existing?.forEach(m => existingByEmail.set(m.email, m))
+    }
+
+    // Pass 3: build uniform-shape rows for insert vs update.
+    // For updates, merge non-empty new fields over existing values so every row in the
+    // upsert has the same column set (PostgREST bulk upsert union-of-columns rule).
+    // The `new || existing` pattern preserves the original `|| undefined` semantics —
+    // notably keeping `wants_to_volunteer` from being flipped true → false.
+    const toInsert = []
+    const toUpdate = []
+    for (const [email, { memberData }] of validRowsByEmail) {
+      const existing = existingByEmail.get(email)
+      if (existing) {
+        const merged = { id: existing.id }
+        for (const field of UPDATEABLE_FIELDS) {
+          merged[field] = memberData[field] || existing[field]
         }
+        toUpdate.push(merged)
+      } else {
+        toInsert.push(memberData)
+      }
+    }
 
-        const memberData = mapMemberstackToMember(row)
-        const stateCode = memberData._state_code
-        const segments = memberData._segments
-        delete memberData._state_code
-        delete memberData._segments
+    // Pass 4: bulk insert new members; on chunk error, fall back to per-row to identify which row failed
+    const newEmailToId = new Map()
+    for (const insertChunk of chunk(toInsert, 200)) {
+      const { data: inserted, error: insertErr } = await adminClient
+        .from('members')
+        .insert(insertChunk)
+        .select('id, email')
 
-        // Track normalization stats
-        if (memberData.phone && row.phone_number !== memberData.phone) {
-          results.phoneNormalized++
-        }
-        if (stateCode && row.state !== stateCode) {
-          results.stateNormalized++
-        }
-
-        // Assign chapter based on state
-        if (stateCode && stateToChapterId[stateCode]) {
-          memberData.chapter_id = stateToChapterId[stateCode]
-          results.stateAssignments++
-        }
-
-        // Check if member already exists
-        const { data: existing } = await adminClient
-          .from('members')
-          .select('id')
-          .eq('email', memberData.email)
-          .single()
-
-        let memberId
-
-        if (existing) {
-          memberId = existing.id
-          // Update existing member - only overwrite fields that have values in import
-          // Using || undefined pattern: Supabase ignores undefined fields in updates
-          const { error } = await adminClient
-            .from('members')
-            .update({
-              first_name: memberData.first_name || undefined,
-              last_name: memberData.last_name || undefined,
-              phone: memberData.phone || undefined,
-              state: memberData.state || undefined,
-              zip_code: memberData.zip_code || undefined,
-              bio: memberData.bio || undefined,
-              // Only set to true, never overwrite true->false
-              wants_to_volunteer: memberData.wants_to_volunteer || undefined,
-              volunteer_experience: memberData.volunteer_experience || undefined,
-              volunteer_skills: memberData.volunteer_skills || undefined,
-              volunteer_interests: memberData.volunteer_interests || undefined,
-              // Don't overwrite mailing list preference for existing members
-              memberstack_id: memberData.memberstack_id || undefined,
-              last_login_at: memberData.last_login_at || undefined,
-              chapter_id: memberData.chapter_id || undefined,
-            })
-            .eq('id', existing.id)
-
-          if (error) throw error
-          results.updated++
-        } else {
-          // Insert new member
-          const { data: inserted, error } = await adminClient
-            .from('members')
-            .insert(memberData)
-            .select('id')
-            .single()
-
-          if (error) throw error
-          memberId = inserted.id
-          results.imported++
-        }
-
-        // Apply segments from CSV data
-        if (segments.length > 0 && memberId) {
-          const segmentRows = segments.map(segment => ({
-            member_id: memberId,
-            segment,
-            applied_by: adminUserId,
-            auto_applied: false,
-          }))
-
-          const { error: segError } = await adminClient
-            .from('member_segments')
-            .upsert(segmentRows, { onConflict: 'member_id,segment', ignoreDuplicates: true })
-
-          if (!segError) {
-            results.segmentsApplied += segments.length
+      if (insertErr) {
+        for (const row of insertChunk) {
+          const { data: ins, error: rowErr } = await adminClient
+            .from('members').insert(row).select('id').single()
+          if (rowErr) {
+            results.skipped++
+            results.errors.push({ email: row.email, error: rowErr.message })
+          } else {
+            newEmailToId.set(row.email, ins.id)
+            results.imported++
           }
         }
-      } catch (err) {
-        results.skipped++
-        results.errors.push({ email: row.email, error: err.message })
+      } else {
+        inserted?.forEach(m => newEmailToId.set(m.email, m.id))
+        results.imported += inserted?.length || 0
       }
+    }
+
+    // Pass 5: bulk upsert updates (by id); per-row fallback on chunk error
+    for (const updateChunk of chunk(toUpdate, 200)) {
+      const { error: updateErr } = await adminClient
+        .from('members')
+        .upsert(updateChunk, { onConflict: 'id' })
+
+      if (updateErr) {
+        for (const row of updateChunk) {
+          const { id, ...patch } = row
+          const { error: rowErr } = await adminClient
+            .from('members').update(patch).eq('id', id)
+          if (rowErr) {
+            results.skipped++
+            results.errors.push({ email: row.email || `id:${id}`, error: rowErr.message })
+          } else {
+            results.updated++
+          }
+        }
+      } else {
+        results.updated += updateChunk.length
+      }
+    }
+
+    // Pass 6: collect all (member_id, segment) pairs and bulk-upsert in one shot
+    const allSegmentRows = []
+    for (const [email, { segments }] of validRowsByEmail) {
+      if (segments.length === 0) continue
+      const memberId = existingByEmail.get(email)?.id ?? newEmailToId.get(email)
+      if (!memberId) continue // insert failed for this row; skip its segments
+      for (const segment of segments) {
+        allSegmentRows.push({
+          member_id: memberId,
+          segment,
+          applied_by: adminUserId,
+          auto_applied: false,
+        })
+      }
+    }
+
+    for (const segChunk of chunk(allSegmentRows, 1000)) {
+      const { error: segErr } = await adminClient
+        .from('member_segments')
+        .upsert(segChunk, { onConflict: 'member_id,segment', ignoreDuplicates: true })
+      if (!segErr) results.segmentsApplied += segChunk.length
     }
 
     return NextResponse.json({
