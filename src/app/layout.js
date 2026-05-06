@@ -2,6 +2,8 @@ import './globals.css'
 import { Geist, Geist_Mono } from 'next/font/google'
 import Navigation from '@/components/Navigation'
 import NavigationWrapper from '@/components/NavigationWrapper'
+import AnalyticsGate from '@/components/AnalyticsGate'
+import CookieConsent from '@/components/CookieConsent'
 
 const geistSans = Geist({
   subsets: ['latin'],
@@ -45,6 +47,8 @@ export default function RootLayout({ children }) {
           <Navigation />
         </NavigationWrapper>
         <main>{children}</main>
+        <CookieConsent />
+        <AnalyticsGate />
       </body>
     </html>
   )
